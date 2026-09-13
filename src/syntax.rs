@@ -163,11 +163,21 @@ pub struct Program {
     pub functions: Vec<Function>,
     pub classes: Vec<ClassDefinition>,
 }
+#[derive(Clone)]
 struct Binding {
     slot: usize,
     initialized: bool,
     changeable: bool,
     alias: bool,
+}
+struct SavedName {
+    binding: Option<Binding>,
+    alias: Option<SymbolAlias>,
+    removed: bool,
+}
+#[derive(Default)]
+struct Scope {
+    names: HashMap<String, SavedName>,
 }
 #[derive(Clone)]
 enum SymbolAlias {
@@ -193,6 +203,7 @@ struct Parser {
     cursor: usize,
     bindings: HashMap<String, Binding>,
     removed_variables: HashSet<String>,
+    out_of_scope_variables: HashSet<String>,
     result_name: Option<String>,
     types: Vec<Option<Type>>,
     declarations: Vec<(String, Position)>,
@@ -204,6 +215,7 @@ struct Parser {
     try_depth: usize,
     lifecycle_hook: Option<String>,
     symbol_aliases: HashMap<String, SymbolAlias>,
+    scopes: Vec<Scope>,
 }
 
 fn lex(source: &str) -> Result<Vec<(Token, Position)>, String> {
@@ -733,6 +745,85 @@ impl Parser {
             _ => Err(position.error("expected a name (reserved words cannot be used as names)")),
         }
     }
+    fn enter_scope(&mut self) {
+        self.scopes.push(Scope::default());
+    }
+    fn save_name_for_scope(&mut self, name: &str, position: Position) -> Result<(), String> {
+        let scope = self
+            .scopes
+            .last_mut()
+            .expect("variable declarations require an active lexical scope");
+        if scope.names.contains_key(name)
+            && !(self.removed_variables.contains(name)
+                && !self.bindings.contains_key(name)
+                && !self.symbol_aliases.contains_key(name))
+        {
+            return Err(position.error(format!(
+                "variable '{name}' is already declared in this scope"
+            )));
+        }
+        if scope.names.contains_key(name) {
+            return Ok(());
+        }
+        scope.names.insert(
+            name.to_owned(),
+            SavedName {
+                binding: self.bindings.get(name).cloned(),
+                alias: self.symbol_aliases.get(name).cloned(),
+                removed: self.removed_variables.contains(name),
+            },
+        );
+        Ok(())
+    }
+    fn leave_scope(&mut self) {
+        let scope = self
+            .scopes
+            .pop()
+            .expect("cannot leave a lexical scope that was not entered");
+        for (name, saved) in scope.names {
+            if saved.binding.is_none()
+                && (self.bindings.contains_key(&name) || self.removed_variables.contains(&name))
+            {
+                self.out_of_scope_variables.insert(name.clone());
+            }
+            match saved.binding {
+                Some(binding) => {
+                    self.bindings.insert(name.clone(), binding);
+                }
+                None => {
+                    self.bindings.remove(&name);
+                }
+            }
+            match saved.alias {
+                Some(alias) => {
+                    self.symbol_aliases.insert(name.clone(), alias);
+                }
+                None => {
+                    self.symbol_aliases.remove(&name);
+                }
+            }
+            if saved.removed {
+                self.removed_variables.insert(name);
+            } else {
+                self.removed_variables.remove(&name);
+            }
+        }
+    }
+    fn bind_symbol_alias(
+        &mut self,
+        name: String,
+        target: SymbolAlias,
+        position: Position,
+    ) -> Result<(), String> {
+        if self.bindings.contains_key(&name) {
+            return Err(position.error(format!("symbol alias '{name}' conflicts with a variable")));
+        }
+        self.save_name_for_scope(&name, position)?;
+        self.removed_variables.remove(&name);
+        self.out_of_scope_variables.remove(&name);
+        self.symbol_aliases.insert(name, target);
+        Ok(())
+    }
     fn bind(
         &mut self,
         name: String,
@@ -741,20 +832,24 @@ impl Parser {
         ty: Option<Type>,
         position: Position,
     ) -> Result<usize, String> {
-        if self.enums.contains_key(&name) {
+        if self.enums.contains_key(&name) || self.classes.contains_key(&name) {
             return Err(position.error(format!(
-                "variable '{name}' conflicts with an enum of the same name"
+                "variable '{name}' conflicts with an enum or class of the same name"
             )));
         }
-        if self.type_aliases.contains_key(&name) {
+        if self.type_aliases.contains_key(&name) || self.traits.contains_key(&name) {
             return Err(position.error(format!(
-                "variable '{name}' conflicts with a type alias of the same name"
+                "variable '{name}' conflicts with a type alias or trait of the same name"
             )));
         }
-        if self.bindings.contains_key(&name) || self.symbol_aliases.contains_key(&name) {
-            return Err(position.error(format!("variable '{name}' is already declared")));
+        if self.symbol_aliases.contains_key(&name) {
+            return Err(position.error(format!(
+                "variable '{name}' conflicts with a function, enum, class, or imported symbol alias"
+            )));
         }
+        self.save_name_for_scope(&name, position)?;
         self.removed_variables.remove(&name);
+        self.out_of_scope_variables.remove(&name);
         let slot = self.types.len();
         self.declarations.push((name.clone(), position));
         self.types.push(ty);
@@ -844,6 +939,8 @@ impl Parser {
         let binding = self.bindings.get(name).ok_or_else(|| {
             if self.removed_variables.contains(name) {
                 position.error(format!("variable '{name}' was removed"))
+            } else if self.out_of_scope_variables.contains(name) {
+                position.error(format!("variable '{name}' is out of scope"))
             } else {
                 position.error(format!("variable '{name}' is not declared"))
             }
@@ -1227,15 +1324,7 @@ impl Parser {
                     self.next();
                     self.next();
                     self.next();
-                    if self.bindings.contains_key(&name) || self.symbol_aliases.contains_key(&name)
-                    {
-                        return Err(
-                            position.error(format!("variable '{name}' is already declared"))
-                        );
-                    }
-                    self.removed_variables.remove(&name);
-                    self.symbol_aliases
-                        .insert(name, SymbolAlias::Function(target.clone()));
+                    self.bind_symbol_alias(name, SymbolAlias::Function(target.clone()), position)?;
                     self.symbol(';')?;
                     return Ok(Statement::Noop(Some(target)));
                 }
@@ -1244,19 +1333,12 @@ impl Parser {
                         return Err(position.error("symbol aliases cannot be static"));
                     }
                     let target = self.alias_target()?;
-                    if self.bindings.contains_key(&name) || self.symbol_aliases.contains_key(&name)
-                    {
-                        return Err(
-                            position.error(format!("variable '{name}' is already declared"))
-                        );
-                    }
                     let function = if let SymbolAlias::Function(target) = &target {
                         Some(target.clone())
                     } else {
                         None
                     };
-                    self.removed_variables.remove(&name);
-                    self.symbol_aliases.insert(name, target);
+                    self.bind_symbol_alias(name, target, position)?;
                     self.symbol(';')?;
                     return Ok(Statement::Noop(function));
                 }
@@ -1275,14 +1357,14 @@ impl Parser {
                     self.next();
                     self.next();
                     self.next();
-                    if self.bindings.contains_key(&name) || self.symbol_aliases.contains_key(&name)
-                    {
-                        return Err(
-                            position.error(format!("variable '{name}' is already declared"))
-                        );
+                    if self.symbol_aliases.contains_key(&name) {
+                        return Err(position
+                            .error(format!("variable '{name}' conflicts with a symbol alias")));
                     }
                     let source_changeable = self.bindings[&source].changeable;
+                    self.save_name_for_scope(&name, position)?;
                     self.removed_variables.remove(&name);
+                    self.out_of_scope_variables.remove(&name);
                     self.bindings.insert(
                         name,
                         Binding {
@@ -1500,6 +1582,12 @@ impl Parser {
         Ok(statement)
     }
     fn block(&mut self) -> Result<Vec<Statement>, String> {
+        self.enter_scope();
+        let result = self.block_contents();
+        self.leave_scope();
+        result
+    }
+    fn block_contents(&mut self) -> Result<Vec<Statement>, String> {
         self.symbol('{')?;
         let mut statements = Vec::new();
         while !self.take(Token::Symbol('}')) {
@@ -1514,6 +1602,22 @@ impl Parser {
         self.loop_depth += 1;
         let result = self.block();
         self.loop_depth -= 1;
+        result
+    }
+    fn iterator_block(
+        &mut self,
+        name: String,
+        position: Position,
+    ) -> Result<(usize, Vec<Statement>), String> {
+        self.enter_scope();
+        let result = (|| {
+            let slot = self.bind(name, true, false, None, position)?;
+            self.loop_depth += 1;
+            let body = self.block_contents();
+            self.loop_depth -= 1;
+            Ok((slot, body?))
+        })();
+        self.leave_scope();
         result
     }
     fn control_statement(&mut self) -> Result<Statement, String> {
@@ -1544,11 +1648,11 @@ impl Parser {
                 if self.take(Token::Symbol('.')) {
                     self.symbol('.')?;
                     let end = self.expression(0)?;
-                    let slot = self.bind(name, true, false, None, name_position)?;
-                    Statement::For(slot, start, end, self.loop_block()?)
+                    let (slot, body) = self.iterator_block(name, name_position)?;
+                    Statement::For(slot, start, end, body)
                 } else {
-                    let slot = self.bind(name, true, false, None, name_position)?;
-                    Statement::ForEach(slot, start, self.loop_block()?)
+                    let (slot, body) = self.iterator_block(name, name_position)?;
+                    Statement::ForEach(slot, start, body)
                 }
             }
             "match" => {
@@ -1593,12 +1697,15 @@ impl Parser {
     fn function_owned(&mut self, owner: Option<(String, u32)>) -> Result<Function, String> {
         self.bindings.clear();
         self.removed_variables.clear();
+        self.out_of_scope_variables.clear();
         self.types.clear();
         self.declarations.clear();
         self.result_name = None;
         self.loop_depth = 0;
         self.lifecycle_hook = None;
         self.symbol_aliases.clear();
+        self.scopes.clear();
+        self.enter_scope();
         let mut optional_parameters = Vec::new();
         let function_position = self.position();
         if let Some((_, id)) = &owner {
@@ -2321,6 +2428,24 @@ pub fn parse_modules(files: &[(String, String)]) -> Result<Program, String> {
             }
             let mut token = tokens[index].0.clone();
             if let Token::Word(name) = &token
+                && imports.contains_key(name)
+            {
+                let previous = index.checked_sub(1).and_then(|i| tokens.get(i));
+                let before_previous = index.checked_sub(2).and_then(|i| tokens.get(i));
+                let variable_declaration = previous.is_some_and(|(token, _)| {
+                    matches!(token, Token::Word(word) if word == "var" || word == "variable")
+                }) || (previous.is_some_and(|(token, _)| {
+                    matches!(token, Token::Word(word) if matches!(word.as_str(), "ch" | "changeable" | "static" | "stc"))
+                }) && before_previous.is_some_and(|(token, _)| {
+                    matches!(token, Token::Word(word) if word == "var" || word == "variable")
+                }));
+                if variable_declaration {
+                    return Err(position.error(format!(
+                        "variable '{name}' conflicts with an imported symbol"
+                    )));
+                }
+            }
+            if let Token::Word(name) = &token
                 && let Some((canonical, kind, _)) = local.get(name).or_else(|| imports.get(name))
             {
                 let declaration = depth == 0
@@ -2393,6 +2518,7 @@ fn parse_tokens(tokens: Vec<(Token, Position)>) -> Result<Program, String> {
         cursor: 0,
         bindings: HashMap::new(),
         removed_variables: HashSet::new(),
+        out_of_scope_variables: HashSet::new(),
         result_name: None,
         types: Vec::new(),
         declarations: Vec::new(),
@@ -2404,6 +2530,7 @@ fn parse_tokens(tokens: Vec<(Token, Position)>) -> Result<Program, String> {
         try_depth: 0,
         lifecycle_hook: None,
         symbol_aliases: HashMap::new(),
+        scopes: Vec::new(),
     };
     let mut functions = Vec::new();
     let mut signatures = HashMap::new();

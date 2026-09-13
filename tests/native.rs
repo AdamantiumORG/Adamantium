@@ -884,6 +884,33 @@ fn native_static_and_changeable_variables() {
     assert_eq!(output.stdout, b"10\r\n15\r\n18\r\n11\r\n10\r\n7\r\n7\r\n");
 }
 
+#[test]
+#[ignore = "requires NASM and Visual Studio C++ build tools"]
+fn native_nested_scopes_use_distinct_storage_and_restore_parent_values() {
+    let project = Project::new(
+        r#"fun main() {
+            var value=1;
+            if true then {
+                var value=2;
+                print.newline(value);
+            }
+            print.newline(value);
+            for value in 3..4 {
+                print.newline(value);
+            }
+            print.newline(value);
+        }"#,
+    );
+    let output = project.run();
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(output.stdout, b"2\r\n1\r\n3\r\n1\r\n");
+}
+
 struct Project(PathBuf);
 impl Project {
     fn new(source: &str) -> Self {

@@ -1445,15 +1445,15 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 1. Complete nested lexical scopes
 
-* [ ] Replace function-only variable scope with nested lexical block scopes
-* [ ] Create a scope for every `{ ... }` block where required
-* [ ] Allow variables to exist only inside their defining scope
-* [ ] Allow child scopes to access variables from parent scopes
-* [ ] Prevent parent scopes from accessing variables declared in child scopes
-* [ ] Define shadowing rules for nested scopes
-* [ ] Validate shadowing behavior for variables, functions, classes, enums and imports
-* [ ] Add compiler diagnostics for invalid scope access
-* [ ] Add parser/type-checker/code-generation tests for nested scopes
+* [x] Replace function-only variable scope with nested lexical block scopes
+* [x] Create a scope for every `{ ... }` block where required
+* [x] Allow variables to exist only inside their defining scope
+* [x] Allow child scopes to access variables from parent scopes
+* [x] Prevent parent scopes from accessing variables declared in child scopes
+* [x] Define shadowing rules for nested scopes
+* [x] Validate shadowing behavior for variables, functions, classes, enums and imports
+* [x] Add compiler diagnostics for invalid scope access
+* [x] Add parser/type-checker/code-generation tests for nested scopes
 
 ### 2. Complete visibility rules
 

@@ -860,3 +860,97 @@ fn parses_offset_creation_and_reads() {
         Statement::Assign(_, Expr::Dereference(_, _))
     ));
 }
+
+#[test]
+fn nested_blocks_shadow_variables_and_restore_parent_bindings() {
+    let program = parse(
+        "fun main() { var value=1; if true then { var value=2; print.newline(value); } print.newline(value); }",
+    )
+    .unwrap();
+    let statements = &program.functions[0].statements;
+    let Statement::If(_, yes, _) = &statements[1] else {
+        panic!("if statement expected");
+    };
+    assert!(matches!(yes[0], Statement::Assign(1, _)));
+    assert!(matches!(yes[1], Statement::Print(Expr::Variable(1), true)));
+    assert!(matches!(
+        statements[2],
+        Statement::Print(Expr::Variable(0), true)
+    ));
+
+    assert!(
+        parse("fun main() { var parent=1; if true then { parent=2; print.newline(parent); } }")
+            .is_ok()
+    );
+    assert!(
+        parse("fun main() { var value=1; var value=2; }")
+            .unwrap_err()
+            .contains("already declared in this scope")
+    );
+}
+
+#[test]
+fn block_variables_and_iterators_expire_at_the_closing_brace() {
+    for source in [
+        "fun main() { if true then { var local=1; } print.newline(local); }",
+        "fun main() { while false { var local=1; } print.newline(local); }",
+        "fun main() { until true { var local=1; } print.newline(local); }",
+        "fun main() { loop { var local=1; break; } print.newline(local); }",
+        "fun main() { match 1 { 1 => { var local=1; } } print.newline(local); }",
+        "fun main() { var error=try { var local=1; }; print.newline(local); }",
+        "fun main() { if true then { var local=1; local.remove; } print.newline(local); }",
+        "fun main() { for item in 0..1 { print.newline(item); } print.newline(item); }",
+        "fun main() { var values=List[1]; for item in values { print.newline(item); } print.newline(item); }",
+    ] {
+        let error = parse(source).unwrap_err();
+        assert!(error.contains("is out of scope"), "{error}");
+    }
+}
+
+#[test]
+fn loop_iterators_may_shadow_parent_variables() {
+    let program = parse(
+        "fun main() { var item=9; for item in 0..1 { print.newline(item); } print.newline(item); }",
+    )
+    .unwrap();
+    let statements = &program.functions[0].statements;
+    let Statement::For(slot, _, _, body) = &statements[1] else {
+        panic!("for statement expected");
+    };
+    assert_eq!(*slot, 1);
+    assert!(matches!(body[0], Statement::Print(Expr::Variable(1), true)));
+    assert!(matches!(
+        statements[2],
+        Statement::Print(Expr::Variable(0), true)
+    ));
+}
+
+#[test]
+fn lexical_shadowing_respects_other_symbol_namespaces() {
+    for source in [
+        "enum State { ready } fun main() { if true then { var State=1; } }",
+        "class Item() { fun __new__() {} } fun main() { if true then { var Item=1; } }",
+        "define Count=int; fun main() { if true then { var Count=1; } }",
+        "trait Named { fun name() result:string; } fun main() { if true then { var Named=1; } }",
+    ] {
+        assert!(parse(source).is_err(), "{source}");
+    }
+
+    let imported = parse_modules(&[
+        ("tools".into(), "pub fun work() result:None {}".into()),
+        (
+            "".into(),
+            "pack tools; use tools:work; fun main() { if true then { var work=1; work(); } }"
+                .into(),
+        ),
+    ])
+    .unwrap_err();
+    assert!(
+        imported.contains("conflicts with an imported symbol"),
+        "{imported}"
+    );
+
+    let function_shadow =
+        parse("fun work() result:None {} fun main() { var work=1; work(); }").unwrap_err();
+    assert!(function_shadow.contains("variable 'work' is not callable"));
+}
