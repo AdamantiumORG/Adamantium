@@ -1,5 +1,6 @@
 mod codegen;
 mod diagnostics;
+mod language_tests;
 mod packages;
 mod syntax;
 mod typed;
@@ -36,6 +37,7 @@ Usage:\n\
   adamantium run [PROJECT_DIRECTORY] [--name value ...]\n\
   adamantium test list [PROJECT_DIRECTORY]\n\
   adamantium test run [PROJECT_DIRECTORY] [TEST_NAME] [--verbose]\n\
+  adamantium test language [SUITE_DIRECTORY] [--verbose]\n\
   adamantium new <PROJECT_NAME_OR_PATH>\n\
   adamantium --help\n\
   adamantium --version\n\n\
@@ -52,6 +54,7 @@ enum Action {
     Clean(PathBuf),
     TestList(PathBuf),
     TestRun(PathBuf, Option<String>, bool),
+    LanguageTests(PathBuf, bool),
     Build(PathBuf),
     Run(PathBuf, Vec<OsString>),
     New(PathBuf),
@@ -80,6 +83,9 @@ fn cli(args: Vec<OsString>) -> Result<ExitCode, String> {
         Action::TestList(root) => list_tests(&root)?,
         Action::TestRun(root, filter, verbose) => {
             return run_tests(&root, filter.as_deref(), verbose);
+        }
+        Action::LanguageTests(root, verbose) => {
+            return language_tests::run(&root, verbose);
         }
         Action::Build(root) => {
             let executable = build(&root)?;
@@ -161,8 +167,25 @@ fn action(args: Vec<OsString>) -> Result<Action, String> {
     if first == "test" {
         let command = args
             .next()
-            .ok_or("adamantium test requires 'list' or 'run'; use --help")?;
+            .ok_or("adamantium test requires 'list', 'run', or 'language'; use --help")?;
         let remaining = args.collect::<Vec<_>>();
+        if command == "language" {
+            let verbose = args_contains_verbose(&remaining);
+            let paths = remaining
+                .into_iter()
+                .filter(|value| value != "--verbose")
+                .collect::<Vec<_>>();
+            let root = match paths.as_slice() {
+                [] => PathBuf::from(current_directory()?).join("tests"),
+                [root] => root.into(),
+                _ => {
+                    return Err(
+                        "too many arguments for 'adamantium test language'; use --help".into(),
+                    );
+                }
+            };
+            return Ok(Action::LanguageTests(root, verbose));
+        }
         if command == "list" {
             let root = remaining
                 .first()
@@ -189,7 +212,7 @@ fn action(args: Vec<OsString>) -> Result<Action, String> {
             return Ok(Action::TestRun(root, filter, verbose));
         }
         let command = command.to_string_lossy();
-        let help = closest_name(&command, &["list", "run"])
+        let help = closest_name(&command, &["language", "list", "run"])
             .map(|name| format!(" Did you mean '{name}'?"))
             .unwrap_or_default();
         return Err(format!(

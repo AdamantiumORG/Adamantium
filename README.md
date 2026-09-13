@@ -92,6 +92,14 @@ exactly named test. Add `--verbose` to show output from passing tests. Every tes
 runs in its own executable process. The summary reports passed and failed tests,
 and the command exits with code `1` when any test fails, which is suitable for CI.
 
+The compiler also has a file-based language conformance suite under
+`tests/valid` and `tests/invalid`. Each case contains `program.ad`,
+`expected.txt`, and `expected_exit_code`; module cases may add supporting `.ad`
+files. Run it with `adamantium test language [SUITE_DIRECTORY]` or as part of
+`cargo test`. Valid cases are compiled and executed. Invalid cases verify their
+error code, source location, and required diagnostic fragments. Add `--verbose`
+to display failure details.
+
 ### Program arguments
 
 Parameters declared by `main` are populated from named command-line arguments. Missing required

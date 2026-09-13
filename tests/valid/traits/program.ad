@@ -1,0 +1,7 @@
+trait Named { fun name() result:string; }
+class Item(pub text:string) implements Named {
+    fun __new__() {}
+    pub fun name() result:string { result=self.text; }
+}
+fun show<T:Named>(value:T) result:string { result=value.name(); }
+fun main() { var item=Item(text="Adamantium"); print.newline(show<Item>(item)); }

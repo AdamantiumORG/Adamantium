@@ -1,0 +1,1 @@
+fun main() { var source=21; var address=source.offset; var value=address.by_offset; print.newline(value); }

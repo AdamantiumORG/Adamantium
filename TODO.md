@@ -1611,31 +1611,31 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 14. Create a complete language regression suite
 
-* [ ] Create `tests/valid/`
-* [ ] Create `tests/invalid/`
-* [ ] Add variable tests
-* [ ] Add type-system tests
-* [ ] Add function tests
-* [ ] Add class tests
-* [ ] Add enum tests
-* [ ] Add list tests
-* [ ] Add generic tests
-* [ ] Add trait tests
-* [ ] Add module tests
-* [ ] Add import tests
+* [x] Create `tests/valid/`
+* [x] Create `tests/invalid/`
+* [x] Add variable tests
+* [x] Add type-system tests
+* [x] Add function tests
+* [x] Add class tests
+* [x] Add enum tests
+* [x] Add list tests
+* [x] Add generic tests
+* [x] Add trait tests
+* [x] Add module tests
+* [x] Add import tests
 * [ ] Add alias tests
-* [ ] Add memory-safety tests
+* [x] Add memory-safety tests
 * [ ] Add control-flow tests
 * [ ] Add error-handling tests
 
 ### 15. Add compile-fail tests
 
-* [ ] Store expected compiler errors for invalid programs
-* [ ] Verify error codes
-* [ ] Verify source locations
-* [ ] Verify important diagnostic text
-* [ ] Verify suggestions where applicable
-* [ ] Ensure diagnostics do not regress silently
+* [x] Store expected compiler errors for invalid programs
+* [x] Verify error codes
+* [x] Verify source locations
+* [x] Verify important diagnostic text
+* [x] Verify suggestions where applicable
+* [x] Ensure diagnostics do not regress silently
 
 ### 16. Complete parallel test execution
 

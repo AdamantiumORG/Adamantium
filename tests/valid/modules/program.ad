@@ -1,0 +1,3 @@
+pack utils;
+use utils:double;
+fun main() { print.newline(double(6)); }

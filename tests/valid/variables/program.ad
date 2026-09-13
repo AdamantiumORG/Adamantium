@@ -1,0 +1,1 @@
+fun main() { var value=10; value=12; print.newline(value); }

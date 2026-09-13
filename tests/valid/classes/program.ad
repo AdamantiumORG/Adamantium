@@ -1,0 +1,2 @@
+class Box(pub value:int) { fun __new__() {} }
+fun main() { var box=Box(value=7); print.newline(box.value); }

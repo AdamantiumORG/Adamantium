@@ -1,0 +1,2 @@
+enum State { ready, stopped }
+fun main() { var state=State.ready; print.newline(state); }

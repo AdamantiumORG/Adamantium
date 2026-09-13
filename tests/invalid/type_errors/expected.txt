@@ -1,0 +1,4 @@
+error[E300]
+program.ad:1
+cannot assign or convert string to i32
+help:

@@ -1,0 +1,2 @@
+fun identity<T>(value:T) result:T { result=value; }
+fun main() { print.newline(identity<int>(8)); }

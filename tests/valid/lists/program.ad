@@ -1,0 +1,1 @@
+fun main() { var values=List[2,4,6]; print.newline(values[1]); }

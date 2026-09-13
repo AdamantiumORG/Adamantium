@@ -1,0 +1,1 @@
+pub fun double(value:int) result:int { result=value*2; }

@@ -1,0 +1,1 @@
+fun main() { if true then { var local=1; } print.newline(local); }
