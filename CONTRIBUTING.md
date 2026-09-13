@@ -14,9 +14,9 @@ Fork and clone the repository, create a branch for your change, and open an
 from the `compiler` directory:
 
 ```bat
-cargo build
-cargo test
-cargo run -- ../adamantium-project
+cargo build --workspace
+cargo test --workspace
+cargo run -p adamantium-cli -- ../adamantium-project
 ..\adamantium-project\target\FirstProject.exe
 ```
 
@@ -51,11 +51,12 @@ error messages.
 - Keep generated build artifacts out of commits. Keep `Cargo.lock` tracked and
   update it when dependency changes require it.
 
-`src/main.rs` handles project configuration and invokes NASM and the linker.
-`src/syntax.rs` parses and validates source code; `src/syntax_tests.rs` tests it.
-`src/typed.rs` checks types. `src/codegen.rs` generates assembly, and
-`src/runtime.asm` provides the entry point. `runtime/` implements typed operations
-and output, including software `f128` arithmetic.
+The repository is a Cargo workspace. `crates/adamantium-cli/src/main.rs` handles
+project configuration and invokes NASM and the linker. Its syntax, typed, codegen,
+and assembly modules contain the current production pipeline while those parts are
+moved incrementally behind the dedicated crate APIs. `crates/adamantium-runtime/`
+implements typed operations and output, including software `f128` arithmetic.
+See `docs/compiler/workspace.md` for crate responsibilities and selective CI.
 The example project lives in `../adamantium-project`.
 
 ## Verify your work
@@ -63,13 +64,11 @@ The example project lives in `../adamantium-project`.
 For compiler changes, run:
 
 ```bat
-cargo fmt --check
-cargo fmt --manifest-path runtime/Cargo.toml --check
-cargo test
-cargo test --locked --test native -- --ignored
-cargo clippy --all-targets -- -D warnings
-cargo clippy --manifest-path runtime/Cargo.toml --all-targets -- -D warnings
-cargo run -- ../adamantium-project
+cargo fmt --all --check
+cargo test --locked --workspace --all-targets
+cargo test --locked -p adamantium-cli --test native -- --ignored
+cargo clippy --workspace --all-targets -- -D warnings
+cargo run -p adamantium-cli -- ../adamantium-project
 ..\adamantium-project\target\FirstProject.exe
 ```
 

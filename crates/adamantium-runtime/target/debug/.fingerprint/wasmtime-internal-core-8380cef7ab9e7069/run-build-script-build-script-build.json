@@ -1,0 +1,1 @@
+{"rustc":6728126329342245928,"features":"","declared_features":"","target":0,"profile":0,"path":0,"deps":[[6954871672843986318,"build_script_build",false,4829524496605535127]],"local":[{"RerunIfChanged":{"output":"debug\\build\\wasmtime-internal-core-8380cef7ab9e7069\\output","paths":["build.rs"]}}],"rustflags":[],"config":0,"compile_kind":0}

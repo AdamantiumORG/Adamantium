@@ -1,0 +1,18 @@
+[package]
+name = "adamantium-cli"
+version.workspace = true
+edition.workspace = true
+license-file = "../../LICENCE.md"
+build = "build.rs"
+
+[[bin]]
+name = "adamantium"
+path = "src/main.rs"
+
+[dependencies]
+adamantium-compiler = { path = "../adamantium-compiler" }
+toml.workspace = true
+rustc_apfloat.workspace = true
+
+[dev-dependencies]
+wat.workspace = true

@@ -50,7 +50,7 @@ adamantium run
 Build and install the CLI from source:
 
 ```text
-cargo install --path .
+cargo install --path crates/adamantium-cli
 ```
 
 Building Adamantium programs requires NASM and a platform linker:

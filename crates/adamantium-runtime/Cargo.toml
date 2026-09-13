@@ -1,0 +1,13 @@
+[package]
+name = "adamantium-runtime"
+version.workspace = true
+edition.workspace = true
+license-file = "../../LICENCE.md"
+
+[lib]
+crate-type = ["staticlib", "rlib"]
+
+[dependencies]
+rustc_apfloat = "=0.2.3"
+wasmi = "2.0.0"
+wasmi_wasi = "2.0.0"

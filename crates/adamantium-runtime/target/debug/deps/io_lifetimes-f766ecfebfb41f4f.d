@@ -1,0 +1,11 @@
+F:\NIEUSUWAC\code\adamantium\compiler\runtime\target\debug\deps\io_lifetimes-f766ecfebfb41f4f.d: C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\io-lifetimes-2.0.4\src\lib.rs C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\io-lifetimes-2.0.4\src\portability.rs C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\io-lifetimes-2.0.4\src\traits.rs C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\io-lifetimes-2.0.4\src\raw.rs C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\io-lifetimes-2.0.4\src\views.rs
+
+F:\NIEUSUWAC\code\adamantium\compiler\runtime\target\debug\deps\libio_lifetimes-f766ecfebfb41f4f.rlib: C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\io-lifetimes-2.0.4\src\lib.rs C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\io-lifetimes-2.0.4\src\portability.rs C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\io-lifetimes-2.0.4\src\traits.rs C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\io-lifetimes-2.0.4\src\raw.rs C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\io-lifetimes-2.0.4\src\views.rs
+
+F:\NIEUSUWAC\code\adamantium\compiler\runtime\target\debug\deps\libio_lifetimes-f766ecfebfb41f4f.rmeta: C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\io-lifetimes-2.0.4\src\lib.rs C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\io-lifetimes-2.0.4\src\portability.rs C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\io-lifetimes-2.0.4\src\traits.rs C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\io-lifetimes-2.0.4\src\raw.rs C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\io-lifetimes-2.0.4\src\views.rs
+
+C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\io-lifetimes-2.0.4\src\lib.rs:
+C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\io-lifetimes-2.0.4\src\portability.rs:
+C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\io-lifetimes-2.0.4\src\traits.rs:
+C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\io-lifetimes-2.0.4\src\raw.rs:
+C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\io-lifetimes-2.0.4\src\views.rs:

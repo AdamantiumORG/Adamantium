@@ -1,0 +1,2 @@
+cargo:rerun-if-changed=build.rs
+cargo:rustc-env=DEBUG_OUTPUT_DIR=F:\NIEUSUWAC\code\adamantium\compiler\runtime\target\debug\build\wiggle-macro-79cffcc3f8811454\out

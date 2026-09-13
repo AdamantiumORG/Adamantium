@@ -13,7 +13,7 @@ $extractedPath = Join-Path $distributionRoot "nasm-$NasmVersion"
 
 if (-not $SkipBuild) {
     $env:RUSTFLAGS = "-C target-feature=+crt-static"
-    cargo build --manifest-path (Join-Path $compilerRoot "Cargo.toml") --locked --release
+    cargo build --manifest-path (Join-Path $compilerRoot "Cargo.toml") --locked --release -p adamantium-cli
     if ($LASTEXITCODE -ne 0) { throw "Cargo release build failed." }
 }
 

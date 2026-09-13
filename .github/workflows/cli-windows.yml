@@ -2,7 +2,19 @@ name: Windows CLI
 
 on:
   push:
+    paths:
+      - "crates/**"
+      - "!crates/adamantium-testing/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "scripts/test-cli-windows.ps1"
   pull_request:
+    paths:
+      - "crates/**"
+      - "!crates/adamantium-testing/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "scripts/test-cli-windows.ps1"
 
 permissions:
   contents: read
@@ -50,7 +62,7 @@ jobs:
         shell: pwsh
         run: |
           $installRoot = Join-Path $env:RUNNER_TEMP 'adamantium-cli'
-          cargo install --path . --locked --force --root $installRoot
+          cargo install --path crates/adamantium-cli --locked --force --root $installRoot
           Add-Content -Path $env:GITHUB_PATH -Value (Join-Path $installRoot 'bin')
 
       - name: Test installed CLI

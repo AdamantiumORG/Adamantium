@@ -1,0 +1,9 @@
+[package]
+name = "adamantium-codegen"
+version.workspace = true
+edition.workspace = true
+license-file = "../../LICENCE.md"
+
+[dependencies]
+adamantium-ir = { path = "../adamantium-ir" }
+adamantium-types = { path = "../adamantium-types" }

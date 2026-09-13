@@ -1,0 +1,10 @@
+[package]
+name = "adamantium-packages"
+version.workspace = true
+edition.workspace = true
+license-file = "../../LICENCE.md"
+
+[dependencies]
+adamantium-project = { path = "../adamantium-project" }
+adamantium-wasm = { path = "../adamantium-wasm" }
+adamantium-diagnostics = { path = "../adamantium-diagnostics" }

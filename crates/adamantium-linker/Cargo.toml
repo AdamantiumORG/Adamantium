@@ -1,0 +1,5 @@
+[package]
+name = "adamantium-linker"
+version.workspace = true
+edition.workspace = true
+license-file = "../../LICENCE.md"

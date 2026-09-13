@@ -1,0 +1,8 @@
+[package]
+name = "adamantium-lexer"
+version.workspace = true
+edition.workspace = true
+license-file = "../../LICENCE.md"
+
+[dependencies]
+adamantium-ast = { path = "../adamantium-ast" }

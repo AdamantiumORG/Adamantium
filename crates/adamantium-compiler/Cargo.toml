@@ -1,0 +1,18 @@
+[package]
+name = "adamantium-compiler"
+version.workspace = true
+edition.workspace = true
+license-file = "../../LICENCE.md"
+
+[dependencies]
+adamantium-parser = { path = "../adamantium-parser" }
+adamantium-semantics = { path = "../adamantium-semantics" }
+adamantium-diagnostics = { path = "../adamantium-diagnostics" }
+adamantium-types = { path = "../adamantium-types" }
+adamantium-ir = { path = "../adamantium-ir" }
+adamantium-codegen = { path = "../adamantium-codegen" }
+adamantium-nasm = { path = "../adamantium-nasm" }
+adamantium-linker = { path = "../adamantium-linker" }
+adamantium-project = { path = "../adamantium-project" }
+adamantium-packages = { path = "../adamantium-packages" }
+adamantium-wasm = { path = "../adamantium-wasm" }

@@ -2,7 +2,19 @@ name: Linux CLI
 
 on:
   push:
+    paths:
+      - "crates/**"
+      - "!crates/adamantium-testing/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "scripts/test-cli-linux.sh"
   pull_request:
+    paths:
+      - "crates/**"
+      - "!crates/adamantium-testing/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "scripts/test-cli-linux.sh"
 
 permissions:
   contents: read
@@ -47,7 +59,7 @@ jobs:
         run: |
           set -euo pipefail
           install_root="$RUNNER_TEMP/adamantium-cli"
-          cargo install --path . --locked --force --root "$install_root"
+          cargo install --path crates/adamantium-cli --locked --force --root "$install_root"
           echo "$install_root/bin" >> "$GITHUB_PATH"
 
       - name: Test installed CLI

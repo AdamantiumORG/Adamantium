@@ -1,0 +1,9 @@
+[package]
+name = "adamantium-parser"
+version.workspace = true
+edition.workspace = true
+license-file = "../../LICENCE.md"
+
+[dependencies]
+adamantium-ast = { path = "../adamantium-ast" }
+adamantium-lexer = { path = "../adamantium-lexer" }

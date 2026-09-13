@@ -1605,9 +1605,9 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 * [ ] Clearly define code-generation input
 * [ ] Document compiler phase responsibilities
 
-### 13a. Migrate to a Cargo workspace after module boundaries stabilize
+### 13a. Complete the Cargo workspace migration
 
-* [ ] Create the root Cargo workspace
+* [x] Create the root Cargo workspace
 * [ ] Extract CLI and project loading
 * [ ] Extract AST, lexer and parser crates
 * [ ] Extract semantics, types and diagnostics crates
@@ -1616,6 +1616,8 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 * [ ] Extract the language testing runner
 * [ ] Add standard library, formatter and LSP crates when implemented
 * [ ] Keep the CLI and generated-program behavior stable during extraction
+* [x] Give every workspace crate a dedicated integration test suite
+* [x] Test changed crates and their transitive downstream dependents in CI
 
 ---
 

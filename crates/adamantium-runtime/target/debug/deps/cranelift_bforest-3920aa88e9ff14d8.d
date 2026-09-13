@@ -1,0 +1,10 @@
+F:\NIEUSUWAC\code\adamantium\compiler\runtime\target\debug\deps\cranelift_bforest-3920aa88e9ff14d8.d: C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\cranelift-bforest-0.133.3\src\lib.rs C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\cranelift-bforest-0.133.3\src\map.rs C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\cranelift-bforest-0.133.3\src\node.rs C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\cranelift-bforest-0.133.3\src\path.rs C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\cranelift-bforest-0.133.3\src\pool.rs C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\cranelift-bforest-0.133.3\src\set.rs
+
+F:\NIEUSUWAC\code\adamantium\compiler\runtime\target\debug\deps\libcranelift_bforest-3920aa88e9ff14d8.rmeta: C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\cranelift-bforest-0.133.3\src\lib.rs C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\cranelift-bforest-0.133.3\src\map.rs C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\cranelift-bforest-0.133.3\src\node.rs C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\cranelift-bforest-0.133.3\src\path.rs C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\cranelift-bforest-0.133.3\src\pool.rs C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\cranelift-bforest-0.133.3\src\set.rs
+
+C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\cranelift-bforest-0.133.3\src\lib.rs:
+C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\cranelift-bforest-0.133.3\src\map.rs:
+C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\cranelift-bforest-0.133.3\src\node.rs:
+C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\cranelift-bforest-0.133.3\src\path.rs:
+C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\cranelift-bforest-0.133.3\src\pool.rs:
+C:\Users\adamo\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\cranelift-bforest-0.133.3\src\set.rs:
