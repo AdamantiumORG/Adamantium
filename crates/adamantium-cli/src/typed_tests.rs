@@ -113,6 +113,53 @@ fn complete_example_project_stays_valid() {
 }
 
 #[test]
+fn class_members_enforce_visibility_across_modules() {
+    fn checked_modules(main: &str) -> Result<Program, String> {
+        let syntax = syntax::parse_modules(&[
+            (
+                "library".into(),
+                r#"
+                    pub class Vault(secret:int,pub visible:int) {
+                        fun __new__() {}
+                        fun hidden() result:int { result=self.secret; }
+                        pub fun expose() result:int { result=self.hidden(); }
+                    }
+                "#
+                .into(),
+            ),
+            ("".into(), format!("pack library; {main}")),
+        ])?;
+        check(&syntax)
+    }
+
+    checked_modules(
+        "fun main() { var vault=library:Vault(secret=1,visible=2); print.newline(vault.visible); print.newline(vault.expose()); }",
+    )
+    .unwrap();
+
+    for (main, expected) in [
+        (
+            "fun main() { var vault=library:Vault(secret=1,visible=2); print.newline(vault.secret); }",
+            "field 'secret' is private",
+        ),
+        (
+            "fun main() { var vault=library:Vault(secret=1,visible=2); vault.hidden(); }",
+            "method 'hidden' is private",
+        ),
+        (
+            "fun main() { var vault=library:Vault(secret=1,visible=2); vault.secret=3; }",
+            "field 'secret' is private",
+        ),
+    ] {
+        let error = match checked_modules(main) {
+            Ok(_) => panic!("accepted private class member access: {main}"),
+            Err(error) => error,
+        };
+        assert!(error.contains(expected), "{error}");
+    }
+}
+
+#[test]
 fn infers_default_types_and_accepts_aliases() {
     let program = checked(
         r#"fun main() {

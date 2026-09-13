@@ -762,6 +762,42 @@ fn enforces_enum_visibility_between_modules() {
 }
 
 #[test]
+fn use_imports_accept_only_public_functions_classes_and_enums() {
+    for (declaration, name, kind) in [
+        ("fun hidden() result:None {}", "hidden", "function"),
+        ("class Hidden() { fun __new__() {} }", "Hidden", "class"),
+        ("enum Hidden { value }", "Hidden", "enum"),
+    ] {
+        for declaration in [declaration.to_owned(), format!("priv {declaration}")] {
+            let error = parse_modules(&[
+                ("library".into(), declaration),
+                (
+                    "".into(),
+                    format!("pack library; use library:[{name}]; fun main() {{}}"),
+                ),
+            ])
+            .unwrap_err();
+            assert!(
+                error.contains(&format!("{kind} '{name}' is private in module 'library'")),
+                "{error}"
+            );
+        }
+    }
+
+    parse_modules(&[
+        (
+            "library".into(),
+            "pub fun visible() result:None {} pub class Visible() { fun __new__() {} } pub enum State { ready }".into(),
+        ),
+        (
+            "".into(),
+            "pack library; use library:[visible,Visible,State]; fun main() { visible(); var object=Visible(); var state=State.ready; }".into(),
+        ),
+    ])
+    .unwrap();
+}
+
+#[test]
 fn validates_traits_implementations_and_generic_constraints() {
     let source = r#"
         trait Printable { fun render(prefix:string) result:string; }

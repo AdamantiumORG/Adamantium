@@ -1457,13 +1457,13 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 2. Complete visibility rules
 
-* [ ] Restrict `use` imports to public symbols only
-* [ ] Validate public/private access consistently across all symbol types
-* [ ] Validate public/private access for functions
-* [ ] Validate public/private access for classes
-* [ ] Validate public/private access for enums
-* [ ] Validate public/private access for class members
-* [ ] Add regression tests for private symbol access
+* [x] Restrict `use` imports to public symbols only
+* [x] Validate public/private access consistently across all symbol types
+* [x] Validate public/private access for functions
+* [x] Validate public/private access for classes
+* [x] Validate public/private access for enums
+* [x] Validate public/private access for class members
+* [x] Add regression tests for private symbol access
 
 ### 3. Complete exhaustive `match`
 
