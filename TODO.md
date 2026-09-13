@@ -1467,13 +1467,13 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 3. Complete exhaustive `match`
 
-* [ ] Detect non-exhaustive enum matches
-* [ ] Detect missing enum variants
-* [ ] Treat `_` as an exhaustive wildcard
-* [ ] Detect unreachable branches after exhaustive patterns
-* [ ] Produce diagnostics listing missing patterns
-* [ ] Add exhaustive-match tests
-* [ ] Document `match` exhaustiveness rules
+* [x] Detect non-exhaustive enum matches
+* [x] Detect missing enum variants
+* [x] Treat `_` as an exhaustive wildcard
+* [x] Detect unreachable branches after exhaustive patterns
+* [x] Produce diagnostics listing missing patterns
+* [x] Add exhaustive-match tests
+* [x] Document `match` exhaustiveness rules
 
 ### 4. Complete explicit program exit
 

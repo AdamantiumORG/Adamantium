@@ -377,6 +377,40 @@ fn match_patterns_must_have_the_matched_type() {
 }
 
 #[test]
+fn enum_matches_must_be_exhaustive() {
+    assert!(
+        checked(
+            "enum Choice { first, second } fun main() { var choice=Choice.first; match choice { Choice.first => {} Choice.second => {} } }"
+        )
+        .is_ok()
+    );
+    assert!(
+        checked(
+            "enum Choice { first, second } fun main() { var choice=Choice.first; match choice { Choice.first => {} _ => {} } }"
+        )
+        .is_ok()
+    );
+
+    let missing = checked(
+        "enum Choice { first, second, third } fun main() { var choice=Choice.first; match choice { Choice.first => {} } }",
+    )
+    .err()
+    .unwrap();
+    assert!(missing.contains("non-exhaustive enum match"), "{missing}");
+    assert!(missing.contains("second, third"), "{missing}");
+
+    let unreachable = checked(
+        "enum Choice { first, second } fun main() { var choice=Choice.first; match choice { Choice.first => {} Choice.second => {} _ => {} } }",
+    )
+    .err()
+    .unwrap();
+    assert!(
+        unreachable.contains("unreachable '_' match branch"),
+        "{unreachable}"
+    );
+}
+
+#[test]
 fn aliases_share_types_and_disconnect_scalar_values() {
     let program = checked("fun main() { var a=10; var b=a.as_variable; a=20; b=15; b.disconect; a=25; print.newline(b); }").unwrap();
     assert_eq!(program.functions[0].types, [Type::I32, Type::I32]);

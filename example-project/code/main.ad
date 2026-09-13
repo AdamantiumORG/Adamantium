@@ -190,7 +190,6 @@ fun main() {
         Status.ready => { print.newline("Ready"); }
         Status.running => { print.newline("Running"); }
         Status.finished => { print.newline("Finished"); }
-        _ => { print.newline("Unknown status"); }
     }
 
     // Classes initialize named fields, call __new__, and copy by value.

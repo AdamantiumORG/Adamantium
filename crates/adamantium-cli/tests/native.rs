@@ -611,7 +611,6 @@ fn native_match_selects_the_first_matching_branch() {
             match choice {
                 Choice.first => { print.newline("first"); }
                 Choice.second => { print.newline("second"); }
-                _ => { print.newline("fallback"); }
             }
             match 9 { 1 => { print.newline("one"); } _ => { print.newline("other"); } }
         }

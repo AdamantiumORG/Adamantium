@@ -162,6 +162,7 @@ pub struct ClassDefinition {
 pub struct Program {
     pub functions: Vec<Function>,
     pub classes: Vec<ClassDefinition>,
+    pub enum_variants: Vec<Vec<String>>,
 }
 #[derive(Clone)]
 struct Binding {
@@ -1680,7 +1681,9 @@ impl Parser {
                     }
                     self.take(Token::Symbol(','));
                     if fallback.is_some() && self.peek() != &Token::Symbol('}') {
-                        return Err(self.position().error("the '_' match branch must be last"));
+                        return Err(self
+                            .position()
+                            .error("unreachable match branch after exhaustive '_' branch"));
                     }
                 }
                 if arms.is_empty() && fallback.is_none() {
@@ -2723,7 +2726,24 @@ fn parse_tokens(tokens: Vec<(Token, Position)>) -> Result<Program, String> {
     }
     let mut classes = parser.classes.into_values().collect::<Vec<_>>();
     classes.sort_by_key(|class| class.id);
-    Ok(Program { functions, classes })
+    let mut enums = parser.enums.into_values().collect::<Vec<_>>();
+    enums.sort_by_key(|definition| match definition.ty {
+        Type::Enum(id) => id,
+        _ => unreachable!(),
+    });
+    let enum_variants = enums
+        .into_iter()
+        .map(|definition| {
+            let mut variants = definition.variants.into_iter().collect::<Vec<_>>();
+            variants.sort_by_key(|(_, value)| *value);
+            variants.into_iter().map(|(name, _)| name).collect()
+        })
+        .collect();
+    Ok(Program {
+        functions,
+        classes,
+        enum_variants,
+    })
 }
 fn validate_expr(expr: &Expr, signatures: &HashMap<String, (usize, usize)>) -> Result<(), String> {
     match expr {

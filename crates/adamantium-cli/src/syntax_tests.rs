@@ -607,7 +607,7 @@ fn parses_match_branches_and_fallback() {
     assert!(
         parse("fun main() { match 1 { _ => {} 1 => {} } }")
             .unwrap_err()
-            .contains("must be last")
+            .contains("unreachable match branch")
     );
 }
 

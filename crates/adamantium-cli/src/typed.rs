@@ -99,6 +99,7 @@ struct Checker<'a> {
     types: Vec<Option<Type>>,
     signatures: &'a HashMap<String, Signature>,
     classes: &'a [ClassDefinition],
+    enum_variants: &'a [Vec<String>],
     owner: Option<u32>,
     offset_origins: HashMap<usize, usize>,
     removed: HashSet<usize>,
@@ -128,6 +129,7 @@ pub fn check(program: &syntax::Program) -> Result<Program, String> {
             types: function.types.clone(),
             signatures: &signatures,
             classes: &program.classes,
+            enum_variants: &program.enum_variants,
             owner: function.owner,
             offset_origins: HashMap::new(),
             removed: HashSet::new(),
@@ -981,6 +983,16 @@ impl Checker<'_> {
                 let mut typed_arms = Vec::new();
                 let mut patterns = Vec::new();
                 for (pattern, body) in arms {
+                    if let Type::Enum(id) = value.ty
+                        && self
+                            .enum_variants
+                            .get(id as usize)
+                            .is_some_and(|variants| patterns.len() == variants.len())
+                    {
+                        return Err(
+                            "unreachable match branch after all enum variants are covered".into(),
+                        );
+                    }
                     let pattern = self.expression(pattern, Some(value.ty))?;
                     let Kind::Constant(pattern_value) = pattern.kind else {
                         return Err("match patterns must be literals or enum variants".into());
@@ -998,6 +1010,39 @@ impl Checker<'_> {
                             .map(|s| self.statement(s))
                             .collect::<Result<_, String>>()?,
                     ));
+                }
+                if fallback.is_some()
+                    && let Type::Enum(id) = value.ty
+                    && self
+                        .enum_variants
+                        .get(id as usize)
+                        .is_some_and(|variants| patterns.len() == variants.len())
+                {
+                    return Err(
+                        "unreachable '_' match branch after all enum variants are covered".into(),
+                    );
+                }
+                if fallback.is_none()
+                    && let Type::Enum(id) = value.ty
+                {
+                    let variants = self
+                        .enum_variants
+                        .get(id as usize)
+                        .ok_or("invalid enum type in match")?;
+                    let missing = variants
+                        .iter()
+                        .enumerate()
+                        .filter(|(value, _)| {
+                            !patterns.iter().any(|pattern| pattern.lo == *value as u64)
+                        })
+                        .map(|(_, name)| name.as_str())
+                        .collect::<Vec<_>>();
+                    if !missing.is_empty() {
+                        return Err(format!(
+                            "non-exhaustive enum match; missing variants: {}",
+                            missing.join(", ")
+                        ));
+                    }
                 }
                 let fallback = fallback
                     .as_ref()
