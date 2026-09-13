@@ -5,12 +5,13 @@ on:
     workflows: ["CI", "CLI Linux", "CLI Windows", "Portable Windows"]
     types:
       - completed
+
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

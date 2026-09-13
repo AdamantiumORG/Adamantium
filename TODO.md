@@ -1572,17 +1572,17 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 11. Refactor the code generator
 
-* [ ] Split `codegen.rs` into focused modules
-* [ ] Separate expression generation
-* [ ] Separate statement generation
-* [ ] Separate function generation
+* [x] Split `codegen.rs` into focused modules
+* [x] Separate expression generation
+* [x] Separate statement generation
+* [x] Separate function generation
 * [ ] Separate class generation
-* [ ] Separate list generation
+* [x] Separate list generation
 * [ ] Separate control-flow generation
 * [ ] Separate operator generation
 * [ ] Separate runtime-call generation
-* [ ] Keep generated assembly behavior unchanged during the refactor
-* [ ] Run the complete test suite after every refactor stage
+* [x] Keep generated assembly behavior unchanged during the refactor
+* [x] Run the complete test suite after every refactor stage
 
 ### 12. Refactor the syntax/compiler frontend
 
@@ -1604,6 +1604,18 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 * [ ] Clearly define semantic-analysis output
 * [ ] Clearly define code-generation input
 * [ ] Document compiler phase responsibilities
+
+### 13a. Migrate to a Cargo workspace after module boundaries stabilize
+
+* [ ] Create the root Cargo workspace
+* [ ] Extract CLI and project loading
+* [ ] Extract AST, lexer and parser crates
+* [ ] Extract semantics, types and diagnostics crates
+* [ ] Extract codegen, NASM and linker crates
+* [ ] Extract runtime, package and WASM crates
+* [ ] Extract the language testing runner
+* [ ] Add standard library, formatter and LSP crates when implemented
+* [ ] Keep the CLI and generated-program behavior stable during extraction
 
 ---
 

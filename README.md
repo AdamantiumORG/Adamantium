@@ -9,6 +9,12 @@
 A Rust compiler that translates Adamantium source code into NASM assembly and
 builds native Windows or Linux x86-64 console executables.
 
+## Documentation
+
+The [documentation index](docs/README.md) links to the language reference,
+compiler architecture, code generation, testing, packages, memory safety, and
+supported targets.
+
 ## Requirements
 
 - Rust and Cargo with edition 2024 support
