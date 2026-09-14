@@ -1339,7 +1339,7 @@ Create clear compiler diagnostics.
 * [ ] Create release channels
 * [ ] Stable releases
 * [ ] Development releases
-* [ ] Nightly releases
+* [x] Nightly releases
 * [ ] Release notes
 * [ ] Changelog
 * [ ] Version compatibility rules

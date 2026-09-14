@@ -8,6 +8,8 @@ on:
       - "Cargo.toml"
       - "Cargo.lock"
       - "scripts/test-cli-windows.ps1"
+      - "scripts/package-windows.ps1"
+      - ".github/workflows/cli-windows.yml"
   pull_request:
     paths:
       - "crates/**"
@@ -58,6 +60,12 @@ jobs:
             throw 'The Windows CLI test must run on x86-64 MSVC.'
           }
 
+      - name: Run all Windows tests
+        run: cargo test --locked --workspace --all-targets
+
+      - name: Run native Windows language tests
+        run: cargo test --locked -p adamantium-cli --test native -- --ignored
+
       - name: Install Adamantium CLI
         shell: pwsh
         run: |
@@ -68,3 +76,84 @@ jobs:
       - name: Test installed CLI
         shell: pwsh
         run: ./scripts/test-cli-windows.ps1
+
+  nightly:
+    name: Publish Windows Nightly
+    needs: test-cli
+    if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
+    permissions:
+      contents: write
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out tested commit
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Configure Windows x64 linker
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Build and verify portable package
+        shell: pwsh
+        run: ./scripts/package-windows.ps1
+
+      - name: Prepare Nightly assets
+        shell: pwsh
+        run: |
+          $source = 'dist/adamantium-windows-x86_64.zip'
+          $asset = 'dist/windows_portable_x86_64.zip'
+          Copy-Item -LiteralPath $source -Destination $asset
+          $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $asset).Hash.ToLowerInvariant()
+          "$hash  windows_portable_x86_64.zip" |
+            Set-Content -LiteralPath "$asset.sha256" -Encoding ASCII
+
+      - name: Upload Nightly workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows_portable_x86_64
+          path: |
+            dist/windows_portable_x86_64.zip
+            dist/windows_portable_x86_64.zip.sha256
+          if-no-files-found: error
+
+      - name: Move Nightly tag to tested commit
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$env:GITHUB_REPOSITORY/git/ref/tags/nightly" *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh api --method PATCH "repos/$env:GITHUB_REPOSITORY/git/refs/tags/nightly" `
+              -f sha="$env:GITHUB_SHA" -F force=true *> $null
+          } else {
+            gh api --method POST "repos/$env:GITHUB_REPOSITORY/git/refs" `
+              -f ref='refs/tags/nightly' -f sha="$env:GITHUB_SHA" *> $null
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'Could not update the Nightly tag.' }
+
+      - name: Create or update Nightly release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view nightly *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release edit nightly --title 'Nightly' --prerelease --latest=false `
+              --notes 'Automatically updated after the Windows CLI tests pass.'
+          } else {
+            gh release create nightly --title 'Nightly' --prerelease --latest=false `
+              --notes 'Automatically updated after the Windows CLI tests pass.'
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'Could not create or update the Nightly release.' }
+          gh release upload nightly `
+            dist/windows_portable_x86_64.zip `
+            dist/windows_portable_x86_64.zip.sha256 `
+            --clobber
+          if ($LASTEXITCODE -ne 0) { throw 'Could not upload the Nightly assets.' }
