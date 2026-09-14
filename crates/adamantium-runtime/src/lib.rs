@@ -383,6 +383,7 @@ pub unsafe extern "C" fn ad_package_call(request: *mut PackageCall) -> u32 {
         }
         let engine = Engine::default();
         let bytes = std::fs::read(&wasm).map_err(|error| error.to_string())?;
+        adamantium_wasm::validate_package(&bytes)?;
         let module = Module::new(&engine, &bytes).map_err(|error| error.to_string())?;
         let mut linker: Linker<WasiCtx> = Linker::new(&engine);
         add_to_linker(&mut linker, |context| context).map_err(|error| error.to_string())?;
@@ -445,5 +446,69 @@ pub unsafe extern "C" fn ad_message(message: *const Value, line: usize, panic: u
         ));
     } else {
         eprintln!("Adamantium program warned at line {line}: {text}");
+    }
+}
+
+#[cfg(test)]
+mod package_tests {
+    use super::*;
+
+    fn text_value(value: &str) -> Value {
+        Value {
+            lo: value.as_ptr() as u64,
+            hi: value.len() as u64,
+        }
+    }
+
+    #[test]
+    fn invokes_a_wasi_package_and_converts_its_result() {
+        let directory =
+            std::env::temp_dir().join(format!("adamantium-wasm-abi-{}", std::process::id()));
+        std::fs::create_dir_all(&directory).unwrap();
+        let path = directory.join("answer.wasm");
+        std::fs::write(
+            &path,
+            wat::parse_str(
+                r#"(module
+                    (import "wasi_snapshot_preview1" "fd_write"
+                        (func $fd_write (param i32 i32 i32 i32) (result i32)))
+                    (memory (export "memory") 1)
+                    (data (i32.const 16) "42")
+                    (func (export "_start")
+                        (i32.store (i32.const 0) (i32.const 16))
+                        (i32.store (i32.const 4) (i32.const 2))
+                        (drop (call $fd_write
+                            (i32.const 1) (i32.const 0) (i32.const 1) (i32.const 8)))))"#,
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        let wasm = path.to_string_lossy();
+        let command = "answer";
+        let mut request = PackageCall {
+            wasm: text_value(&wasm),
+            command: text_value(command),
+            arguments: [Value::default(); 8],
+            types: [0; 8],
+            count: 0,
+            result_type: Type::I32.id(),
+            filesystem: 0,
+            reserved: 0,
+            output: Value::default(),
+        };
+
+        assert_eq!(unsafe { ad_package_call(&mut request) }, 0);
+        assert_eq!(request.output.lo as i64, 42);
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn converts_all_supported_result_shapes_and_rejects_invalid_values() {
+        assert_eq!(package_result(b"true\n", Type::Bool).unwrap().lo, 1);
+        assert_eq!(package_result(b"false", Type::Bool).unwrap().lo, 0);
+        assert!(package_result(b"yes", Type::Bool).is_err());
+        assert_eq!(package_result(b"", Type::None).unwrap(), Value::default());
+        let string = package_result(b"text\n", Type::String).unwrap();
+        assert_eq!(unsafe { value_text(string) }.unwrap(), "text\n");
     }
 }

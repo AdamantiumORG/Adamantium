@@ -13,6 +13,7 @@ serde_json = "1"
 toml = "0.8"
 rustc_apfloat = "=0.2.3"
 wat = "1"
+wasmparser = "0.228"
 
 [profile.release]
 panic = "abort"

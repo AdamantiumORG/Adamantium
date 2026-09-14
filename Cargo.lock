@@ -12,6 +12,7 @@ version = "0.1.0"
 dependencies = [
  "adamantium-compiler",
  "adamantium-packages",
+ "adamantium-wasm",
  "rustc_apfloat",
  "toml",
  "wat",
@@ -101,9 +102,11 @@ dependencies = [
 name = "adamantium-runtime"
 version = "0.1.0"
 dependencies = [
+ "adamantium-wasm",
  "rustc_apfloat",
  "wasmi",
  "wasmi_wasi",
+ "wat",
 ]
 
 [[package]]
@@ -138,6 +141,8 @@ name = "adamantium-wasm"
 version = "0.1.0"
 dependencies = [
  "adamantium-types",
+ "wasmparser 0.228.0",
+ "wat",
 ]
 
 [[package]]
@@ -364,6 +369,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9229cfe53dfd69f0609a49f65461bd93001ea1ef889cd5529dd176593f5338a1"
 dependencies = [
  "foldhash",
+ "serde",
 ]
 
 [[package]]
@@ -410,6 +416,8 @@ checksum = "cc4e190f5d26ca7051642629da2c52fc03bde85a03197c99408dcd291734c855"
 dependencies = [
  "equivalent",
  "hashbrown 0.17.1",
+ "serde",
+ "serde_core",
 ]
 
 [[package]]
@@ -1024,7 +1032,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4abf1132c1fdf747d56bbc1bb52152400c70f336870f968b85e89ea422198ae3"
 dependencies = [
  "bitflags",
+ "hashbrown 0.15.5",
  "indexmap",
+ "semver",
+ "serde",
 ]
 
 [[package]]

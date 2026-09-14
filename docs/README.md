@@ -25,5 +25,6 @@
 
 - [Testing](TESTING.md)
 - [Creating packages](CREATING_PACKAGES.md)
+- [WASM package ABI](packages/WASM_ABI.md)
 - [Memory safety](MEMORY_SAFETY.md)
 - [Compilation targets](TARGETS.md)

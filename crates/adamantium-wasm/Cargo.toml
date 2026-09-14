@@ -6,3 +6,7 @@ license-file = "../../LICENCE.md"
 
 [dependencies]
 adamantium-types = { path = "../adamantium-types" }
+wasmparser.workspace = true
+
+[dev-dependencies]
+wat.workspace = true

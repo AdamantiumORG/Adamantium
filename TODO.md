@@ -1700,16 +1700,16 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 20. Implement WASM package loading
 
-* [ ] Define the Adamantium WASM package ABI
-* [ ] Implement WASM module loading
-* [ ] Validate WASM modules before execution
-* [ ] Implement package initialization
-* [ ] Implement exported function discovery
-* [ ] Implement Adamantium-to-WASM function calls
-* [ ] Implement WASM-to-Adamantium value conversion
-* [ ] Define supported WASM value types
-* [ ] Define package error propagation
-* [ ] Add WASM package integration tests
+* [x] Define the Adamantium WASM package ABI
+* [x] Implement WASM module loading
+* [x] Validate WASM modules before execution
+* [x] Implement package initialization
+* [x] Implement exported function discovery
+* [x] Implement Adamantium-to-WASM function calls
+* [x] Implement WASM-to-Adamantium value conversion
+* [x] Define supported WASM value types
+* [x] Define package error propagation
+* [x] Add WASM package integration tests
 
 ### 21. Implement package publishing
 
@@ -1934,7 +1934,7 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 * [ ] Write the compiler specification
 * [ ] Write the memory-safety specification
 * [ ] Write the package specification
-* [ ] Write the WASM ABI specification
+* [x] Write the WASM ABI specification
 * [ ] Write the standard-library specification
 * [ ] Write the CLI specification
 
@@ -2055,7 +2055,7 @@ Do not skip ahead to later phases unless a current task is blocked.
 17. [ ] Implement assertions
 18. [ ] Complete package installation
 19. [ ] Implement package security
-20. [ ] Implement WASM package loading
+20. [x] Implement WASM package loading
 21. [ ] Implement package publishing
 22. [ ] Complete `AdamantiumFiles`
 23. [ ] Complete `AdamantiumJson`

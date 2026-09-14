@@ -54,10 +54,10 @@ pub fn load_bindings(
                 package.name
             )
         })?;
-        if !bytes.starts_with(b"\0asm\x01\0\0\0") {
+        if let Err(error) = adamantium_wasm::validate_package(&bytes) {
             return Err(format!(
-                "installed package '{}' is not valid WASM",
-                package.name
+                "installed package '{}' is not valid WASM: {error}",
+                package.name,
             ));
         }
         let mut declarations = String::new();

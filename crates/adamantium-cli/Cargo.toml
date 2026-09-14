@@ -12,6 +12,7 @@ path = "src/main.rs"
 [dependencies]
 adamantium-compiler = { path = "../adamantium-compiler" }
 adamantium-packages = { path = "../adamantium-packages" }
+adamantium-wasm = { path = "../adamantium-wasm" }
 toml.workspace = true
 rustc_apfloat.workspace = true
 

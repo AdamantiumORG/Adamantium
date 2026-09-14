@@ -826,7 +826,7 @@ fn package_cache_directory(root: &Path, package: &Package) -> Result<PathBuf, St
 }
 
 fn valid_wasm_file(path: &Path) -> bool {
-    fs::read(path).is_ok_and(|bytes| bytes.starts_with(b"\0asm\x01\0\0\0"))
+    fs::read(path).is_ok_and(|bytes| adamantium_wasm::validate_package(&bytes).is_ok())
 }
 
 fn replace_file(source: &Path, destination: &Path) -> Result<(), String> {
