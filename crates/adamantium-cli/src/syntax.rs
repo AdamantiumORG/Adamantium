@@ -122,7 +122,7 @@ pub enum Statement {
     Match(Expr, Vec<(Expr, Vec<Statement>)>, Option<Vec<Statement>>),
     Break,
     Continue,
-    Exit,
+    Exit(Option<Expr>),
     Return,
 }
 #[derive(Debug)]
@@ -1402,8 +1402,16 @@ impl Parser {
             }
             Token::Word(word) if word == "exit" => {
                 self.symbol('(')?;
-                self.symbol(')')?;
-                Statement::Exit
+                let code = if self.take(Token::Symbol(')')) {
+                    None
+                } else {
+                    self.word("code")?;
+                    self.symbol('=')?;
+                    let code = self.expression(0)?;
+                    self.symbol(')')?;
+                    Some(code)
+                };
+                Statement::Exit(code)
             }
             Token::Word(word) if word == "return" => {
                 if self.try_depth != 0 {
@@ -1819,7 +1827,7 @@ impl Parser {
         while self.peek() != &Token::Symbol('}') {
             positions.push(self.position());
             let statement = self.statement()?;
-            returned |= matches!(statement, Statement::Return | Statement::Exit);
+            returned |= matches!(statement, Statement::Return | Statement::Exit(_));
             statements.push(statement);
         }
         if !returned && let Some(name) = &self.result_name {

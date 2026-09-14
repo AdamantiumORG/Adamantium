@@ -5,6 +5,7 @@
 - [Variables](language/variables.md)
 - [Types](language/types.md)
 - [Functions](language/functions.md)
+- [Control flow](language/control-flow.md)
 - [Classes](language/classes.md)
 - [Enums](language/enums.md)
 - [Traits](language/traits.md)

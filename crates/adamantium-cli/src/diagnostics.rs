@@ -199,7 +199,7 @@ pub fn warnings(program: &Program) -> Vec<String> {
                     }
                 }
                 Statement::Break | Statement::Continue => (),
-                Statement::Return | Statement::Exit => returned = true,
+                Statement::Return | Statement::Exit(_) => returned = true,
             }
         }
         // A named result is read by both explicit and implicit return.
@@ -388,7 +388,12 @@ fn visit_statement(
                 }
             }
         }
-        Statement::Break | Statement::Continue | Statement::Exit | Statement::Return => (),
+        Statement::Exit(code) => {
+            if let Some(code) = code {
+                visit(code, reads, calls);
+            }
+        }
+        Statement::Break | Statement::Continue | Statement::Return => (),
     }
 }
 fn visit_call(call: &Call, reads: &mut HashSet<usize>, calls: &mut HashSet<String>) {

@@ -35,5 +35,22 @@ fn builds_and_runs_linux_x86_64_executable() {
         .unwrap();
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(output.stdout, b"42\r\n");
+
+    fs::write(root.join("code/main.ad"), "fun main() { exit(code=23); }").unwrap();
+    let build = Command::new(env!("CARGO_BIN_EXE_adamantium"))
+        .args(["build", root.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        build.status.success(),
+        "{}",
+        String::from_utf8_lossy(&build.stderr)
+    );
+    let output = Command::new(root.join("target/LinuxNative"))
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(23));
+    assert!(output.stdout.is_empty());
+    assert!(output.stderr.is_empty());
     fs::remove_dir_all(root).unwrap();
 }

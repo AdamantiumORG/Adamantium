@@ -56,7 +56,7 @@ pub enum Instruction {
     ),
     Break,
     Continue,
-    Exit,
+    Exit(Option<Expression>),
     Return,
 }
 pub struct Function {
@@ -866,7 +866,26 @@ impl Checker<'_> {
                 position.line(),
             ),
             Statement::Return => Instruction::Return,
-            Statement::Exit => Instruction::Exit,
+            Statement::Exit(code) => Instruction::Exit(
+                code.as_ref()
+                    .map(|code| {
+                        let code = self.expression(code, None)?;
+                        if !code.ty.integer() {
+                            return Err(format!("exit code must be an integer, found {}", code.ty));
+                        }
+                        if matches!(code.kind, Kind::Constant(_)) {
+                            self.convert(code, Type::U8)
+                        } else if code.ty == Type::U8 {
+                            Ok(code)
+                        } else {
+                            Err(format!(
+                                "exit code expression must have type u8, found {}",
+                                code.ty
+                            ))
+                        }
+                    })
+                    .transpose()?,
+            ),
             Statement::Call(call) => {
                 let signature = &self.signatures[&call.name];
                 let arguments = self.arguments(&call.arguments, &signature.parameters)?;

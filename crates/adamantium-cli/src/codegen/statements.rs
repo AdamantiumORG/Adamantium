@@ -58,7 +58,15 @@ impl Generator {
                     }
                 }
                 Instruction::Call(expr) => self.expression(expr),
-                Instruction::Exit => self.emit("    xor ecx, ecx\n    call ExitProcess"),
+                Instruction::Exit(code) => {
+                    if let Some(code) = code {
+                        self.expression(code);
+                        self.emit("    mov ecx, eax");
+                    } else {
+                        self.emit("    xor ecx, ecx");
+                    }
+                    self.emit("    call ExitProcess");
+                }
                 Instruction::SetField(object, index, value, hook) => {
                     self.expression(object);
                     let receiver = self.save();

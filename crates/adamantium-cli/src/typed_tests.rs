@@ -367,6 +367,43 @@ fn checks_comparisons_conditions_and_integer_ranges() {
 }
 
 #[test]
+fn exit_codes_are_typed_and_range_checked() {
+    for source in [
+        "fun main() { exit(); }",
+        "fun main() { exit(code=0); }",
+        "fun main() { exit(code=255); }",
+        "fun main() { var code=12:u8; exit(code=code); }",
+    ] {
+        assert!(checked(source).is_ok(), "rejected {source}");
+    }
+
+    for source in [
+        "fun main() { exit(code=-1); }",
+        "fun main() { exit(code=256); }",
+        "fun main() { exit(code=true); }",
+        "fun main() { exit(code=1.5); }",
+        "fun main() { exit(code=\"1\"); }",
+        "fun main() { var code=12; exit(code=code); }",
+    ] {
+        assert!(checked(source).is_err(), "accepted {source}");
+    }
+}
+
+#[test]
+fn explicit_exit_code_is_emitted_for_the_platform_runtime() {
+    let program = checked("fun main() { exit(code=23); }").unwrap();
+    let assembly = crate::codegen::assembly_entry(&program, "main");
+    assert!(assembly.contains("mov rax, 23"), "{assembly}");
+    assert!(assembly.contains("mov ecx, eax"), "{assembly}");
+    let exit_call = if cfg!(target_os = "linux") {
+        "call ad_linux_exit"
+    } else {
+        "call ExitProcess"
+    };
+    assert!(assembly.contains(exit_call), "{assembly}");
+}
+
+#[test]
 fn match_patterns_must_have_the_matched_type() {
     assert!(checked("fun main() { match 2 { 1 => {} 2 => {} _ => {} } }").is_ok());
     assert!(checked("enum Choice { yes, no } fun main() { var c=Choice.yes; match c { Choice.yes => {} _ => {} } }").is_ok());

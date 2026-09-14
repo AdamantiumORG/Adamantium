@@ -25,7 +25,11 @@ fn parses_argumentless_exit() {
     let program = parse("fun main() { exit(); print.newline(\"unreachable\"); }").unwrap();
     assert!(matches!(
         program.functions[0].statements[0],
-        Statement::Exit
+        Statement::Exit(None)
+    ));
+    assert!(matches!(
+        parse("fun main() { exit(code=7); }").unwrap().functions[0].statements[0],
+        Statement::Exit(Some(Expr::Integer(7)))
     ));
     assert!(parse("fun main() { exit(1); }").is_err());
     assert!(parse("fun main() { exit; }").is_err());

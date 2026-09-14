@@ -1477,12 +1477,12 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 4. Complete explicit program exit
 
-* [ ] Implement `exit()`
-* [ ] Implement `exit(code = <integer>)`
-* [ ] Validate exit-code types
-* [ ] Validate exit-code ranges
-* [ ] Return explicit exit codes to the operating system
-* [ ] Add runtime tests for explicit exit codes
+* [x] Implement `exit()`
+* [x] Implement `exit(code = <integer>)`
+* [x] Validate exit-code types
+* [x] Validate exit-code ranges
+* [x] Return explicit exit codes to the operating system
+* [x] Add runtime tests for explicit exit codes
 
 ---
 
