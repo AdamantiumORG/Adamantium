@@ -1,6 +1,6 @@
 # Rust build artifacts. Keep Cargo.lock tracked for reproducible builds.
 /target/
-/runtime/target/
+/crates/*/target/
 /example-project/target/
 /dist/
 /packages/

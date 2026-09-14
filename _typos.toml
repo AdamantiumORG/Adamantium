@@ -1,2 +1,5 @@
+[files]
+extend-exclude = ["**/target/**", "dist/**"]
+
 [default.extend-words]
 disconect = "disconect"

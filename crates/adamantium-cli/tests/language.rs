@@ -1,3 +1,4 @@
+#[cfg(any(target_os = "windows", target_os = "linux"))]
 use std::process::Command;
 
 #[test]

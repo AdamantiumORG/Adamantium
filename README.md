@@ -1,3 +1,5 @@
+[![License: GPL](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://opensource.org/licenses/gpl-3-0)
+
 # Adamantium
 
 ## What is Adamantium?
