@@ -484,6 +484,32 @@ fn aliases_share_types_and_disconnect_scalar_values() {
 }
 
 #[test]
+fn alias_management_queries_and_state_changes_are_typed() {
+    checked(
+        r#"fun main() {
+            var root=10;
+            var alias=root.as_variable;
+            var child=alias.as_variable;
+            print.newline(alias.get_parent());
+            print.newline(child.get_root());
+            print.newline(alias.alias_of());
+            print.newline(root.is_alias());
+            print.newline(alias.is_synced());
+            print.newline(root.alias_count());
+            alias.detach();
+            alias.change_only(12);
+            alias.sync();
+            alias.desync();
+            alias.reattach(child);
+            alias.disconnect();
+            alias.changename(saved);
+            print.newline(saved);
+        }"#,
+    )
+    .unwrap();
+}
+
+#[test]
 fn logical_remainder_and_optional_values_are_typed() {
     assert!(
         checked(

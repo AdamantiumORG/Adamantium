@@ -684,20 +684,20 @@ var a = b.as_variable;
 * [x] Implement alias chains through shared storage
 * [x] Implement function, enum and class symbol aliases
 * [x] Allow symbol aliases to be redirected to another symbol
-* [ ] Implement `get_parent()`
-* [ ] Implement `get_root()`
-* [ ] Implement `is_alias()`
-* [ ] Implement `is_synced()`
-* [ ] Implement `alias_of()`
-* [ ] Implement `alias_count()`
-* [ ] Implement `desync()`
-* [ ] Implement `change_only()`
-* [ ] Implement `sync()`
+* [x] Implement `get_parent()`
+* [x] Implement `get_root()`
+* [x] Implement `is_alias()`
+* [x] Implement `is_synced()`
+* [x] Implement `alias_of()`
+* [x] Implement `alias_count()`
+* [x] Implement `desync()`
+* [x] Implement `change_only()`
+* [x] Implement `sync()`
 * [x] Implement `disconect` and `disconnect` for scalar value aliases
-* [ ] Implement `detach()` as a separate API
-* [ ] Implement `reattach()`
-* [ ] Define alias lifetime rules
-* [ ] Prevent alias use-after-lifetime
+* [x] Implement `detach()` as a separate API
+* [x] Implement `reattach()`
+* [x] Define alias lifetime rules
+* [x] Prevent alias use-after-lifetime
 * [x] Integrate aliases with memory safety - shared slots remain live until the last name is removed
 
 ---
@@ -730,13 +730,13 @@ Implement:
 b.changename(a);
 ```
 
-* [ ] Implement `changename`
-* [ ] Change identifier without moving the underlying storage
-* [ ] Preserve type
-* [ ] Preserve value
-* [ ] Preserve memory location
-* [ ] Update compiler symbol tables
-* [ ] Define behavior with aliases
+* [x] Implement `changename`
+* [x] Change identifier without moving the underlying storage
+* [x] Preserve type
+* [x] Preserve value
+* [x] Preserve memory location
+* [x] Update compiler symbol tables
+* [x] Define behavior with aliases
 
 ---
 
@@ -1490,31 +1490,31 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 5. Finalize the alias model
 
-* [ ] Define the complete alias data model
-* [ ] Define alias parent/root semantics
-* [ ] Define alias lifetime semantics
-* [ ] Define synchronization semantics
-* [ ] Define disconnection semantics
-* [ ] Define detachment semantics
-* [ ] Define reattachment semantics
-* [ ] Define behavior when an aliased variable is removed
-* [ ] Define behavior when an alias is redirected
-* [ ] Document all alias guarantees
+* [x] Define the complete alias data model
+* [x] Define alias parent/root semantics
+* [x] Define alias lifetime semantics
+* [x] Define synchronization semantics
+* [x] Define disconnection semantics
+* [x] Define detachment semantics
+* [x] Define reattachment semantics
+* [x] Define behavior when an aliased variable is removed
+* [x] Define behavior when an alias is redirected
+* [x] Document all alias guarantees
 
 ### 6. Implement the remaining alias API
 
-* [ ] Implement `get_parent()`
-* [ ] Implement `get_root()`
-* [ ] Implement `is_alias()`
-* [ ] Implement `is_synced()`
-* [ ] Implement `alias_of()`
-* [ ] Implement `alias_count()`
-* [ ] Implement `desync()`
-* [ ] Implement `change_only()`
-* [ ] Implement `sync()`
-* [ ] Implement `detach()`
-* [ ] Implement `reattach()`
-* [ ] Define and implement `changename()`
+* [x] Implement `get_parent()`
+* [x] Implement `get_root()`
+* [x] Implement `is_alias()`
+* [x] Implement `is_synced()`
+* [x] Implement `alias_of()`
+* [x] Implement `alias_count()`
+* [x] Implement `desync()`
+* [x] Implement `change_only()`
+* [x] Implement `sync()`
+* [x] Implement `detach()`
+* [x] Implement `reattach()`
+* [x] Define and implement `changename()`
 
 ### 7. Complete memory-safety testing
 
@@ -2040,8 +2040,8 @@ Do not skip ahead to later phases unless a current task is blocked.
 2. [ ] Complete public/private import enforcement
 3. [ ] Implement exhaustive `match`
 4. [ ] Implement explicit `exit(code = ...)`
-5. [ ] Finalize alias semantics
-6. [ ] Implement remaining alias APIs
+5. [x] Finalize alias semantics
+6. [x] Implement remaining alias APIs
 7. [ ] Complete memory-safety regression tests
 8. [ ] Complete the List runtime
 9. [ ] Complete string operations

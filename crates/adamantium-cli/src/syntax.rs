@@ -170,6 +170,9 @@ struct Binding {
     initialized: bool,
     changeable: bool,
     alias: bool,
+    parent: Option<usize>,
+    detached_parent: Option<usize>,
+    root: Option<usize>,
 }
 struct SavedName {
     binding: Option<Binding>,
@@ -861,6 +864,9 @@ impl Parser {
                 initialized,
                 changeable,
                 alias: false,
+                parent: None,
+                detached_parent: None,
+                root: None,
             },
         );
         Ok(slot)
@@ -907,6 +913,50 @@ impl Parser {
                 .tokens
                 .get(self.cursor + offset + 1)
                 .is_some_and(|(token, _)| token == &Token::Word("as_variable".into()))
+    }
+
+    fn alias_query(&mut self, name: &str, position: Position) -> Result<Option<Expr>, String> {
+        let Some(binding) = self.bindings.get(name).cloned() else {
+            return Ok(None);
+        };
+        let Some((Token::Symbol('.'), _)) = self.tokens.get(self.cursor) else {
+            return Ok(None);
+        };
+        let Some((Token::Word(method), _)) = self.tokens.get(self.cursor + 1) else {
+            return Ok(None);
+        };
+        if !matches!(
+            method.as_str(),
+            "get_parent" | "get_root" | "is_alias" | "is_synced" | "alias_of" | "alias_count"
+        ) {
+            return Ok(None);
+        }
+        let method = method.clone();
+        self.next();
+        self.next();
+        self.symbol('(')?;
+        self.symbol(')')?;
+        let expression = match method.as_str() {
+            "is_alias" => Expr::Bool(binding.alias),
+            "is_synced" => Expr::Bool(binding.alias && binding.detached_parent.is_none()),
+            "alias_count" => Expr::Integer(
+                self.bindings
+                    .values()
+                    .filter(|candidate| candidate.slot == binding.slot)
+                    .count()
+                    .saturating_sub(1) as i128,
+            ),
+            "get_root" => Expr::Variable(binding.root.unwrap_or(binding.slot)),
+            "get_parent" | "alias_of" => {
+                let parent = binding
+                    .parent
+                    .or(binding.detached_parent)
+                    .ok_or_else(|| position.error(format!("variable '{name}' is not an alias")))?;
+                Expr::Variable(parent)
+            }
+            _ => unreachable!(),
+        };
+        Ok(Some(expression))
     }
     fn bare_function_target(&self, alias_name: &str) -> Option<String> {
         let Some((Token::Word(name), _)) = self.tokens.get(self.cursor) else {
@@ -1082,6 +1132,9 @@ impl Parser {
                 inner
             }
             Token::Word(name) => {
+                if let Some(query) = self.alias_query(&name, position)? {
+                    return self.expression_tail(query, min_precedence);
+                }
                 let name = match self.symbol_aliases.get(&name) {
                     Some(
                         SymbolAlias::Function(target)
@@ -1362,7 +1415,7 @@ impl Parser {
                         return Err(position
                             .error(format!("variable '{name}' conflicts with a symbol alias")));
                     }
-                    let source_changeable = self.bindings[&source].changeable;
+                    let source_binding = self.bindings[&source].clone();
                     self.save_name_for_scope(&name, position)?;
                     self.removed_variables.remove(&name);
                     self.out_of_scope_variables.remove(&name);
@@ -1371,8 +1424,11 @@ impl Parser {
                         Binding {
                             slot: source_slot,
                             initialized: true,
-                            changeable: changeable && source_changeable,
+                            changeable: changeable && source_binding.changeable,
                             alias: true,
+                            parent: Some(source_slot),
+                            detached_parent: None,
+                            root: Some(source_binding.root.unwrap_or(source_slot)),
                         },
                     );
                     self.symbol(';')?;
@@ -1493,7 +1549,11 @@ impl Parser {
                             .bindings
                             .iter()
                             .filter(|(other_name, binding)| {
-                                *other_name != &name && binding.slot == slot
+                                *other_name != &name
+                                    && (binding.slot == slot
+                                        || binding.parent == Some(slot)
+                                        || binding.detached_parent == Some(slot)
+                                        || binding.root == Some(slot))
                             })
                             .count();
                         self.bindings.remove(&name);
@@ -1504,6 +1564,9 @@ impl Parser {
                             Statement::Noop(None)
                         }
                     } else if member == "disconect" || member == "disconnect" {
+                        if self.take(Token::Symbol('(')) {
+                            self.symbol(')')?;
+                        }
                         let binding = self.bindings.get(&name).unwrap();
                         if !binding.alias {
                             return Err(
@@ -1521,9 +1584,127 @@ impl Parser {
                                 initialized: true,
                                 changeable: true,
                                 alias: false,
+                                parent: None,
+                                detached_parent: None,
+                                root: None,
                             },
                         );
                         Statement::Disconnect(new_slot, old_slot)
+                    } else if member == "detach" || member == "desync" {
+                        self.symbol('(')?;
+                        self.symbol(')')?;
+                        let binding = self.bindings.get(&name).unwrap().clone();
+                        if !binding.alias || binding.detached_parent.is_some() {
+                            return Err(position
+                                .error(format!("variable '{name}' is not a synchronized alias")));
+                        }
+                        let new_slot = self.types.len();
+                        self.types.push(None);
+                        self.declarations.push((name.clone(), position));
+                        self.bindings.insert(
+                            name,
+                            Binding {
+                                slot: new_slot,
+                                initialized: true,
+                                changeable: binding.changeable,
+                                alias: true,
+                                parent: None,
+                                detached_parent: Some(binding.slot),
+                                root: binding.root,
+                            },
+                        );
+                        Statement::Disconnect(new_slot, binding.slot)
+                    } else if member == "sync" || member == "reattach" {
+                        self.symbol('(')?;
+                        let binding = self.bindings.get(&name).unwrap().clone();
+                        if !binding.alias {
+                            return Err(
+                                position.error(format!("variable '{name}' is not an alias"))
+                            );
+                        }
+                        let target = if self.take(Token::Symbol(')')) {
+                            binding.detached_parent.ok_or_else(|| {
+                                position.error(format!("alias '{name}' is already synchronized"))
+                            })?
+                        } else {
+                            if member == "sync" {
+                                return Err(position.error("sync does not accept a target"));
+                            }
+                            let target_name = self.name()?;
+                            if target_name == name {
+                                return Err(position.error("an alias cannot reattach to itself"));
+                            }
+                            let target = self.variable(&target_name, true, position)?;
+                            self.symbol(')')?;
+                            target
+                        };
+                        let root = self
+                            .bindings
+                            .values()
+                            .find(|candidate| candidate.slot == target)
+                            .and_then(|candidate| candidate.root)
+                            .unwrap_or(target);
+                        let current = self.bindings.get_mut(&name).unwrap();
+                        current.slot = target;
+                        current.parent = Some(target);
+                        current.detached_parent = None;
+                        current.root = Some(root);
+                        Statement::Noop(None)
+                    } else if member == "change_only" {
+                        self.symbol('(')?;
+                        let binding = self.bindings.get(&name).unwrap().clone();
+                        if !binding.alias {
+                            return Err(
+                                position.error(format!("variable '{name}' is not an alias"))
+                            );
+                        }
+                        if !binding.changeable {
+                            return Err(
+                                position.error(format!("cannot change static alias '{name}'"))
+                            );
+                        }
+                        let value = self.expression(0)?;
+                        self.symbol(')')?;
+                        if binding.detached_parent.is_some() {
+                            Statement::Assign(binding.slot, value)
+                        } else {
+                            let new_slot = self.types.len();
+                            self.types.push(None);
+                            self.declarations.push((name.clone(), position));
+                            self.bindings.insert(
+                                name,
+                                Binding {
+                                    slot: new_slot,
+                                    initialized: true,
+                                    changeable: binding.changeable,
+                                    alias: true,
+                                    parent: None,
+                                    detached_parent: Some(binding.slot),
+                                    root: binding.root,
+                                },
+                            );
+                            Statement::Assign(new_slot, value)
+                        }
+                    } else if member == "changename" {
+                        self.symbol('(')?;
+                        let new_name = self.name()?;
+                        self.symbol(')')?;
+                        if self.bindings.contains_key(&new_name)
+                            || self.symbol_aliases.contains_key(&new_name)
+                            || self.enums.contains_key(&new_name)
+                            || self.classes.contains_key(&new_name)
+                            || self.type_aliases.contains_key(&new_name)
+                        {
+                            return Err(position.error(format!(
+                                "cannot rename '{name}' to already declared name '{new_name}'"
+                            )));
+                        }
+                        self.save_name_for_scope(&new_name, position)?;
+                        let binding = self.bindings.remove(&name).unwrap();
+                        self.removed_variables.insert(name);
+                        self.removed_variables.remove(&new_name);
+                        self.bindings.insert(new_name, binding);
+                        Statement::Noop(None)
                     } else if member == "clamp" {
                         self.writable_variable(&name, position)?;
                         self.symbol('(')?;

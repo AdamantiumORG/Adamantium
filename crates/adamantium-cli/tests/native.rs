@@ -624,6 +624,57 @@ fn native_value_and_function_aliases() {
 
 #[test]
 #[ignore = "requires NASM and Visual Studio C++ build tools"]
+fn native_alias_management_api() {
+    let output = Project::new(
+        r#"
+        fun main() {
+            var root=10;
+            var alias=root.as_variable;
+            var child=alias.as_variable;
+            print.newline(root.is_alias());
+            print.newline(alias.is_alias());
+            print.newline(alias.is_synced());
+            print.newline(root.alias_count());
+            print.newline(child.get_parent());
+            print.newline(child.get_root());
+            print.newline(alias.alias_of());
+            alias.detach();
+            root=20;
+            print.newline(alias);
+            print.newline(alias.is_synced());
+            alias.change_only(15);
+            print.newline(root);
+            print.newline(alias);
+            alias.sync();
+            print.newline(alias);
+            alias.desync();
+            alias=30;
+            alias.reattach(child);
+            child=40;
+            print.newline(alias);
+            alias.disconnect();
+            child=50;
+            alias.changename(saved);
+            print.newline(saved);
+            print.newline(child);
+        }
+        "#,
+    )
+    .run();
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(
+        output.stdout,
+        b"false\r\ntrue\r\ntrue\r\n2\r\n10\r\n10\r\n10\r\n10\r\nfalse\r\n20\r\n15\r\n20\r\n40\r\n40\r\n50\r\n"
+    );
+}
+
+#[test]
+#[ignore = "requires NASM and Visual Studio C++ build tools"]
 fn native_match_selects_the_first_matching_branch() {
     let output = Project::new(
         r#"

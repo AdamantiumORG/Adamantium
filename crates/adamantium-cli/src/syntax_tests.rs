@@ -649,6 +649,45 @@ fn parses_value_and_symbol_aliases() {
 }
 
 #[test]
+fn parses_alias_queries_synchronization_and_renaming() {
+    assert!(
+        parse(
+            r#"fun main() {
+                var root=10;
+                var alias=root.as_variable;
+                var child=alias.as_variable;
+                print.newline(alias.get_parent());
+                print.newline(child.get_root());
+                print.newline(alias.alias_of());
+                print.newline(root.is_alias());
+                print.newline(alias.is_synced());
+                print.newline(root.alias_count());
+                alias.detach();
+                alias.change_only(20);
+                alias.sync();
+                alias.desync();
+                alias.reattach(child);
+                alias.disconnect();
+                alias.changename(renamed);
+                print.newline(renamed);
+            }"#,
+        )
+        .is_ok()
+    );
+    for source in [
+        "fun main() { var value=1; value.sync(); }",
+        "fun main() { var value=1; value.detach(); }",
+        "fun main() { var value=1; print.newline(value.get_parent()); }",
+        "fun main() { var value=1; var alias=value.as_variable; alias.changename(value); }",
+    ] {
+        assert!(
+            parse(source).is_err(),
+            "accepted invalid alias program: {source}"
+        );
+    }
+}
+
+#[test]
 fn removing_aliased_values_finalizes_only_the_last_reference() {
     let statements = main_statements(
         "fun main() { var value=10; var alias=value.as_variable; value.remove; alias.remove; }",

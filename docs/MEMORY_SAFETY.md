@@ -27,6 +27,48 @@ Removing one name leaves the slot alive while another alias exists. The
 removed name cannot be read, written, removed again, or used to create another
 reference. Scalar aliases may be disconnected to create an independent copy.
 
+### Alias identity and synchronization
+
+Each local binding has its own name and points to one storage slot. A normal
+variable is a root binding. `source.as_variable` creates an alias whose parent
+is the storage node used by `source` at that moment and whose root is that
+node's root. An alias chain does not create extra runtime copies while it is
+synchronized. Detaching or redirecting the source name later does not silently
+retarget aliases that were previously created from it.
+
+The alias API has these guarantees:
+
+* `get_parent()` and `alias_of()` read the current value in the direct parent's
+  slot. Calling either method on a root is a compile error.
+* `get_root()` reads the current value in the root slot. On a root it reads the
+  variable itself.
+* `is_alias()` is true for synchronized and temporarily detached aliases. It is
+  false for roots and permanently disconnected values.
+* `is_synced()` is true only while writes use the same slot as the parent.
+* `alias_count()` returns the number of other names currently synchronized to
+  the same slot.
+* `detach()` and `desync()` copy the current value into private storage while
+  retaining the parent relationship. Writes then affect only that alias.
+* `change_only(value)` detaches a synchronized alias and assigns `value`. On an
+  already detached alias it changes the existing private value.
+* `sync()` discards the private value and reconnects to the remembered parent.
+* `reattach()` is equivalent to `sync()`. `reattach(target)` redirects the alias
+  to `target` and adopts the target's root.
+* `disconnect()` and the compatibility spelling `disconect` copy the current
+  value and permanently remove all parent and root relationships.
+* `changename(new_name)` moves the binding to an unused identifier. It preserves
+  the slot, value, type, mutability, parent, root, and synchronization state.
+
+Removing one synchronized name does not remove shared storage. A detached alias
+keeps its remembered parent slot alive so it can synchronize again. Removing
+the last reachable name ends the source-level lifetime. Redirecting or
+reattaching an alias does not mutate either the old or new target.
+
+Synchronization management applies to scalar value aliases. Function, enum,
+and class symbol aliases can be removed or redirected to another symbol, but
+cannot be detached or disconnected as runtime values. `changename` applies to
+value bindings.
+
 ## Offsets
 
 An offset is a typed, non-owning reference to a local variable's storage slot.
