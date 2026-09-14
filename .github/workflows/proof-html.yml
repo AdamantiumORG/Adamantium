@@ -2,23 +2,32 @@ name: Proof HTML
 
 on:
   workflow_run:
-    workflows: ["CI", "CLI Linux", "CLI Windows", "Portable Windows"]
+    workflows: ["CI", "Linux CLI", "Windows CLI"]
     types:
       - completed
-
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: proof-html-${{ github.event.workflow_run.id || github.run_id }}
+  cancel-in-progress: true
+
 jobs:
-  build:
+  proof-html:
+    name: Check documentation links after ${{ github.event.workflow_run.name || 'manual run' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Check out tested revision
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
 
-      - name: Run HTML Proof
+      - name: Check HTML and Markdown links
         uses: anishathalye/proof-html@v1.1.0
         with:
           directory: ./
