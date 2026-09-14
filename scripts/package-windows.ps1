@@ -60,7 +60,9 @@ $windowsLibraries = @(
     "kernel32.lib",
     "msvcrt.lib",
     "ntdll.lib",
+    "ucrt.lib",
     "userenv.lib",
+    "vcruntime.lib",
     "ws2_32.lib"
 )
 $libraryDirectories = $env:LIB -split ";" | Where-Object { $_ -and (Test-Path -LiteralPath $_ -PathType Container) }
