@@ -8,3 +8,5 @@ license-file = "../../LICENCE.md"
 adamantium-project = { path = "../adamantium-project" }
 adamantium-wasm = { path = "../adamantium-wasm" }
 adamantium-diagnostics = { path = "../adamantium-diagnostics" }
+serde.workspace = true
+toml.workspace = true

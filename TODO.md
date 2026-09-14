@@ -1678,15 +1678,15 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 18. Finish package installation
 
-* [ ] Define the complete package format
-* [ ] Define package metadata
-* [ ] Define package version semantics
-* [ ] Implement package caching
-* [ ] Implement dependency locking
-* [ ] Implement dependency graph resolution
-* [ ] Detect dependency cycles
-* [ ] Validate package versions
-* [ ] Validate package metadata
+* [x] Define the complete package format
+* [x] Define package metadata
+* [x] Define package version semantics
+* [x] Implement package caching
+* [x] Implement dependency locking
+* [x] Implement dependency graph resolution
+* [x] Detect dependency cycles
+* [x] Validate package versions
+* [x] Validate package metadata
 
 ### 19. Implement package security
 

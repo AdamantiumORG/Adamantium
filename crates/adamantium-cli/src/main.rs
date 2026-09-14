@@ -634,48 +634,16 @@ fn packages(table: &toml::Table) -> Result<Vec<Package>, String> {
         let version = value.as_str().ok_or_else(|| {
             format!("requirement.toml: package '{source}' version must be a string")
         })?;
-        let path = source
-            .strip_prefix("https://github.com/")
-            .and_then(|path| path.split_once('/'))
-            .filter(|(owner, name)| valid_github_owner(owner) && valid_github_repository(name))
-            .ok_or_else(|| {
-                format!(
-                    "requirement.toml: package source '{source}' must be an https://github.com/<owner>/<name> URL"
-                )
-            })?;
-        let name = path.1;
-        let parts = version.split('.').collect::<Vec<_>>();
-        if parts.len() != 3
-            || parts
-                .iter()
-                .any(|part| part.is_empty() || !part.bytes().all(|byte| byte.is_ascii_digit()))
-        {
-            return Err(format!(
-                "requirement.toml: package '{source}' version must use MAJOR.MINOR.PATCH"
-            ));
-        }
+        let requirement = adamantium_packages::Requirement::new(source, version)
+            .map_err(|error| format!("requirement.toml: package '{source}': {error}"))?;
         result.push(Package {
-            name: name.into(),
-            source: source.into(),
-            version: version.into(),
+            name: requirement.name,
+            source: requirement.source,
+            version: requirement.version.to_string(),
         });
     }
     result.sort_by(|left, right| left.name.cmp(&right.name));
     Ok(result)
-}
-
-fn valid_github_owner(name: &str) -> bool {
-    !name.is_empty()
-        && name
-            .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
-}
-
-fn valid_github_repository(name: &str) -> bool {
-    !name.is_empty()
-        && name
-            .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
 }
 
 fn is_official_package_source(source: &str) -> bool {
@@ -702,14 +670,57 @@ fn install_packages(root: &Path) -> Result<(), String> {
         .canonicalize()
         .map_err(|error| format!("{}: {error}", requested_root.display()))?;
     let requirements = read_toml(&root.join("requirement.toml"))?;
-    let packages = packages(&requirements)?;
-    if packages.is_empty() {
+    let requested = packages(&requirements)?;
+    if requested.is_empty() {
         println!("No packages to install");
         return Ok(());
     }
-    for package in &packages {
-        if let Some(warning) = community_package_warning(package) {
+    let downloader = env::var_os("ADAMANTIUM_CURL").unwrap_or_else(|| {
+        if cfg!(windows) {
+            "curl.exe".into()
+        } else {
+            "curl".into()
+        }
+    });
+    let mut manifests = std::collections::BTreeMap::new();
+    for package in &requested {
+        collect_package_manifests(&root, package, &downloader, &mut manifests)?;
+    }
+    let roots = requested
+        .iter()
+        .map(|package| adamantium_packages::Requirement::new(&package.source, &package.version))
+        .collect::<Result<Vec<_>, _>>()?;
+    let lock = adamantium_packages::resolve(&roots, &manifests)?;
+    for locked in &lock.packages {
+        let repository_name = adamantium_packages::github_repository_name(&locked.source)?;
+        let package = Package {
+            name: repository_name,
+            source: locked.source.clone(),
+            version: locked.version.clone(),
+        };
+        if let Some(warning) = community_package_warning(&package) {
             eprintln!("{warning}");
+        }
+        let cache = package_cache_directory(&root, &package)?;
+        fs::create_dir_all(&cache)
+            .map_err(|error| format!("could not create {}: {error}", cache.display()))?;
+        let cached_wasm = cache.join("adamantium_packet.wasm");
+        if !valid_wasm_file(&cached_wasm) {
+            let temporary = cache.join("adamantium_packet.wasm.download");
+            let tag = format!("adamantium_packet_{}", package.version.replace('.', "_"));
+            let url = format!(
+                "{}/releases/download/{tag}/adamantium_packet.wasm",
+                package.source
+            );
+            download_package_file(&downloader, &url, &temporary, &package)?;
+            if !valid_wasm_file(&temporary) {
+                let _ = fs::remove_file(&temporary);
+                return Err(format!(
+                    "package '{}' did not contain a valid WebAssembly binary",
+                    package.name
+                ));
+            }
+            replace_file(&temporary, &cached_wasm)?;
         }
         let directory = root
             .join("packages")
@@ -718,57 +729,10 @@ fn install_packages(root: &Path) -> Result<(), String> {
         fs::create_dir_all(&directory)
             .map_err(|error| format!("could not create {}: {error}", directory.display()))?;
         let destination = directory.join("adamantium_packet.wasm");
-        let temporary = directory.join("adamantium_packet.wasm.download");
         let manifest_destination = directory.join("adamantium_packet.toml");
-        let manifest_temporary = directory.join("adamantium_packet.toml.download");
-        let tag = format!("adamantium_packet_{}", package.version.replace('.', "_"));
-        let url = format!(
-            "{}/releases/download/{tag}/adamantium_packet.wasm",
-            package.source
-        );
-        let downloader = env::var_os("ADAMANTIUM_CURL").unwrap_or_else(|| {
-            if cfg!(windows) {
-                "curl.exe".into()
-            } else {
-                "curl".into()
-            }
-        });
-        download_package_file(&downloader, &url, &temporary, package)?;
-        let manifest_url = format!(
-            "{}/releases/download/{tag}/adamantium_packet.toml",
-            package.source
-        );
-        if let Err(error) =
-            download_package_file(&downloader, &manifest_url, &manifest_temporary, package)
-        {
-            let _ = fs::remove_file(&temporary);
-            return Err(error);
-        }
-        let bytes = fs::read(&temporary)
-            .map_err(|error| format!("could not read downloaded package: {error}"))?;
-        if !bytes.starts_with(b"\0asm\x01\0\0\0") {
-            let _ = fs::remove_file(&temporary);
-            let _ = fs::remove_file(&manifest_temporary);
-            return Err(format!(
-                "package '{}' did not contain a valid WebAssembly binary",
-                package.name
-            ));
-        }
-        if let Err(error) = packages::validate_manifest(&manifest_temporary, &package.version) {
-            let _ = fs::remove_file(&temporary);
-            let _ = fs::remove_file(&manifest_temporary);
-            return Err(error);
-        }
-        for destination in [&destination, &manifest_destination] {
-            if destination.exists() {
-                fs::remove_file(destination).map_err(|error| {
-                    format!("could not replace {}: {error}", destination.display())
-                })?;
-            }
-        }
-        fs::rename(&temporary, &destination)
+        fs::copy(&cached_wasm, &destination)
             .map_err(|error| format!("could not install {}: {error}", destination.display()))?;
-        fs::rename(&manifest_temporary, &manifest_destination).map_err(|error| {
+        fs::copy(cache.join("adamantium_packet.toml"), &manifest_destination).map_err(|error| {
             format!(
                 "could not install {}: {error}",
                 manifest_destination.display()
@@ -776,12 +740,102 @@ fn install_packages(root: &Path) -> Result<(), String> {
         })?;
         println!("Installed {} {}", package.name, package.version);
     }
+    fs::write(root.join("adamantium.lock"), lock.render()?)
+        .map_err(|error| format!("could not write adamantium.lock: {error}"))?;
     println!(
         "Installed {} package{}",
-        packages.len(),
-        if packages.len() == 1 { "" } else { "s" }
+        lock.packages.len(),
+        if lock.packages.len() == 1 { "" } else { "s" }
     );
     Ok(())
+}
+
+fn collect_package_manifests(
+    root: &Path,
+    package: &Package,
+    downloader: &std::ffi::OsStr,
+    manifests: &mut std::collections::BTreeMap<String, adamantium_packages::Manifest>,
+) -> Result<(), String> {
+    if manifests.contains_key(&package.source) {
+        return Ok(());
+    }
+    let cache = package_cache_directory(root, package)?;
+    fs::create_dir_all(&cache)
+        .map_err(|error| format!("could not create {}: {error}", cache.display()))?;
+    let manifest_path = cache.join("adamantium_packet.toml");
+    let manifest = match fs::read_to_string(&manifest_path)
+        .ok()
+        .and_then(|source| adamantium_packages::Manifest::parse(&source).ok())
+        .filter(|manifest| manifest.package.version == package.version)
+    {
+        Some(manifest) => {
+            packages::validate_manifest(&manifest_path, &package.version)?;
+            manifest
+        }
+        None => {
+            let temporary = cache.join("adamantium_packet.toml.download");
+            let tag = format!("adamantium_packet_{}", package.version.replace('.', "_"));
+            let url = format!(
+                "{}/releases/download/{tag}/adamantium_packet.toml",
+                package.source
+            );
+            download_package_file(downloader, &url, &temporary, package)?;
+            let source = fs::read_to_string(&temporary)
+                .map_err(|error| format!("could not read package manifest: {error}"))?;
+            let manifest = adamantium_packages::Manifest::parse(&source)?;
+            if manifest.package.version != package.version {
+                return Err(format!(
+                    "package '{}' manifest declares version {}, expected {}",
+                    package.name, manifest.package.version, package.version
+                ));
+            }
+            packages::validate_manifest(&temporary, &package.version)?;
+            replace_file(&temporary, &manifest_path)?;
+            manifest
+        }
+    };
+    manifests.insert(package.source.clone(), manifest.clone());
+    for (source, version) in &manifest.dependencies {
+        let dependency = adamantium_packages::Requirement::new(source, version)?;
+        collect_package_manifests(
+            root,
+            &Package {
+                name: dependency.name,
+                source: dependency.source,
+                version: dependency.version.to_string(),
+            },
+            downloader,
+            manifests,
+        )?;
+    }
+    Ok(())
+}
+
+fn package_cache_directory(root: &Path, package: &Package) -> Result<PathBuf, String> {
+    let repository = package
+        .source
+        .strip_prefix("https://github.com/")
+        .and_then(|path| path.split_once('/'))
+        .ok_or_else(|| format!("invalid package source '{}'", package.source))?;
+    Ok(root
+        .join("packages")
+        .join(".cache")
+        .join(repository.0)
+        .join(repository.1.trim_end_matches(".git"))
+        .join(&package.version))
+}
+
+fn valid_wasm_file(path: &Path) -> bool {
+    fs::read(path).is_ok_and(|bytes| bytes.starts_with(b"\0asm\x01\0\0\0"))
+}
+
+fn replace_file(source: &Path, destination: &Path) -> Result<(), String> {
+    if destination.exists() {
+        fs::remove_file(destination)
+            .map_err(|error| format!("could not replace {}: {error}", destination.display()))?;
+    }
+    fs::rename(source, destination)
+        .map_err(|error| format!("could not install {}: {error}", destination.display()))
 }
 
 fn download_package_file(
@@ -860,6 +914,7 @@ fn project_sources(root: &Path) -> Result<ProjectSources, String> {
     if !errors.is_empty() {
         return Err(diagnostics::multiple_errors(errors));
     }
+    let packages = packages_from_lock(&root, packages)?;
     let mut sources = load_modules(&root.join("code"))?;
     let bindings = packages::load_bindings(&root, &packages, &mut sources)?;
     Ok((
@@ -868,6 +923,36 @@ fn project_sources(root: &Path) -> Result<ProjectSources, String> {
         sources,
         bindings,
     ))
+}
+
+fn packages_from_lock(root: &Path, direct: Vec<Package>) -> Result<Vec<Package>, String> {
+    let path = root.join("adamantium.lock");
+    if !path.exists() {
+        return Ok(direct);
+    }
+    let source = fs::read_to_string(&path)
+        .map_err(|error| format!("could not read {}: {error}", path.display()))?;
+    let lock = adamantium_packages::Lockfile::parse(&source)?;
+    for requirement in &direct {
+        if !lock.packages.iter().any(|package| {
+            package.source == requirement.source && package.version == requirement.version
+        }) {
+            return Err(format!(
+                "adamantium.lock is out of date for package '{}'; run 'adamantium install'",
+                requirement.name
+            ));
+        }
+    }
+    lock.packages
+        .into_iter()
+        .map(|package| {
+            Ok(Package {
+                name: adamantium_packages::github_repository_name(&package.source)?,
+                source: package.source,
+                version: package.version,
+            })
+        })
+        .collect()
 }
 
 fn analyze_sources(

@@ -20,6 +20,13 @@ Version `1.4.2` uses tag `adamantium_packet_1_4_2`. The WASM file must be a WebA
 name = "TextTools"
 version = "1.4.2"
 abi = "wasi-command-v1"
+description = "UTF-8 text file helpers"
+authors = ["Example Author"]
+license = "MIT"
+repository = "https://github.com/community/TextTools"
+
+[dependencies]
+"https://github.com/community/CoreTools" = "2.0.0"
 
 [permissions]
 filesystem = "read-write"
@@ -34,7 +41,11 @@ result = "bool"
 command = "file-exists"
 ```
 
-`package.name` is the identifier used in Adamantium code. It may differ from the repository name. The version must match `requirement.toml`. The current ABI is `wasi-command-v1`.
+`package.name` is the identifier used in Adamantium code. It may differ from the repository name. `name`, `version`, and `abi` are required. `description`, `authors`, `license`, and `repository` are optional metadata. Names contain ASCII letters, digits, `_`, or `-`. The current ABI is `wasi-command-v1`.
+
+Versions use an exact, canonical `MAJOR.MINOR.PATCH` value. Version ranges, pre-release labels, build metadata, missing components, and leading zeroes are rejected. The manifest version must equal the requested version.
+
+The optional `[dependencies]` table maps a public GitHub repository URL to an exact version. `adamantium install` resolves all transitive dependencies, rejects cycles and version mismatches, and writes the complete deterministic graph to `adamantium.lock`. Commit this lockfile so every machine and CI job uses the same versions.
 
 `permissions.filesystem` accepts `none`, `read`, or `read-write`. With `none`, the package cannot see the project directory. Both filesystem modes currently receive a preopened project directory from the WASI backend, so `read` is advisory for now. Use `none` when file access is unnecessary.
 
@@ -147,7 +158,7 @@ fun main() {
 
 Single imports such as `use TextTools:read_text;` also work. Without `use`, call `TextTools:read_text("notes.txt")`. Every source file that uses a package declares its own `mod` and `use` statements.
 
-Installed files are stored under `packages/REPOSITORY/VERSION/`. `adamantium check`, `build`, and `run` validate the declaration, manifest, ABI, types, version, and WASM header.
+Installed files are stored under `packages/REPOSITORY/VERSION/`. Downloads are cached under `packages/.cache/OWNER/REPOSITORY/VERSION/` and reused after validation. `adamantium check`, `build`, and `run` read transitive packages from `adamantium.lock` and validate the declaration, manifest, ABI, types, version, and WASM header. Run `adamantium install` after changing `requirement.toml`.
 
 ## Troubleshooting
 
@@ -157,7 +168,7 @@ Installed files are stored under `packages/REPOSITORY/VERSION/`. `adamantium che
 - `function ... is not declared` - add `[functions.NAME]` and import the same name.
 - `Adamantium package error` - inspect the package's stderr output.
 
-Dependency locking, checksums, signatures, transitive dependencies, and a central registry are still planned.
+Checksums, signatures, and a central registry are still planned.
 
 ## Release checklist
 
