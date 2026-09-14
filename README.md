@@ -58,12 +58,14 @@ Build and install the CLI from source:
 cargo install --path crates/adamantium-cli
 ```
 
-Building Adamantium programs requires NASM and a platform linker:
+For Windows x86-64, download `adamantium-windows-x86_64.zip` from a GitHub Release, extract the complete directory, and add that directory to `PATH`. The portable package includes the CLI, NASM, the LLVM linker, and the required Windows import libraries. It does not require Rust, Cargo, Visual Studio, the Windows SDK, or a separate NASM installation.
+
+When building the CLI from source, building Adamantium programs requires NASM and a platform linker:
 
 - Windows: Visual Studio C++ Build Tools and the Windows SDK
 - Linux: a C linker available as `cc`
 
-The portable Windows release contains `adamantium.exe` and NASM, so Rust and a separate NASM installation are not required for CLI users. Visual Studio C++ Build Tools are still required for linking programs.
+The portable archive also contains `INSTALL.txt` and a SHA-256 checksum is published beside it.
 
 ## Quick Start
 

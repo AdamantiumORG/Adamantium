@@ -7,7 +7,7 @@ on:
       - "v*"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   package:
@@ -36,5 +36,16 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: adamantium-windows-x86_64
-          path: dist/adamantium-windows-x86_64.zip
+          path: |
+            dist/adamantium-windows-x86_64.zip
+            dist/adamantium-windows-x86_64.zip.sha256
           if-no-files-found: error
+
+      - name: Publish tagged portable package
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/adamantium-windows-x86_64.zip
+            dist/adamantium-windows-x86_64.zip.sha256
+          fail_on_unmatched_files: true

@@ -1334,7 +1334,7 @@ Create clear compiler diagnostics.
 * [x] Add pinned SHA-256 verification for bundled NASM
 * [x] Include the NASM BSD 2-Clause license in distributions
 * [x] Build the Windows CLI with the static CRT
-* [ ] Bundle a linker and required Windows libraries
+* [x] Bundle a linker and required Windows libraries
 * [ ] Create Windows installer
 * [ ] Create release channels
 * [ ] Stable releases
@@ -1878,7 +1878,7 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 * [ ] Bundle required Windows libraries where legally and technically appropriate
 * [ ] Remove the remaining Visual Studio requirement
 * [ ] Test clean Windows machines
-* [ ] Update portable distribution
+* [x] Update portable distribution
 * [ ] Add Windows linker regression tests
 
 ### 33. Complete cross-platform behavior

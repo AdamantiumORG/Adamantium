@@ -44,7 +44,7 @@ Usage:\n\
   adamantium --version\n\n\
 PROJECT_DIRECTORY defaults to the current directory.\n\
 For compatibility, `adamantium PROJECT_DIRECTORY` is the same as `adamantium build PROJECT_DIRECTORY`.\n\
-Building requires NASM and a platform linker (MSVC on Windows or cc on Linux).\n\
+The portable Windows package includes NASM and a linker. Source builds require NASM and a platform linker.\n\
 Override tools with ADAMANTIUM_NASM and ADAMANTIUM_LINKER.";
 
 enum Action {
@@ -1072,6 +1072,13 @@ fn link(target: &Path, name: &str, obj: &Path, runtime: &Path, exe: &Path) -> Re
             "Microsoft linker configured by ADAMANTIUM_LINKER",
         );
     }
+    if let Some(tools) = portable_tools_directory() {
+        let linker = tools.join("lld-link.exe");
+        if linker.is_file() {
+            arguments.push(format!("/libpath:{}", tools.join("lib").display()).into());
+            return execute(Command::new(linker).args(&arguments), "bundled LLVM linker");
+        }
+    }
     if env::var_os("VSCMD_ARG_TGT_ARCH").is_some() {
         return execute(
             Command::new("link.exe").args(&arguments),
@@ -1097,6 +1104,12 @@ fn link(target: &Path, name: &str, obj: &Path, runtime: &Path, exe: &Path) -> Re
             .arg(format!("@{}", response.display())),
         "Microsoft linker through the Visual Studio x64 environment",
     )
+}
+
+fn portable_tools_directory() -> Option<PathBuf> {
+    env::current_exe()
+        .ok()
+        .and_then(|executable| executable.parent().map(|parent| parent.join("tools")))
 }
 
 fn extract_runtime_auxiliary_libraries(target: &Path) -> Result<Vec<PathBuf>, String> {
