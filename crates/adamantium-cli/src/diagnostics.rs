@@ -146,7 +146,7 @@ pub fn warnings(program: &Program) -> Vec<String> {
                     visit(object, &mut reads, &mut calls);
                     visit(value, &mut reads, &mut calls);
                 }
-                Statement::SetIndex(list, index, value) => {
+                Statement::SetIndex(list, index, value, _) => {
                     visit(list, &mut reads, &mut calls);
                     visit(index, &mut reads, &mut calls);
                     visit(value, &mut reads, &mut calls);
@@ -337,7 +337,7 @@ fn visit_statement(
             visit(object, reads, calls);
             visit(value, reads, calls);
         }
-        Statement::SetIndex(list, index, value) => {
+        Statement::SetIndex(list, index, value, _) => {
             visit(list, reads, calls);
             visit(index, reads, calls);
             visit(value, reads, calls);

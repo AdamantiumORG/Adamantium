@@ -85,7 +85,7 @@ impl Generator {
                         self.call_saved(hook, &[receiver]);
                     }
                 }
-                Instruction::SetIndex(list, index, value) => {
+                Instruction::SetIndex(list, index, value, line) => {
                     self.expression(list);
                     let list = self.save();
                     self.expression(index);
@@ -93,7 +93,7 @@ impl Generator {
                     self.expression(value);
                     self.clone_class(value.ty);
                     let value = self.save();
-                    self.emit_list_bounds(list, index);
+                    self.emit_list_bounds(list, index, *line);
                     self.load(list);
                     self.emit("    mov r11, rax");
                     self.load(index);

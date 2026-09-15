@@ -21,11 +21,11 @@ pub enum Kind {
     Compare(Comparison, Box<Expression>, Box<Expression>),
     Logical(LogicalOperator, Box<Expression>, Box<Expression>),
     Convert(Box<Expression>),
-    Unwrap(Box<Expression>),
+    Unwrap(Box<Expression>, usize),
     Call(String, Vec<Expression>),
     Construct(u32, Vec<Expression>, String),
     List(Vec<Expression>),
-    Index(Box<Expression>, Box<Expression>),
+    Index(Box<Expression>, Box<Expression>, usize),
     Field(Box<Expression>, usize),
     MethodCall(String, Box<Expression>, Vec<Expression>),
     Try(Vec<Instruction>),
@@ -41,7 +41,7 @@ pub enum Instruction {
     Print(Expression, bool),
     Call(Expression),
     SetField(Expression, usize, Expression, Option<String>),
-    SetIndex(Expression, Expression, Expression),
+    SetIndex(Expression, Expression, Expression, usize),
     Message(Expression, bool, usize),
     If(Expression, Vec<Instruction>, Vec<Instruction>),
     While(Expression, Vec<Instruction>),
@@ -527,6 +527,7 @@ impl Checker<'_> {
                     kind: Kind::Index(
                         Box::new(list),
                         Box::new(self.expression(index, Some(Type::U64))?),
+                        position.line(),
                     ),
                 }
             }
@@ -558,7 +559,7 @@ impl Checker<'_> {
                     let ty = Type::from_id(inner).unwrap();
                     object = Expression {
                         ty,
-                        kind: Kind::Unwrap(Box::new(object)),
+                        kind: Kind::Unwrap(Box::new(object), position.line()),
                     };
                 }
                 let Type::Class(id) = object.ty else {
@@ -596,7 +597,7 @@ impl Checker<'_> {
                     let ty = Type::from_id(inner).unwrap();
                     object = Expression {
                         ty,
-                        kind: Kind::Unwrap(Box::new(object)),
+                        kind: Kind::Unwrap(Box::new(object), position.line()),
                     };
                 }
                 let Type::Class(id) = object.ty else {
@@ -921,7 +922,7 @@ impl Checker<'_> {
                     .map(|method| method.function.clone());
                 Instruction::SetField(object, index, self.expression(value, Some(field.ty))?, hook)
             }
-            Statement::SetIndex(list, index, value) => {
+            Statement::SetIndex(list, index, value, position) => {
                 let list = self.expression(list, None)?;
                 let Type::List(inner) = list.ty else {
                     return Err(format!("invalid access: {} cannot be indexed", list.ty));
@@ -931,6 +932,7 @@ impl Checker<'_> {
                     list,
                     self.expression(index, Some(Type::U64))?,
                     self.expression(value, Some(element_ty))?,
+                    position.line(),
                 )
             }
             Statement::MethodCall(expr) => Instruction::Call(self.expression(expr, None)?),

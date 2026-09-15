@@ -108,13 +108,13 @@ impl Generator {
                 self.emit(format!("    mov rdx, {}", values.len()));
                 self.next_slot = mark;
             }
-            Kind::Index(list, index) => {
+            Kind::Index(list, index, line) => {
                 let mark = self.next_slot;
                 self.expression(list);
                 let list = self.save();
                 self.expression(index);
                 let index = self.save();
-                self.emit_list_bounds(list, index);
+                self.emit_list_bounds(list, index, *line);
                 self.load(list);
                 self.emit("    mov r11, rax");
                 self.load(index);
@@ -155,12 +155,12 @@ impl Generator {
                 self.evaluate(op, expr.ty, value.ty, &[slot]);
                 self.next_slot = mark;
             }
-            Kind::Unwrap(value) => {
+            Kind::Unwrap(value, line) => {
                 let compact = self.label("optional_compact");
                 let done = self.label("optional_unwrapped");
                 self.expression(value);
                 let error = self.error_target().to_string();
-                self.emit(format!("    test rdx, rdx\n    jnz {compact}\n    call ad_optional_error\n    jmp {error}\n{compact}:\n    cmp rdx, 2\n    jne {done}\n    mov r11, rax\n    mov rax, [r11]\n    mov rdx, [r11 + 8]\n{done}:"));
+                self.emit(format!("    test rdx, rdx\n    jnz {compact}\n    mov ecx, {line}\n    call ad_optional_error\n    jmp {error}\n{compact}:\n    cmp rdx, 2\n    jne {done}\n    mov r11, rax\n    mov rax, [r11]\n    mov rdx, [r11 + 8]\n{done}:"));
             }
             Kind::Not(value) => {
                 self.expression(value);

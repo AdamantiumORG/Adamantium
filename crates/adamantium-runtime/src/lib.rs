@@ -11,15 +11,60 @@ use wasmi_wasi::{
 
 thread_local! {
     static TRY_DEPTH: Cell<usize> = const { Cell::new(0) };
-    static LAST_ERROR: RefCell<Option<String>> = const { RefCell::new(None) };
+    static LAST_ERROR: RefCell<Option<RuntimeError>> = const { RefCell::new(None) };
 }
 
-fn report_error(message: String) {
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RuntimeErrorKind {
+    Recoverable,
+    Panic,
+    Package,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RuntimeError {
+    pub kind: RuntimeErrorKind,
+    pub code: &'static str,
+    pub message: String,
+    pub line: Option<usize>,
+}
+
+impl std::fmt::Display for RuntimeError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match (self.kind, self.line) {
+            (RuntimeErrorKind::Recoverable, Some(line)) => {
+                write!(
+                    formatter,
+                    "Adamantium runtime error at line {line}: {}",
+                    self.message
+                )
+            }
+            (RuntimeErrorKind::Recoverable, None) => {
+                write!(formatter, "Adamantium runtime error: {}", self.message)
+            }
+            (RuntimeErrorKind::Panic, Some(line)) => {
+                write!(
+                    formatter,
+                    "Adamantium program panicked at line {line}: {}",
+                    self.message
+                )
+            }
+            (RuntimeErrorKind::Panic, None) => {
+                write!(formatter, "Adamantium program panicked: {}", self.message)
+            }
+            (RuntimeErrorKind::Package, _) => {
+                write!(formatter, "Adamantium package error: {}", self.message)
+            }
+        }
+    }
+}
+
+fn report_error(error: RuntimeError) {
     let handled = TRY_DEPTH.get() != 0;
     if handled {
-        LAST_ERROR.with_borrow_mut(|error| *error = Some(message));
+        LAST_ERROR.with_borrow_mut(|last| *last = Some(error));
     } else {
-        eprintln!("{message}");
+        eprintln!("{error}");
     }
 }
 
@@ -43,7 +88,7 @@ pub unsafe extern "C" fn ad_try_end(output: *mut Value) {
         *output = Value::default();
         return;
     };
-    let bytes = error.into_bytes().into_boxed_slice();
+    let bytes = error.to_string().into_bytes().into_boxed_slice();
     let value = Value {
         lo: bytes.as_ptr() as u64,
         hi: bytes.len() as u64,
@@ -83,10 +128,13 @@ pub unsafe extern "C" fn ad_object_clone(source: *const Value, field_count: usiz
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn ad_list_error(index: usize, length: usize) -> u32 {
-    report_error(format!(
-        "Adamantium runtime error: List index {index} is out of bounds for length {length}"
-    ));
+pub extern "C" fn ad_list_error(index: usize, length: usize, line: usize) -> u32 {
+    report_error(RuntimeError {
+        kind: RuntimeErrorKind::Recoverable,
+        code: "R001",
+        message: format!("List index {index} is out of bounds for length {length}"),
+        line: (line != 0).then_some(line),
+    });
     2
 }
 
@@ -124,9 +172,56 @@ mod list_tests {
     }
 }
 
+#[cfg(test)]
+mod runtime_error_tests {
+    use super::*;
+
+    #[test]
+    fn recoverable_errors_keep_structured_context() {
+        ad_try_begin();
+        assert_eq!(ad_list_error(5, 2, 17), 2);
+        let error = LAST_ERROR.with_borrow(|error| error.clone()).unwrap();
+        assert_eq!(error.kind, RuntimeErrorKind::Recoverable);
+        assert_eq!(error.code, "R001");
+        assert_eq!(error.line, Some(17));
+        assert_eq!(error.message, "List index 5 is out of bounds for length 2");
+        assert_eq!(
+            error.to_string(),
+            "Adamantium runtime error at line 17: List index 5 is out of bounds for length 2"
+        );
+        TRY_DEPTH.set(0);
+        LAST_ERROR.with_borrow_mut(Option::take);
+    }
+
+    #[test]
+    fn panics_are_distinct_from_recoverable_errors() {
+        let message = Value {
+            lo: b"broken".as_ptr() as u64,
+            hi: 6,
+        };
+        ad_try_begin();
+        unsafe { ad_message(&message, 9, 1) };
+        let error = LAST_ERROR.with_borrow(|error| error.clone()).unwrap();
+        assert_eq!(error.kind, RuntimeErrorKind::Panic);
+        assert_eq!(error.code, "P001");
+        assert_eq!(error.line, Some(9));
+        assert_eq!(
+            error.to_string(),
+            "Adamantium program panicked at line 9: broken"
+        );
+        TRY_DEPTH.set(0);
+        LAST_ERROR.with_borrow_mut(Option::take);
+    }
+}
+
 #[unsafe(no_mangle)]
-pub extern "C" fn ad_optional_error() -> u32 {
-    report_error("Adamantium runtime error: cannot access a field or method through None".into());
+pub extern "C" fn ad_optional_error(line: usize) -> u32 {
+    report_error(RuntimeError {
+        kind: RuntimeErrorKind::Recoverable,
+        code: "R002",
+        message: "cannot access a field or method through None".into(),
+        line: (line != 0).then_some(line),
+    });
     2
 }
 
@@ -278,7 +373,12 @@ pub unsafe extern "C" fn ad_evaluate(request: *mut Request) -> u32 {
             0
         }
         Err(error) => {
-            report_error(format!("Adamantium runtime error: {error}"));
+            report_error(RuntimeError {
+                kind: RuntimeErrorKind::Recoverable,
+                code: "R003",
+                message: error,
+                line: (request.reserved != 0).then_some(request.reserved as usize),
+            });
             2
         }
     }
@@ -459,7 +559,12 @@ pub unsafe extern "C" fn ad_package_call(request: *mut PackageCall) -> u32 {
             0
         }
         Err(error) => {
-            report_error(format!("Adamantium package error: {}", error.trim()));
+            report_error(RuntimeError {
+                kind: RuntimeErrorKind::Package,
+                code: "R004",
+                message: error.trim().into(),
+                line: None,
+            });
             2
         }
     }
@@ -475,9 +580,12 @@ pub unsafe extern "C" fn ad_message(message: *const Value, line: usize, panic: u
     let bytes = unsafe { std::slice::from_raw_parts(message.lo as *const u8, message.hi as usize) };
     let text = String::from_utf8_lossy(bytes);
     if panic != 0 {
-        report_error(format!(
-            "Adamantium program panicked at line {line}: {text}"
-        ));
+        report_error(RuntimeError {
+            kind: RuntimeErrorKind::Panic,
+            code: "P001",
+            message: text.into_owned(),
+            line: Some(line),
+        });
     } else {
         eprintln!("Adamantium program warned at line {line}: {text}");
     }

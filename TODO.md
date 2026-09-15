@@ -1111,7 +1111,7 @@ Adamantium must remain memory-safe.
 * [x] Implement list runtime - contiguous `Value` storage, recursive copies, indexing, iteration and bounds errors
 * [x] Implement object runtime - allocation and independent class-value copying
 * [x] Report arithmetic overflow, division by zero, and invalid clamp ranges
-* [ ] Implement error runtime
+* [x] Implement error runtime - structured recoverable, panic and package errors integrated with `try`
 * [ ] Optimize runtime overhead
 
 ---
@@ -1559,12 +1559,12 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 10. Complete runtime error handling
 
-* [ ] Define runtime error representation
-* [ ] Separate recoverable runtime errors from panics
-* [ ] Integrate runtime errors with `try`
-* [ ] Add structured runtime error information
-* [ ] Preserve source locations where possible
-* [ ] Add runtime error tests
+* [x] Define runtime error representation
+* [x] Separate recoverable runtime errors from panics
+* [x] Integrate runtime errors with `try`
+* [x] Add structured runtime error information
+* [x] Preserve source locations where possible
+* [x] Add runtime error tests
 
 ---
 
@@ -2045,7 +2045,7 @@ Do not skip ahead to later phases unless a current task is blocked.
 7. [x] Complete memory-safety regression tests
 8. [x] Complete the List runtime
 9. [ ] Complete string operations
-10. [ ] Complete runtime error handling
+10. [x] Complete runtime error handling
 11. [ ] Refactor `codegen.rs`
 12. [ ] Refactor the compiler frontend
 13. [ ] Define compiler phase boundaries

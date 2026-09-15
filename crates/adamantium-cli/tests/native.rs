@@ -483,6 +483,26 @@ fn native_try_catches_runtime_errors_and_panics() {
 
 #[test]
 #[ignore = "requires NASM and Visual Studio C++ build tools"]
+fn native_try_preserves_runtime_error_source_lines() {
+    let output = Project::new(
+        "fun main() {\n    var error = try {\n        var values=List[1];\n        print.newline(values[3]);\n    };\n    print.newline(error);\n}",
+    )
+    .run();
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(
+        output.stdout,
+        b"Adamantium runtime error at line 4: List index 3 is out of bounds for length 1\r\n"
+    );
+    assert!(!String::from_utf8_lossy(&output.stderr).contains("runtime error"));
+}
+
+#[test]
+#[ignore = "requires NASM and Visual Studio C++ build tools"]
 fn native_offsets_read_current_values_and_preserve_types() {
     let output = Project::new(
         r#"

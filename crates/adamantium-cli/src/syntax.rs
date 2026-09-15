@@ -110,7 +110,7 @@ pub enum Statement {
     Print(Expr, bool),
     Call(Call),
     SetField(Expr, String, Expr),
-    SetIndex(Expr, Expr, Expr),
+    SetIndex(Expr, Expr, Expr, Position),
     MethodCall(Expr),
     Message(Expr, bool, Position),
     If(Expr, Vec<Statement>, Vec<Statement>),
@@ -1540,7 +1540,7 @@ impl Parser {
                         target =
                             Expr::Index(Box::new(target), Box::new(parent_index), index_position);
                     }
-                    Statement::SetIndex(target, index, self.expression(0)?)
+                    Statement::SetIndex(target, index, self.expression(0)?, position)
                 } else if self.peek() == &Token::Symbol('(') {
                     Statement::Call(self.arguments(name, position)?)
                 } else if self.take(Token::Symbol('.')) {

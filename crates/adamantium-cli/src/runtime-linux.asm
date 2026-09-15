@@ -78,12 +78,14 @@ ad_linux_object_clone:
 ad_linux_list_error:
     mov rdi, rcx
     mov rsi, rdx
+    mov edx, r8d
     sub rsp, 8
     call ad_list_error
     add rsp, 8
     ret
 
 ad_linux_optional_error:
+    mov edi, ecx
     sub rsp, 8
     call ad_optional_error
     add rsp, 8
