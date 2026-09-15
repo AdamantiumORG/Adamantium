@@ -85,6 +85,8 @@ jobs:
       contents: write
     runs-on: windows-latest
     timeout-minutes: 30
+    concurrency:
+      group: adamantium-nightly-release
 
     steps:
       - name: Check out tested commit
@@ -146,10 +148,10 @@ jobs:
           gh release view nightly *> $null
           if ($LASTEXITCODE -eq 0) {
             gh release edit nightly --title 'Nightly' --prerelease --latest=false `
-              --notes 'Automatically updated after the Windows CLI tests pass.'
+              --notes 'Automatically updated after the Windows and Linux CLI tests pass in their platform workflows.'
           } else {
             gh release create nightly --title 'Nightly' --prerelease --latest=false `
-              --notes 'Automatically updated after the Windows CLI tests pass.'
+              --notes 'Automatically updated after the Windows and Linux CLI tests pass in their platform workflows.'
           }
           if ($LASTEXITCODE -ne 0) { throw 'Could not create or update the Nightly release.' }
           gh release upload nightly `

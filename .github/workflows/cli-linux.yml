@@ -8,6 +8,8 @@ on:
       - "Cargo.toml"
       - "Cargo.lock"
       - "scripts/test-cli-linux.sh"
+      - "scripts/package-linux.sh"
+      - ".github/workflows/cli-linux.yml"
   pull_request:
     paths:
       - "crates/**"
@@ -15,6 +17,8 @@ on:
       - "Cargo.toml"
       - "Cargo.lock"
       - "scripts/test-cli-linux.sh"
+      - "scripts/package-linux.sh"
+      - ".github/workflows/cli-linux.yml"
 
 permissions:
   contents: read
@@ -54,6 +58,12 @@ jobs:
           test "$(rustc --version --verbose | sed -n 's/^host: //p')" = "x86_64-unknown-linux-gnu"
           test "$(uname -m)" = "x86_64"
 
+      - name: Run all Linux tests
+        run: cargo test --locked --workspace --all-targets
+
+      - name: Run native Linux language tests
+        run: cargo test --locked -p adamantium-cli --test native_linux -- --ignored
+
       - name: Install Adamantium CLI
         shell: bash
         run: |
@@ -65,3 +75,84 @@ jobs:
       - name: Test installed CLI
         shell: bash
         run: bash scripts/test-cli-linux.sh
+
+  nightly:
+    name: Publish Linux Nightly
+    needs: test-cli
+    if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: adamantium-nightly-release
+
+    steps:
+      - name: Check out tested commit
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes nasm zip
+
+      - name: Install Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.14.1
+
+      - name: Build and verify portable package
+        shell: bash
+        run: bash scripts/package-linux.sh
+
+      - name: Prepare Nightly assets
+        shell: bash
+        run: |
+          cp dist/adamantium-linux-x86_64.zip dist/linux_portable_x86_64.zip
+          cd dist
+          sha256sum linux_portable_x86_64.zip > linux_portable_x86_64.zip.sha256
+
+      - name: Upload Nightly workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux_portable_x86_64
+          path: |
+            dist/linux_portable_x86_64.zip
+            dist/linux_portable_x86_64.zip.sha256
+          if-no-files-found: error
+
+      - name: Move Nightly tag to tested commit
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/nightly" >/dev/null 2>&1; then
+            gh api --method PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/nightly" \
+              -f sha="$GITHUB_SHA" -F force=true >/dev/null
+          else
+            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+              -f ref='refs/tags/nightly' -f sha="$GITHUB_SHA" >/dev/null
+          fi
+
+      - name: Create or update Nightly release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          notes='Automatically updated after the Windows and Linux CLI tests pass in their platform workflows.'
+          if gh release view nightly >/dev/null 2>&1; then
+            gh release edit nightly --title 'Nightly' --prerelease --latest=false --notes "$notes"
+          else
+            gh release create nightly --title 'Nightly' --prerelease --latest=false --notes "$notes"
+          fi
+          gh release upload nightly \
+            dist/linux_portable_x86_64.zip \
+            dist/linux_portable_x86_64.zip.sha256 \
+            --clobber

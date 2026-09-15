@@ -44,7 +44,7 @@ Usage:\n\
   adamantium --version\n\n\
 PROJECT_DIRECTORY defaults to the current directory.\n\
 For compatibility, `adamantium PROJECT_DIRECTORY` is the same as `adamantium build PROJECT_DIRECTORY`.\n\
-The portable Windows package includes NASM and a linker. Source builds require NASM and a platform linker.\n\
+The portable Windows and Linux packages include NASM and a linker. Source builds require NASM and a platform linker.\n\
 Override tools with ADAMANTIUM_NASM and ADAMANTIUM_LINKER.";
 
 enum Action {
@@ -552,9 +552,13 @@ fn emit_executable(
     fs::write(&asm, codegen::assembly_entry(statements, entry)).map_err(|e| e.to_string())?;
     let nasm = env::var_os("ADAMANTIUM_NASM").unwrap_or_else(|| {
         let bundled = env::current_exe().ok().and_then(|executable| {
-            executable
-                .parent()
-                .map(|parent| parent.join("tools/nasm.exe"))
+            executable.parent().map(|parent| {
+                parent.join(if cfg!(windows) {
+                    "tools/nasm.exe"
+                } else {
+                    "tools/nasm"
+                })
+            })
         });
         if let Some(bundled) = bundled
             && bundled.is_file()
@@ -1034,11 +1038,26 @@ fn load_modules(code: &Path) -> Result<Vec<(String, String)>, String> {
 fn link(target: &Path, name: &str, obj: &Path, runtime: &Path, exe: &Path) -> Result<(), String> {
     if cfg!(target_os = "linux") {
         let libraries = include_str!(concat!(env!("OUT_DIR"), "/runtime-libraries.txt"));
-        let mut command =
-            Command::new(env::var_os("ADAMANTIUM_LINKER").unwrap_or_else(|| "cc".into()));
+        let configured = env::var_os("ADAMANTIUM_LINKER");
+        let bundled = portable_tools_directory()
+            .map(|tools| tools.join("zig/zig"))
+            .filter(|linker| linker.is_file());
+        let use_bundled_zig = configured.is_none() && bundled.is_some();
+        let mut command = Command::new(
+            configured
+                .or_else(|| bundled.clone().map(PathBuf::into_os_string))
+                .unwrap_or_else(|| "cc".into()),
+        );
+        if use_bundled_zig {
+            command.arg("cc");
+        }
         command.arg("-no-pie").arg(obj).arg(runtime);
         command
-            .args(libraries.split_whitespace())
+            .args(
+                libraries
+                    .split_whitespace()
+                    .filter(|library| !use_bundled_zig || *library != "-lgcc_s"),
+            )
             .arg("-o")
             .arg(exe);
         return execute(&mut command, "Linux C linker");

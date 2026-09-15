@@ -1255,6 +1255,8 @@ Create the official standard library.
 * [ ] Build documentation
 * [x] Create portable Windows packaging workflow - manual runs and version tags
 * [x] Publish portable ZIP as a GitHub Actions artifact
+* [x] Create portable Linux x86-64 ZIP after Linux CLI tests pass
+* [x] Publish Linux portable ZIP and checksum to the Nightly release
 * [x] Build a standalone CLI that does not require Rust on user machines
 * [x] Bundle and checksum the official NASM Windows binary
 * [ ] Publish installer
@@ -1331,6 +1333,7 @@ Create clear compiler diagnostics.
 
 * [ ] Define semantic versioning
 * [x] Create portable Windows ZIP packaging
+* [x] Create portable Linux x86-64 ZIP packaging
 * [x] Add pinned SHA-256 verification for bundled NASM
 * [x] Include the NASM BSD 2-Clause license in distributions
 * [x] Build the Windows CLI with the static CRT

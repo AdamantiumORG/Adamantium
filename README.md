@@ -60,12 +60,14 @@ cargo install --path crates/adamantium-cli
 
 For Windows x86-64, download `windows_portable_x86_64.zip` from the [Nightly release](https://github.com/AdamantiumORG/Adamantium/releases/tag/nightly), extract the complete directory, and add that directory to `PATH`. The portable package includes the CLI, NASM, the LLVM linker, and the required Windows import libraries. It does not require Rust, Cargo, Visual Studio, the Windows SDK, or a separate NASM installation. Nightly is replaced automatically after all Windows tests pass on the default branch.
 
+For Linux x86-64, download `linux_portable_x86_64.zip` from the same Nightly release. It includes the CLI, NASM, and the Zig linker toolchain, so Rust, Cargo, NASM, GCC, Clang, and system development packages are not required. The Linux archive is rebuilt and its Nightly assets are replaced after all Linux CLI tests pass on the default branch.
+
 When building the CLI from source, building Adamantium programs requires NASM and a platform linker:
 
 - Windows: Visual Studio C++ Build Tools and the Windows SDK
 - Linux: a C linker available as `cc`
 
-The portable archive also contains `INSTALL.txt` and a SHA-256 checksum is published beside it.
+Each portable archive contains `INSTALL.txt`, and a SHA-256 checksum is published beside it.
 
 ## Quick Start
 

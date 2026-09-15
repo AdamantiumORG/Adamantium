@@ -5,7 +5,7 @@
 | Target | Object format | Calling convention | Linker | Status |
 | --- | --- | --- | --- | --- |
 | `x86_64-pc-windows-msvc` | COFF (`win64`) | Windows x64 for runtime calls | MSVC `link.exe` | Supported |
-| `x86_64-unknown-linux-gnu` | ELF64 | System V AMD64 for runtime calls | `cc` | Supported |
+| `x86_64-unknown-linux-gnu` | ELF64 | System V AMD64 for runtime calls | `cc` or bundled Zig | Supported |
 
 Adamantium function calls use the compiler's internal stack-based value ABI on
 both targets. Platform entry points and calls into the Rust runtime use adapters
@@ -36,3 +36,10 @@ Before an ARM64 target can be marked supported, it must provide:
 Target selection will eventually be exposed through a `--target <triple>` CLI
 option. Until that option exists, the compiler builds programs for its host
 operating system and x86-64 architecture.
+
+## Portable Linux distribution
+
+`linux_portable_x86_64.zip` contains the Adamantium CLI, NASM, and Zig's linker
+toolchain. The CLI discovers both tools relative to its own executable. The
+packaging smoke test removes system compiler tools from `PATH`, creates a new
+project, compiles it, and runs the resulting ELF executable before publication.
