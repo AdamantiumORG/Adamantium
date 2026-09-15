@@ -897,6 +897,14 @@ fn parses_list_literals_indexing_and_assignment() {
 }
 
 #[test]
+fn parses_nested_list_element_assignment() {
+    let statements = main_statements("fun main() { var values=List[List[1,2]]; values[0][1]=9; }");
+    let Statement::SetIndex(Expr::Index(_, _, _), _, _) = &statements[1] else {
+        panic!("nested List assignment expected");
+    };
+}
+
+#[test]
 fn parses_try_blocks_as_expressions() {
     let program = parse("fun main() { var error = try { print.newline(1); }; }").unwrap();
     let Statement::Assign(_, Expr::Try(body)) = &program.functions[0].statements[0] else {

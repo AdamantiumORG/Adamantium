@@ -9,7 +9,7 @@ codegen/
 ├── expressions.rs  typed expression lowering
 ├── statements.rs   statements and control flow
 ├── functions.rs    function frames and saved calls
-├── lists.rs        list bounds checks
+├── lists.rs        recursive List copies and bounds checks
 └── entry.rs        CLI entry point, data section and platform adaptation
 ```
 

@@ -90,6 +90,40 @@ pub extern "C" fn ad_list_error(index: usize, length: usize) -> u32 {
     2
 }
 
+#[cfg(test)]
+mod list_tests {
+    use super::*;
+
+    #[test]
+    fn allocates_zero_initialized_list_storage() {
+        let list = ad_object_new(3);
+        assert!(!list.is_null());
+        let values = unsafe { std::slice::from_raw_parts(list, 3) };
+        assert_eq!(values, &[Value::default(); 3]);
+        unsafe { drop(Box::from_raw(std::ptr::slice_from_raw_parts_mut(list, 3))) };
+    }
+
+    #[test]
+    fn clones_list_storage_independently() {
+        let list = ad_object_new(2);
+        unsafe {
+            list.write(Value { lo: 10, hi: 0 });
+            list.add(1).write(Value { lo: 20, hi: 0 });
+        }
+        let copy = unsafe { ad_object_clone(list, 2) };
+        unsafe { copy.write(Value { lo: 99, hi: 0 }) };
+
+        assert_eq!(unsafe { (*list).lo }, 10);
+        assert_eq!(unsafe { (*copy).lo }, 99);
+        assert_eq!(unsafe { (*copy.add(1)).lo }, 20);
+
+        unsafe {
+            drop(Box::from_raw(std::ptr::slice_from_raw_parts_mut(list, 2)));
+            drop(Box::from_raw(std::ptr::slice_from_raw_parts_mut(copy, 2)));
+        }
+    }
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn ad_optional_error() -> u32 {
     report_error("Adamantium runtime error: cannot access a field or method through None".into());

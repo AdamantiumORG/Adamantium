@@ -90,8 +90,8 @@ impl Generator {
                 "    mov rcx, rax\n    mov edx, {}\n    call ad_object_clone\n    xor edx, edx",
                 self.class_sizes[id as usize]
             )),
-            Type::List(_) => self.emit(
-                "    sub rsp, 16\n    mov [rsp], rdx\n    mov rcx, rax\n    call ad_object_clone\n    mov rdx, [rsp]\n    add rsp, 16",
+            Type::List(inner) => self.clone_list(
+                Type::from_id(inner).expect("checked List element type must be available"),
             ),
             _ => (),
         }

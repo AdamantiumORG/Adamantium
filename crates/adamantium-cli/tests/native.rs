@@ -241,6 +241,29 @@ fn native_lists_create_read_and_update_elements() {
         String::from_utf8_lossy(&output.stderr)
             .contains("List index 1 is out of bounds for length 1")
     );
+
+    let output = Project::new("fun main() { var values=List[1]; values[2]=7; }").run();
+    assert_eq!(output.status.code(), Some(2));
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("List index 2 is out of bounds for length 1")
+    );
+}
+
+#[test]
+#[ignore = "requires NASM and Visual Studio C++ build tools"]
+fn native_nested_list_copies_are_independent() {
+    let output = Project::new(
+        "fun main() { var original=List[List[1,2],List[3,4]]; var copy=original; copy[0][1]=9; print.newline(original[0][1]); print.newline(copy[0][1]); }",
+    )
+    .run();
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(output.stdout, b"2\r\n9\r\n");
 }
 
 #[test]

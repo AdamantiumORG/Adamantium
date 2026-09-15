@@ -1108,7 +1108,7 @@ Adamantium must remain memory-safe.
 * [x] Implement exit codes - normal completion, output failures, arithmetic/range failures
 * [ ] Implement memory management
 * [x] Implement string runtime - immutable literal storage and value copies; string operations are pending
-* [ ] Implement list runtime
+* [x] Implement list runtime - contiguous `Value` storage, recursive copies, indexing, iteration and bounds errors
 * [x] Implement object runtime - allocation and independent class-value copying
 * [x] Report arithmetic overflow, division by zero, and invalid clamp ranges
 * [ ] Implement error runtime
@@ -1128,7 +1128,7 @@ Adamantium must remain memory-safe.
 * [x] Generate function calls
 * [x] Generate returns
 * [x] Generate classes - runtime-backed field storage, method calls and independent copies
-* [ ] Generate lists
+* [x] Generate lists - allocation, copying, indexing, assignment and iteration through NASM
 * [x] Generate strings - read-only UTF-8 storage with pointer/length values
 * [x] Generate scalar aliases and disconnection copies
 * [ ] Generate async support
@@ -1533,18 +1533,18 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 8. Complete the List runtime
 
-* [ ] Define the runtime representation of `List`
-* [ ] Implement list allocation
-* [ ] Implement list element storage
-* [ ] Implement list indexing
-* [ ] Implement list element assignment
-* [ ] Implement list copying
-* [ ] Implement nested lists
-* [ ] Implement list iteration
-* [ ] Implement list bounds checking
-* [ ] Report invalid list indexes as runtime errors
-* [ ] Add list runtime tests
-* [ ] Generate native list operations through the NASM backend
+* [x] Define the runtime representation of `List`
+* [x] Implement list allocation
+* [x] Implement list element storage
+* [x] Implement list indexing
+* [x] Implement list element assignment
+* [x] Implement list copying - recursively copy nested Lists
+* [x] Implement nested lists
+* [x] Implement list iteration
+* [x] Implement list bounds checking
+* [x] Report invalid list indexes as runtime errors
+* [x] Add list runtime tests
+* [x] Generate native list operations through the NASM backend
 
 ### 9. Complete string operations
 
@@ -2043,7 +2043,7 @@ Do not skip ahead to later phases unless a current task is blocked.
 5. [x] Finalize alias semantics
 6. [x] Implement remaining alias APIs
 7. [x] Complete memory-safety regression tests
-8. [ ] Complete the List runtime
+8. [x] Complete the List runtime
 9. [ ] Complete string operations
 10. [ ] Complete runtime error handling
 11. [ ] Refactor `codegen.rs`

@@ -10,3 +10,24 @@ var text = "hello":string;
 ```
 
 Defaults are `i32` for integer literals and `f64` for decimal literals. Explicit conversions use `value.as(Type)` and are checked by the compiler.
+
+## Lists
+
+`List` stores homogeneous values. The compiler can infer the element type from
+a non-empty literal, or the type can be written explicitly.
+
+```adamantium
+var values = List[1, 2, 3];
+var empty = List[]:List[int];
+var nested = List[List[1, 2], List[3, 4]];
+
+values[1] = 9;
+nested[0][1] = 8;
+```
+
+At runtime, a List value is represented by two machine words: a pointer to a
+contiguous allocation and its element count. Every element occupies the common
+16-byte runtime `Value` representation. List assignment creates an independent
+copy, including recursive copies of nested Lists. Iteration visits elements in
+index order. Reading or writing an index outside `0..length` stops normal
+execution with a runtime error that reports the index and length.

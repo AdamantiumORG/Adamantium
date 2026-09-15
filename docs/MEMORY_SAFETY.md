@@ -6,7 +6,9 @@ runtime. The model intentionally excludes raw pointers and manual allocation.
 ## Ownership
 
 Every local variable owns its value. Assigning ordinary values creates a value
-copy. Class and List assignments copy their outer runtime storage. Immutable
+copy. Class assignments copy their outer runtime storage. List assignments
+recursively copy nested Lists and copy class elements according to class value
+semantics. Immutable
 string data can be shared because Adamantium does not permit mutation of string
 storage.
 

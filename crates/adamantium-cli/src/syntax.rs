@@ -1526,11 +1526,21 @@ impl Parser {
                     }
                 } else if self.peek() == &Token::Symbol('[') {
                     let slot = self.writable_variable(&name, position)?;
-                    self.next();
-                    let index = self.expression(0)?;
-                    self.symbol(']')?;
+                    let mut target = Expr::Variable(slot);
+                    let mut indexes = Vec::new();
+                    while self.peek() == &Token::Symbol('[') {
+                        let index_position = self.position();
+                        self.next();
+                        indexes.push((self.expression(0)?, index_position));
+                        self.symbol(']')?;
+                    }
                     self.symbol('=')?;
-                    Statement::SetIndex(Expr::Variable(slot), index, self.expression(0)?)
+                    let (index, _) = indexes.pop().expect("at least one List index");
+                    for (parent_index, index_position) in indexes {
+                        target =
+                            Expr::Index(Box::new(target), Box::new(parent_index), index_position);
+                    }
+                    Statement::SetIndex(target, index, self.expression(0)?)
                 } else if self.peek() == &Token::Symbol('(') {
                     Statement::Call(self.arguments(name, position)?)
                 } else if self.take(Token::Symbol('.')) {
