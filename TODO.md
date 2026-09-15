@@ -1518,14 +1518,14 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 7. Complete memory-safety testing
 
-* [ ] Add alias lifetime tests
-* [ ] Add offset lifetime tests
-* [ ] Add removed-variable tests
-* [ ] Add invalid dereference tests
-* [ ] Add escaped-offset tests
-* [ ] Add class lifecycle safety tests
-* [ ] Add nested-scope memory-safety tests
-* [ ] Add regression tests for every discovered memory-safety bug
+* [x] Add alias lifetime tests
+* [x] Add offset lifetime tests
+* [x] Add removed-variable tests
+* [x] Add invalid dereference tests
+* [x] Add escaped-offset tests
+* [x] Add class lifecycle safety tests
+* [x] Add nested-scope memory-safety tests
+* [x] Add regression tests for every discovered memory-safety bug
 
 ---
 
@@ -2042,7 +2042,7 @@ Do not skip ahead to later phases unless a current task is blocked.
 4. [ ] Implement explicit `exit(code = ...)`
 5. [x] Finalize alias semantics
 6. [x] Implement remaining alias APIs
-7. [ ] Complete memory-safety regression tests
+7. [x] Complete memory-safety regression tests
 8. [ ] Complete the List runtime
 9. [ ] Complete string operations
 10. [ ] Complete runtime error handling

@@ -20,3 +20,14 @@ cargo test
 ```
 
 Use `adamantium test language tests --verbose` to show full failure output. Native valid cases require NASM and a supported linker. The Cargo integration test runs on Windows and Linux and is disabled on macOS until a macOS backend exists.
+
+Memory-safety compile checks have a dedicated cross-platform integration suite:
+
+```text
+cargo test -p adamantium-cli --test memory_safety
+```
+
+It covers alias and offset lifetimes, removed bindings, invalid dereferences,
+escaped offsets, class lifecycle recursion, nested scopes, and regressions for
+previously discovered memory-safety bugs. These tests use `adamantium check`
+and do not require NASM or a native linker.
