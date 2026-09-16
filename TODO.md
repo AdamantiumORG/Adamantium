@@ -1309,6 +1309,14 @@ Create clear compiler diagnostics.
 * [ ] macOS support
 * [x] x86-64 backend - Windows COFF and Linux ELF64
 * [x] Define future ARM64 support - target triples, ABI, object formats and acceptance tests
+* [x] Move target-independent typed IR into `adamantium-ir`
+* [x] Decouple typed IR operators from parser syntax
+* [x] Keep the NASM backend consuming the shared typed IR
+* [ ] Implement the LLVM ARM64 backend
+* [ ] Generate Windows ARM64 native executables
+* [ ] Generate Linux ARM64 native executables
+* [ ] Create portable Windows ARM64 ZIP packaging
+* [ ] Create portable Linux ARM64 ZIP packaging
 * [ ] Cross-platform standard library behavior
 * [ ] Cross-platform file handling
 * [ ] Cross-platform process handling

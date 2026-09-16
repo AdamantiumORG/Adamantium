@@ -11,6 +11,7 @@ path = "src/main.rs"
 
 [dependencies]
 adamantium-compiler = { path = "../adamantium-compiler" }
+adamantium-ir = { path = "../adamantium-ir" }
 adamantium-packages = { path = "../adamantium-packages" }
 adamantium-wasm = { path = "../adamantium-wasm" }
 toml.workspace = true

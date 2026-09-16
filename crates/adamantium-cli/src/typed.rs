@@ -7,89 +7,47 @@ use crate::{
     types::{self, Type, Value},
 };
 
-pub struct Expression {
-    pub ty: Type,
-    pub kind: Kind,
+pub type Expression = adamantium_ir::typed::Expression<Type, Value>;
+pub type Kind = adamantium_ir::typed::ExpressionKind<Type, Value>;
+pub type Instruction = adamantium_ir::typed::Statement<Type, Value>;
+pub type Function = adamantium_ir::typed::Function<Type, Value>;
+pub type Program = adamantium_ir::typed::Program<Type, Value>;
+pub type PackageFunction = adamantium_ir::typed::PackageFunction<Type>;
+pub type ClassInfo = adamantium_ir::typed::Class<Type>;
+pub type ClassFieldInfo = adamantium_ir::typed::ClassField<Type>;
+
+impl From<Operator> for adamantium_ir::typed::ArithmeticOperator {
+    fn from(operator: Operator) -> Self {
+        match operator {
+            Operator::Add => Self::Add,
+            Operator::Subtract => Self::Subtract,
+            Operator::Multiply => Self::Multiply,
+            Operator::Divide => Self::Divide,
+            Operator::Remainder => Self::Remainder,
+        }
+    }
 }
-pub enum Kind {
-    Constant(Value),
-    String(Vec<u8>),
-    Variable(usize),
-    Negate(Box<Expression>),
-    Not(Box<Expression>),
-    Binary(Operator, Box<Expression>, Box<Expression>),
-    Compare(Comparison, Box<Expression>, Box<Expression>),
-    Logical(LogicalOperator, Box<Expression>, Box<Expression>),
-    Convert(Box<Expression>),
-    Unwrap(Box<Expression>, usize),
-    Call(String, Vec<Expression>),
-    Construct(u32, Vec<Expression>, String),
-    List(Vec<Expression>),
-    Index(Box<Expression>, Box<Expression>, usize),
-    Field(Box<Expression>, usize),
-    MethodCall(String, Box<Expression>, Vec<Expression>),
-    Try(Vec<Instruction>),
-    Address(usize),
-    Dereference(Box<Expression>),
+
+impl From<Comparison> for adamantium_ir::typed::ComparisonOperator {
+    fn from(operator: Comparison) -> Self {
+        match operator {
+            Comparison::Equal => Self::Equal,
+            Comparison::NotEqual => Self::NotEqual,
+            Comparison::Less => Self::Less,
+            Comparison::LessEqual => Self::LessEqual,
+            Comparison::Greater => Self::Greater,
+            Comparison::GreaterEqual => Self::GreaterEqual,
+        }
+    }
 }
-pub enum Instruction {
-    Noop,
-    Assign(usize, Expression),
-    Disconnect(usize, usize),
-    Remove(Expression, Option<String>),
-    Clamp(usize, Expression, Expression),
-    Print(Expression, bool),
-    Call(Expression),
-    SetField(Expression, usize, Expression, Option<String>),
-    SetIndex(Expression, Expression, Expression, usize),
-    Message(Expression, bool, usize),
-    If(Expression, Vec<Instruction>, Vec<Instruction>),
-    While(Expression, Vec<Instruction>),
-    Until(Expression, Vec<Instruction>),
-    Loop(Vec<Instruction>),
-    For(usize, Expression, Expression, Vec<Instruction>),
-    ForEach(usize, Expression, Vec<Instruction>),
-    Match(
-        Expression,
-        Vec<(Expression, Vec<Instruction>)>,
-        Option<Vec<Instruction>>,
-    ),
-    Break,
-    Continue,
-    Exit(Option<Expression>),
-    Return,
-}
-pub struct Function {
-    pub name: String,
-    pub parameters: usize,
-    pub result: Option<usize>,
-    pub types: Vec<Type>,
-    pub instructions: Vec<Instruction>,
-    pub parameter_names: Vec<String>,
-}
-pub struct Program {
-    pub functions: Vec<Function>,
-    pub class_sizes: Vec<usize>,
-    pub classes: Vec<ClassInfo>,
-    pub package_functions: HashMap<String, PackageFunction>,
-}
-#[derive(Clone)]
-pub struct PackageFunction {
-    pub wasm_path: String,
-    pub command: String,
-    pub result: Type,
-    pub filesystem: u32,
-}
-#[derive(Clone)]
-pub struct ClassInfo {
-    pub name: String,
-    pub fields: Vec<ClassFieldInfo>,
-}
-#[derive(Clone)]
-pub struct ClassFieldInfo {
-    pub name: String,
-    pub ty: Type,
-    pub public: bool,
+
+impl From<LogicalOperator> for adamantium_ir::typed::LogicalOperator {
+    fn from(operator: LogicalOperator) -> Self {
+        match operator {
+            LogicalOperator::And => Self::And,
+            LogicalOperator::Or => Self::Or,
+        }
+    }
 }
 struct Signature {
     parameters: Vec<Type>,
@@ -689,7 +647,7 @@ impl Checker<'_> {
                     Expression {
                         ty,
                         kind: Kind::Binary(
-                            *op,
+                            (*op).into(),
                             Box::new(self.convert(a, ty)?),
                             Box::new(self.convert(b, ty)?),
                         ),
@@ -737,14 +695,14 @@ impl Checker<'_> {
                     };
                     Expression {
                         ty: Type::Bool,
-                        kind: Kind::Compare(*comparison, Box::new(a), Box::new(b)),
+                        kind: Kind::Compare((*comparison).into(), Box::new(a), Box::new(b)),
                     }
                 }
             }
             Expr::Logical(operator, a, b) => Expression {
                 ty: Type::Bool,
                 kind: Kind::Logical(
-                    *operator,
+                    (*operator).into(),
                     Box::new(self.expression(a, Some(Type::Bool))?),
                     Box::new(self.expression(b, Some(Type::Bool))?),
                 ),

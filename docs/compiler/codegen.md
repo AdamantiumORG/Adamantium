@@ -1,6 +1,6 @@
 # Code generation
 
-`src/codegen` converts the typed program into x86-64 NASM source. It does not parse source text or resolve names.
+`src/codegen` converts `adamantium_ir::typed::Program<Type, Value>` into x86-64 NASM source. It does not parse source text or resolve names. Typed IR operators and instructions are target-independent; register selection, stack layout, calling conventions, and assembly syntax belong to the backend.
 
 ```text
 codegen/
@@ -18,3 +18,7 @@ Every Adamantium value occupies a 16-byte slot. The generator tracks temporary s
 Windows and Linux share generated logic. `entry.rs` maps runtime calls to Linux ABI wrappers when producing Linux assembly. Platform-specific assembly remains in `src/runtime.asm` and `src/runtime-linux.asm`.
 
 Future splits should follow actual responsibilities. Class construction, operators, and runtime request encoding can move to separate files when they grow enough to justify another boundary.
+
+## LLVM ARM64 boundary
+
+The LLVM backend should accept the same typed `Program` used by NASM and lower it to LLVM IR. It must not import parser AST types. Target triples, data layouts, ABI lowering, object emission, and linker selection stay outside `adamantium-ir`. This keeps semantic behavior shared while allowing Windows ARM64 and Linux ARM64 to use their platform ABIs.

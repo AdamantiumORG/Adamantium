@@ -11,6 +11,7 @@ name = "adamantium-cli"
 version = "0.1.0"
 dependencies = [
  "adamantium-compiler",
+ "adamantium-ir",
  "adamantium-packages",
  "adamantium-wasm",
  "rustc_apfloat",

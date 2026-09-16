@@ -1,6 +1,6 @@
 # Compiler architecture
 
-Adamantium currently uses one Rust binary crate with a separately built static runtime. The compilation path is:
+Adamantium is organized as a Rust workspace with a CLI and focused compiler crates. The current compilation path is:
 
 ```text
 CLI and project loading
@@ -9,7 +9,7 @@ lexer and parser
         |
 name resolution and AST validation
         |
-type checking and typed instructions
+type checking and target-independent typed IR
         |
 x86-64 NASM generation
         |
@@ -18,11 +18,13 @@ NASM and platform linker
 native executable
 ```
 
-The current modules are intentionally kept in one crate while their boundaries are stabilized. `syntax` currently owns lexing, parsing, AST declarations, module combination, visibility, imports, and part of name resolution. `typed` validates types and produces typed instructions. `codegen` translates those instructions to NASM. `diagnostics`, `packages`, and `language_tests` provide supporting services.
+`adamantium-cli` currently owns the mature parser, semantic checker, and NASM generator while their public crate APIs are stabilized. The checker lowers parsed syntax into `adamantium_ir::typed::Program<Type, Value>`. `adamantium-ir` owns the target-independent control-flow, expression, class, package-call, and operator representation. It has no dependency on the parser or a native backend.
 
-## Planned workspace
+The existing NASM generator consumes this shared typed IR. A future LLVM ARM64 generator can consume the same IR without translating parser syntax or depending on x86-64 register conventions.
 
-The long-term workspace may contain focused crates such as `adamantium-cli`, `adamantium-lexer`, `adamantium-parser`, `adamantium-ast`, `adamantium-semantics`, `adamantium-types`, `adamantium-diagnostics`, `adamantium-codegen`, `adamantium-nasm`, `adamantium-linker`, `adamantium-runtime`, `adamantium-project`, `adamantium-packages`, `adamantium-wasm`, and `adamantium-testing`.
+## Workspace direction
+
+The workspace contains focused crates including `adamantium-cli`, `adamantium-lexer`, `adamantium-parser`, `adamantium-ast`, `adamantium-semantics`, `adamantium-types`, `adamantium-diagnostics`, `adamantium-ir`, `adamantium-codegen`, `adamantium-nasm`, `adamantium-linker`, `adamantium-runtime`, `adamantium-project`, `adamantium-packages`, `adamantium-wasm`, and `adamantium-testing`.
 
 Crates should be extracted only after the corresponding in-crate API has a clear input, output, ownership model, and diagnostic boundary. This avoids cyclic dependencies and prevents internal data structures from becoming public APIs accidentally.
 

@@ -7,8 +7,11 @@ mod statements;
 
 pub use entry::assembly_entry;
 
+use adamantium_ir::typed::{
+    ArithmeticOperator as Operator, ComparisonOperator as Comparison, LogicalOperator,
+};
+
 use crate::{
-    syntax::{Comparison, LogicalOperator, Operator},
     typed::{ClassInfo, Expression, Function, Instruction, Kind, PackageFunction, Program},
     types::Type,
 };
