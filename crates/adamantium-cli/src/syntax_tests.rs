@@ -1,6 +1,24 @@
 use super::*;
 
 #[test]
+fn refactored_frontend_preserves_single_and_multifile_results() {
+    let source = "fun main() { var value=1+2; print.newline(value); }";
+    let single = parse(source).unwrap();
+    let multifile = parse_modules(&[(String::new(), source.into())]).unwrap();
+
+    assert_eq!(single.functions.len(), multifile.functions.len());
+    assert_eq!(single.functions[0].name, multifile.functions[0].name);
+    assert_eq!(single.functions[0].types, multifile.functions[0].types);
+    assert_eq!(
+        single.functions[0].statements.len(),
+        multifile.functions[0].statements.len()
+    );
+
+    let error = parse("fun main() { var value=@; }").unwrap_err();
+    assert!(error.starts_with("1:24:"), "{error}");
+}
+
+#[test]
 fn parses_package_modules_and_single_symbol_imports() {
     let files = vec![
         (

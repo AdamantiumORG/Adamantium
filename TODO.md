@@ -1597,13 +1597,13 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 12. Refactor the syntax/compiler frontend
 
-* [ ] Separate lexer implementation
-* [ ] Separate token definitions
-* [ ] Separate parser implementation
-* [ ] Separate AST definitions
-* [ ] Separate parser diagnostics
-* [ ] Keep the public compiler behavior unchanged
-* [ ] Add regression tests for the refactored frontend
+* [x] Separate lexer implementation
+* [x] Separate token definitions
+* [x] Separate parser implementation
+* [x] Separate AST definitions
+* [x] Separate parser diagnostics
+* [x] Keep the public compiler behavior unchanged
+* [x] Add regression tests for the refactored frontend
 
 ### 13. Define compiler phase boundaries
 
