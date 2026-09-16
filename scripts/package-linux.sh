@@ -18,8 +18,8 @@ command -v zig >/dev/null
 command -v zip >/dev/null
 
 if [[ "${1:-}" != "--skip-build" ]]; then
-    RUSTFLAGS="-C target-feature=+crt-static" \
-        cargo build --manifest-path "$compiler_root/Cargo.toml" --locked --release -p adamantium-cli
+    cargo rustc --manifest-path "$compiler_root/Cargo.toml" --locked --release \
+        -p adamantium-cli -- -C target-feature=+crt-static
 fi
 
 rm -rf "$package_root"

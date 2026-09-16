@@ -39,7 +39,7 @@ fn strings_support_length_comparison_concatenation_and_indexing() {
             var length=joined.length;
             var same_length=joined.length();
             var character=joined[1];
-            var ordered="abc"<"abd";
+            var ordered="abc"<"bcd";
             var equal=joined=="Żółw!";
         }"#,
     )

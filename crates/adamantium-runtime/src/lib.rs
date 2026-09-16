@@ -268,7 +268,7 @@ mod string_tests {
             )));
         }
 
-        let less = unsafe { string_operation(&request(9, value("abc"), value("abd"))) }.unwrap();
+        let less = unsafe { string_operation(&request(9, value("abc"), value("bcd"))) }.unwrap();
         let equal = unsafe { string_operation(&request(7, value("żółw"), value("żółw"))) }.unwrap();
         assert_eq!(less.lo, 1);
         assert_eq!(equal.lo, 1);

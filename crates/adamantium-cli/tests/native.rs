@@ -1203,7 +1203,7 @@ fn native_string_operations_use_utf8_characters() {
         print.newline(text[0]);
         print.newline(text[3]);
         print.newline(text+"!");
-        print.newline("abc"<"abd");
+        print.newline("abc"<"bcd");
         print.newline(text=="Żółw");
         var error=try { print.newline(text[4]); };
         print.newline(error);
