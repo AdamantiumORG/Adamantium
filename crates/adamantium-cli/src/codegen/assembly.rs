@@ -178,6 +178,16 @@ impl Generator {
         self.next_slot = mark;
     }
     pub(super) fn evaluate(&mut self, operation: u32, ty: Type, from: Type, operands: &[usize]) {
+        self.evaluate_at(operation, ty, from, operands, 0);
+    }
+    pub(super) fn evaluate_at(
+        &mut self,
+        operation: u32,
+        ty: Type,
+        from: Type,
+        operands: &[usize],
+        line: usize,
+    ) {
         let mark = self.next_slot;
         let request = self.reserve(5);
         // Request is 80 bytes: three operands, output, operation/type/from/padding.
@@ -193,7 +203,7 @@ impl Generator {
             ));
         }
         let error = self.error_target().to_string();
-        self.emit(format!("    mov dword {}, {operation}\n    mov dword {}, {}\n    mov dword {}, {}\n    lea rcx, {}\n    call ad_evaluate\n    test eax, eax\n    jnz {error}\n    mov rax, {}\n    mov rdx, {}", memory(request,64), memory(request,68),ty.id(),memory(request,72),from.id(),memory(request,0),memory(request,48),memory(request,56)));
+        self.emit(format!("    mov dword {}, {operation}\n    mov dword {}, {}\n    mov dword {}, {}\n    mov dword {}, {line}\n    lea rcx, {}\n    call ad_evaluate\n    test eax, eax\n    jnz {error}\n    mov rax, {}\n    mov rdx, {}", memory(request,64), memory(request,68),ty.id(),memory(request,72),from.id(),memory(request,76),memory(request,0),memory(request,48),memory(request,56)));
         self.next_slot = mark;
     }
 }

@@ -291,12 +291,14 @@ impl Checker<'_> {
                 .map(|ty| Type::List(ty.id())),
             Expr::Index(list, _, _) => self.hint(list).and_then(|ty| match ty {
                 Type::List(inner) => Type::from_id(inner),
+                Type::String => Some(Type::String),
                 _ => None,
             }),
             Expr::Field(_, _, _) | Expr::MethodCall(_, _, _, _) => None,
             Expr::Negate(e) | Expr::Positive(e) => self.hint(e),
             Expr::Not(_) | Expr::Logical(_, _, _) => Some(Type::Bool),
             Expr::Binary(_, a, b) => match (self.hint(a), self.hint(b)) {
+                (Some(Type::String), Some(Type::String)) => Some(Type::String),
                 (Some(a), Some(b)) => promoted(a, b).ok(),
                 (a, b) => a.or(b),
             },
@@ -474,12 +476,14 @@ impl Checker<'_> {
             }
             Expr::Index(list, index, position) => {
                 let list = self.expression(list, None)?;
-                let Type::List(inner) = list.ty else {
-                    return Err(
-                        position.error(format!("invalid access: {} cannot be indexed", list.ty))
-                    );
+                let element_ty = match list.ty {
+                    Type::List(inner) => Type::from_id(inner).ok_or("invalid List element type")?,
+                    Type::String => Type::String,
+                    _ => {
+                        return Err(position
+                            .error(format!("invalid access: {} cannot be indexed", list.ty)));
+                    }
                 };
-                let element_ty = Type::from_id(inner).ok_or("invalid List element type")?;
                 Expression {
                     ty: element_ty,
                     kind: Kind::Index(
@@ -511,6 +515,12 @@ impl Checker<'_> {
             }
             Expr::Field(object, field_name, position) => {
                 let mut object = self.expression(object, None)?;
+                if object.ty == Type::String && field_name == "length" {
+                    return Ok(Expression {
+                        ty: Type::U64,
+                        kind: Kind::StringLength(Box::new(object), position.line()),
+                    });
+                }
                 if let Type::Optional(inner) = object.ty
                     && Type::from_id(inner).is_some_and(|ty| matches!(ty, Type::Class(_)))
                 {
@@ -549,6 +559,15 @@ impl Checker<'_> {
             }
             Expr::MethodCall(object, method_name, arguments, position) => {
                 let mut object = self.expression(object, None)?;
+                if object.ty == Type::String && method_name == "length" {
+                    if !arguments.is_empty() {
+                        return Err(position.error("string.length() expects no arguments"));
+                    }
+                    return Ok(Expression {
+                        ty: Type::U64,
+                        kind: Kind::StringLength(Box::new(object), position.line()),
+                    });
+                }
                 if let Type::Optional(inner) = object.ty
                     && Type::from_id(inner).is_some_and(|ty| matches!(ty, Type::Class(_)))
                 {
@@ -621,7 +640,17 @@ impl Checker<'_> {
                 kind: Kind::Not(Box::new(self.expression(value, Some(Type::Bool))?)),
             },
             Expr::Binary(op, a, b) => {
-                if matches!(self.hint(a), Some(Type::Class(_))) {
+                if self.hint(a) == Some(Type::String) || self.hint(b) == Some(Type::String) {
+                    if !matches!(op, Operator::Add) {
+                        return Err("strings support only the '+' arithmetic operator".into());
+                    }
+                    let a = self.expression(a, Some(Type::String))?;
+                    let b = self.expression(b, Some(Type::String))?;
+                    Expression {
+                        ty: Type::String,
+                        kind: Kind::Binary((*op).into(), Box::new(a), Box::new(b)),
+                    }
+                } else if matches!(self.hint(a), Some(Type::Class(_))) {
                     let method = match op {
                         Operator::Add => "__add__",
                         Operator::Subtract => "__sub__",
@@ -682,13 +711,14 @@ impl Checker<'_> {
                         let b = self.expression(b, Some(a.ty))?;
                         if !matches!(comparison, Comparison::Equal | Comparison::NotEqual)
                             && !a.ty.numeric()
+                            && a.ty != Type::String
                         {
                             return Err(format!(
                                 "ordering comparison is not supported for {}",
                                 a.ty
                             ));
                         }
-                        if matches!(a.ty, Type::String | Type::Class(_)) {
+                        if matches!(a.ty, Type::Class(_)) {
                             return Err(format!("comparison is not supported for {}", a.ty));
                         }
                         (a, b)

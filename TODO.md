@@ -1559,14 +1559,14 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 9. Complete string operations
 
-* [ ] Define string runtime semantics
-* [ ] Implement string length
-* [ ] Implement string comparison
-* [ ] Implement string concatenation
-* [ ] Implement string indexing rules
-* [ ] Define UTF-8 behavior
-* [ ] Add string runtime tests
-* [ ] Add string code-generation tests
+* [x] Define string runtime semantics - immutable UTF-8 pointer/byte-length values
+* [x] Implement string length - Unicode scalar count through `length` or `length()`
+* [x] Implement string comparison
+* [x] Implement string concatenation
+* [x] Implement string indexing rules - Unicode scalar indexes returning a string
+* [x] Define UTF-8 behavior
+* [x] Add string runtime tests
+* [x] Add string code-generation tests
 
 ### 10. Complete runtime error handling
 

@@ -214,6 +214,67 @@ mod runtime_error_tests {
     }
 }
 
+#[cfg(test)]
+mod string_tests {
+    use super::*;
+
+    fn value(text: &str) -> Value {
+        Value {
+            lo: text.as_ptr() as u64,
+            hi: text.len() as u64,
+        }
+    }
+
+    fn request(operation: u32, a: Value, b: Value) -> Request {
+        Request {
+            a,
+            b,
+            c: Value::default(),
+            output: Value::default(),
+            operation,
+            ty: Type::String.id(),
+            from: Type::String.id(),
+            reserved: 0,
+        }
+    }
+
+    #[test]
+    fn strings_use_unicode_scalar_lengths_and_indexes() {
+        let text = "aŻ🙂";
+        let length =
+            unsafe { string_operation(&request(14, value(text), Value::default())) }.unwrap();
+        assert_eq!(length.lo, 3);
+
+        let indexed =
+            unsafe { string_operation(&request(15, value(text), Value { lo: 2, hi: 0 })) }.unwrap();
+        assert_eq!(unsafe { string_value(indexed) }.unwrap(), "🙂");
+        assert!(
+            unsafe { string_operation(&request(15, value(text), Value { lo: 3, hi: 0 })) }
+                .unwrap_err()
+                .contains("out of bounds")
+        );
+    }
+
+    #[test]
+    fn strings_compare_and_concatenate_by_value() {
+        let left = "Ada";
+        let right = "mantium";
+        let joined = unsafe { string_operation(&request(0, value(left), value(right))) }.unwrap();
+        assert_eq!(unsafe { string_value(joined) }.unwrap(), "Adamantium");
+        unsafe {
+            drop(Box::from_raw(std::ptr::slice_from_raw_parts_mut(
+                joined.lo as *mut u8,
+                joined.hi as usize,
+            )));
+        }
+
+        let less = unsafe { string_operation(&request(9, value("abc"), value("abd"))) }.unwrap();
+        let equal = unsafe { string_operation(&request(7, value("żółw"), value("żółw"))) }.unwrap();
+        assert_eq!(less.lo, 1);
+        assert_eq!(equal.lo, 1);
+    }
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn ad_optional_error(line: usize) -> u32 {
     report_error(RuntimeError {
@@ -349,6 +410,71 @@ pub struct Request {
     pub reserved: u32,
 }
 
+unsafe fn string_value(value: Value) -> Result<&'static str, String> {
+    if value.lo == 0 {
+        return if value.hi == 0 {
+            Ok("")
+        } else {
+            Err("invalid string pointer".into())
+        };
+    }
+    let bytes = unsafe { std::slice::from_raw_parts(value.lo as *const u8, value.hi as usize) };
+    std::str::from_utf8(bytes).map_err(|_| "string contains invalid UTF-8".into())
+}
+
+unsafe fn string_operation(request: &Request) -> Result<Value, String> {
+    let left = unsafe { string_value(request.a)? };
+    match request.operation {
+        0 => {
+            let right = unsafe { string_value(request.b)? };
+            let bytes = [left.as_bytes(), right.as_bytes()]
+                .concat()
+                .into_boxed_slice();
+            let value = Value {
+                lo: bytes.as_ptr() as u64,
+                hi: bytes.len() as u64,
+            };
+            std::mem::forget(bytes);
+            Ok(value)
+        }
+        7..=12 => {
+            let right = unsafe { string_value(request.b)? };
+            let ordering = left.cmp(right);
+            let result = match request.operation {
+                7 => ordering.is_eq(),
+                8 => !ordering.is_eq(),
+                9 => ordering.is_lt(),
+                10 => !ordering.is_gt(),
+                11 => ordering.is_gt(),
+                12 => !ordering.is_lt(),
+                _ => unreachable!(),
+            };
+            Ok(Value {
+                lo: result as u64,
+                hi: 0,
+            })
+        }
+        14 => Ok(Value {
+            lo: left.chars().count() as u64,
+            hi: 0,
+        }),
+        15 => {
+            let index = usize::try_from(request.b.lo).map_err(|_| "string index is too large")?;
+            let Some((start, character)) = left.char_indices().nth(index) else {
+                return Err(format!(
+                    "String index {index} is out of bounds for length {}",
+                    left.chars().count()
+                ));
+            };
+            Ok(Value {
+                lo: unsafe { (request.a.lo as *const u8).add(start) } as u64,
+                hi: character.len_utf8() as u64,
+            })
+        }
+        _ => Err("invalid string operation".into()),
+    }
+}
+
 /// # Safety
 /// `request` must point to an initialized, writable Request owned by the caller.
 #[unsafe(no_mangle)]
@@ -364,6 +490,8 @@ pub unsafe extern "C" fn ad_evaluate(request: *mut Request) -> u32 {
             return 2;
         };
         types::convert(request.a, from, ty)
+    } else if request.from == Type::String.id() || request.ty == Type::String.id() {
+        unsafe { string_operation(request) }
     } else {
         types::operation(request.operation, ty, request.a, request.b, request.c)
     };

@@ -73,6 +73,7 @@ pub mod typed {
         Call(String, Vec<Expression<T, V>>),
         Construct(u32, Vec<Expression<T, V>>, String),
         List(Vec<Expression<T, V>>),
+        StringLength(Box<Expression<T, V>>, usize),
         Index(Box<Expression<T, V>>, Box<Expression<T, V>>, usize),
         Field(Box<Expression<T, V>>, usize),
         MethodCall(String, Box<Expression<T, V>>, Vec<Expression<T, V>>),

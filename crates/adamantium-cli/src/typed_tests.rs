@@ -31,6 +31,48 @@ fn lists_are_homogeneous_and_indexed_by_integers() {
 }
 
 #[test]
+fn strings_support_length_comparison_concatenation_and_indexing() {
+    let program = checked(
+        r#"fun main() {
+            var text="Żółw";
+            var joined=text+"!";
+            var length=joined.length;
+            var same_length=joined.length();
+            var character=joined[1];
+            var ordered="abc"<"abd";
+            var equal=joined=="Żółw!";
+        }"#,
+    )
+    .unwrap();
+    assert_eq!(program.functions[0].types[1], Type::String);
+    assert_eq!(program.functions[0].types[2], Type::U64);
+    assert_eq!(program.functions[0].types[3], Type::U64);
+    assert_eq!(program.functions[0].types[4], Type::String);
+    assert_eq!(program.functions[0].types[5], Type::Bool);
+    assert_eq!(program.functions[0].types[6], Type::Bool);
+
+    assert!(checked(r#"fun main() { var text="a"-"b"; }"#).is_err());
+    assert!(checked(r#"fun main() { "a"[0]="b"; }"#).is_err());
+}
+
+#[test]
+fn string_operations_generate_runtime_evaluation_calls() {
+    let program = checked(
+        r#"fun main() { var value="a"+"b"; print.newline(value.length); print.newline(value[1]); print.newline(value=="ab"); }"#,
+    )
+    .unwrap();
+    let assembly = crate::codegen::assembly_entry(&program, "main");
+    for operation in [0, 7, 14, 15] {
+        assert!(
+            assembly.contains(&format!("mov dword [rbp - 8], {operation}"))
+                || assembly.contains(&format!(", {operation}\n")),
+            "missing string operation {operation}: {assembly}"
+        );
+    }
+    assert!(assembly.contains("call ad_evaluate"));
+}
+
+#[test]
 fn list_iteration_infers_the_element_type() {
     let program = checked(
         "fun main() { var values=List[1:i16,2:i16]; for value in values { print.newline(value); } }",
@@ -227,7 +269,7 @@ fn rejects_incompatible_types_and_reserved_future_types() {
         "var a = \"hello\":i32;",
         "var a = 1.5:int;",
         "var a = true; a.clamp(0,1);",
-        "var a = \"a\"+\"b\";",
+        "var a = \"a\"-\"b\";",
         "var a = None; a = 1;",
         "var a = 1:u64; print.newline(-a);",
         "var a = 1e100:f32;",

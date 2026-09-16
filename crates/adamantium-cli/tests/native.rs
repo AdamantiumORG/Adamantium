@@ -1195,6 +1195,35 @@ fn native_runtime_errors_are_reported() {
 
 #[test]
 #[ignore = "requires NASM and Visual Studio C++ build tools"]
+fn native_string_operations_use_utf8_characters() {
+    let source = r#"fun main() {
+        var text="Żółw";
+        print.newline(text.length);
+        print.newline(text.length());
+        print.newline(text[0]);
+        print.newline(text[3]);
+        print.newline(text+"!");
+        print.newline("abc"<"abd");
+        print.newline(text=="Żółw");
+        var error=try { print.newline(text[4]); };
+        print.newline(error);
+    }"#;
+    let output = Project::new(source).run();
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout).replace("\r\n", "\n");
+    assert_eq!(
+        stdout,
+        "4\n4\nŻ\nw\nŻółw!\ntrue\ntrue\nAdamantium runtime error at line 10: String index 4 is out of bounds for length 4\n"
+    );
+}
+
+#[test]
+#[ignore = "requires NASM and Visual Studio C++ build tools"]
 fn native_empty_function_and_large_stack_frame() {
     assert!(Project::new("fun main() {}").run().status.success());
     let mut source = String::from("fun main() {");

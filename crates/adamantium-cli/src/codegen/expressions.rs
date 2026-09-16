@@ -108,19 +108,31 @@ impl Generator {
                 self.emit(format!("    mov rdx, {}", values.len()));
                 self.next_slot = mark;
             }
+            Kind::StringLength(value, line) => {
+                let mark = self.next_slot;
+                self.expression(value);
+                let value = self.save();
+                self.evaluate_at(14, Type::U64, Type::String, &[value], *line);
+                self.next_slot = mark;
+            }
             Kind::Index(list, index, line) => {
                 let mark = self.next_slot;
+                let string = list.ty == Type::String;
                 self.expression(list);
                 let list = self.save();
                 self.expression(index);
                 let index = self.save();
-                self.emit_list_bounds(list, index, *line);
-                self.load(list);
-                self.emit("    mov r11, rax");
-                self.load(index);
-                self.emit(
-                    "    shl rax, 4\n    add r11, rax\n    mov rax, [r11]\n    mov rdx, [r11 + 8]",
-                );
+                if string {
+                    self.evaluate_at(15, Type::String, Type::String, &[list, index], *line);
+                } else {
+                    self.emit_list_bounds(list, index, *line);
+                    self.load(list);
+                    self.emit("    mov r11, rax");
+                    self.load(index);
+                    self.emit(
+                        "    shl rax, 4\n    add r11, rax\n    mov rax, [r11]\n    mov rdx, [r11 + 8]",
+                    );
+                }
                 self.next_slot = mark;
             }
             Kind::Field(object, index) => {

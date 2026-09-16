@@ -11,6 +11,19 @@ var text = "hello":string;
 
 Defaults are `i32` for integer literals and `f64` for decimal literals. Explicit conversions use `value.as(Type)` and are checked by the compiler.
 
+## Strings
+
+Strings are immutable UTF-8 values. Assignment may share their backing bytes because string contents cannot be changed. Concatenation with `+` creates a new runtime-owned string. Comparisons use string contents and support `==`, `!=`, `<`, `<=`, `>` and `>=`.
+
+```adamantium
+var greeting = "Hello, " + "Adamantium";
+var count = greeting.length;
+var same_count = greeting.length();
+var first = greeting[0];
+```
+
+`length` counts Unicode scalar values rather than UTF-8 bytes. Indexing uses the same character positions and returns one character as a string. Strings cannot be changed through an index. An out-of-bounds index produces a recoverable runtime error and can be handled by `try`.
+
 ## Lists
 
 `List` stores homogeneous values. The compiler can infer the element type from
