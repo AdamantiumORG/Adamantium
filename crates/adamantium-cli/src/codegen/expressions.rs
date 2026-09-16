@@ -52,34 +52,7 @@ impl Generator {
                 self.emit("    mov r11, rax\n    mov rax, [r11]\n    mov rdx, [r11 + 8]");
             }
             Kind::Construct(id, fields, constructor) => {
-                let mark = self.next_slot;
-                let mut values = Vec::new();
-                for field in fields {
-                    self.expression(field);
-                    self.clone_class(field.ty);
-                    values.push(self.save());
-                }
-                self.emit(format!(
-                    "    mov ecx, {}\n    call ad_object_new\n    xor edx, edx",
-                    fields.len()
-                ));
-                let object = self.save();
-                for (index, value) in values.iter().enumerate() {
-                    self.load(object);
-                    self.emit("    mov r11, rax");
-                    self.load(*value);
-                    self.emit(format!(
-                        "    mov [r11 + {}], rax\n    mov [r11 + {}], rdx",
-                        index * 16,
-                        index * 16 + 8
-                    ));
-                }
-                self.load(object);
-                let receiver = self.save();
-                self.call_saved(constructor, &[receiver]);
-                self.load(object);
-                self.next_slot = mark;
-                let _ = id;
+                self.construct_class(*id, fields, constructor)
             }
             Kind::List(values) => {
                 let mark = self.next_slot;
@@ -135,38 +108,9 @@ impl Generator {
                 }
                 self.next_slot = mark;
             }
-            Kind::Field(object, index) => {
-                self.expression(object);
-                self.emit(format!(
-                    "    mov r11, rax\n    mov rax, [r11 + {}]\n    mov rdx, [r11 + {}]",
-                    index * 16,
-                    index * 16 + 8
-                ));
-            }
-            Kind::MethodCall(name, object, arguments) => {
-                let mark = self.next_slot;
-                self.expression(object);
-                let mut slots = vec![self.save()];
-                for argument in arguments {
-                    self.expression(argument);
-                    self.clone_class(argument.ty);
-                    slots.push(self.save());
-                }
-                self.call_saved(name, &slots);
-                self.next_slot = mark;
-            }
-            Kind::Negate(value) | Kind::Convert(value) => {
-                let mark = self.next_slot;
-                self.expression(value);
-                let slot = self.save();
-                let op = if matches!(expr.kind, Kind::Negate(_)) {
-                    4
-                } else {
-                    5
-                };
-                self.evaluate(op, expr.ty, value.ty, &[slot]);
-                self.next_slot = mark;
-            }
+            Kind::Field(object, index) => self.class_field(object, *index),
+            Kind::MethodCall(name, object, arguments) => self.class_method(name, object, arguments),
+            Kind::Negate(value) | Kind::Convert(value) => self.unary_operation(expr, value),
             Kind::Unwrap(value, line) => {
                 let compact = self.label("optional_compact");
                 let done = self.label("optional_unwrapped");
@@ -174,58 +118,10 @@ impl Generator {
                 let error = self.error_target().to_string();
                 self.emit(format!("    test rdx, rdx\n    jnz {compact}\n    mov ecx, {line}\n    call ad_optional_error\n    jmp {error}\n{compact}:\n    cmp rdx, 2\n    jne {done}\n    mov r11, rax\n    mov rax, [r11]\n    mov rdx, [r11 + 8]\n{done}:"));
             }
-            Kind::Not(value) => {
-                self.expression(value);
-                self.emit("    test rax, rax\n    sete al\n    movzx eax, al\n    xor edx, edx");
-            }
-            Kind::Logical(operator, a, b) => {
-                let skip = self.label("logical_skip");
-                let end = self.label("logical_end");
-                self.expression(a);
-                self.emit("    test rax, rax");
-                match operator {
-                    LogicalOperator::And => self.emit(format!("    jz {skip}")),
-                    LogicalOperator::Or => self.emit(format!("    jnz {skip}")),
-                }
-                self.expression(b);
-                self.emit(format!(
-                    "    jmp {end}\n{skip}:\n    mov eax, {}\n    xor edx, edx\n{end}:",
-                    u8::from(matches!(operator, LogicalOperator::Or))
-                ));
-            }
-            Kind::Binary(op, a, b) => {
-                let mark = self.next_slot;
-                self.expression(a);
-                let left = self.save();
-                self.expression(b);
-                let right = self.save();
-                let op = match op {
-                    Operator::Add => 0,
-                    Operator::Subtract => 1,
-                    Operator::Multiply => 2,
-                    Operator::Divide => 3,
-                    Operator::Remainder => 13,
-                };
-                self.evaluate(op, expr.ty, expr.ty, &[left, right]);
-                self.next_slot = mark;
-            }
-            Kind::Compare(comparison, a, b) => {
-                let mark = self.next_slot;
-                self.expression(a);
-                let left = self.save();
-                self.expression(b);
-                let right = self.save();
-                let operation = match comparison {
-                    Comparison::Equal => 7,
-                    Comparison::NotEqual => 8,
-                    Comparison::Less => 9,
-                    Comparison::LessEqual => 10,
-                    Comparison::Greater => 11,
-                    Comparison::GreaterEqual => 12,
-                };
-                self.evaluate(operation, a.ty, a.ty, &[left, right]);
-                self.next_slot = mark;
-            }
+            Kind::Not(value) => self.logical_not(value),
+            Kind::Logical(operator, a, b) => self.logical_operation(*operator, a, b),
+            Kind::Binary(operator, a, b) => self.binary_operation(*operator, expr.ty, a, b),
+            Kind::Compare(comparison, a, b) => self.comparison(*comparison, a, b),
         }
     }
 }

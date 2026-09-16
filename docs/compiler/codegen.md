@@ -4,20 +4,24 @@
 
 ```text
 codegen/
-├── mod.rs          shared generator state and public entry export
-├── assembly.rs     slots, calls, runtime calls, printing and evaluation
-├── expressions.rs  typed expression lowering
-├── statements.rs   statements and control flow
-├── functions.rs    function frames and saved calls
-├── lists.rs        recursive List copies and bounds checks
-└── entry.rs        CLI entry point, data section and platform adaptation
+|-- mod.rs            shared generator state and public entry export
+|-- assembly.rs       labels, slots and basic assembly emission
+|-- expressions.rs    expression dispatch
+|-- statements.rs     statement dispatch
+|-- classes.rs        class construction, fields, methods and copying
+|-- lists.rs          recursive List copies and bounds checks
+|-- control_flow.rs   branches, loops and match lowering
+|-- operators.rs      unary, binary, logical and comparison operators
+|-- runtime_calls.rs  runtime requests, printing and function calls
+|-- functions.rs      function frames and saved calls
+`-- entry.rs          CLI entry point, data section and platform adaptation
 ```
 
 Every Adamantium value occupies a 16-byte slot. The generator tracks temporary slots and calculates the largest stack frame used by each function. Typed expressions leave their value in `rax` and `rdx`. Runtime failures branch to the active error target.
 
 Windows and Linux share generated logic. `entry.rs` maps runtime calls to Linux ABI wrappers when producing Linux assembly. Platform-specific assembly remains in `src/runtime.asm` and `src/runtime-linux.asm`.
 
-Future splits should follow actual responsibilities. Class construction, operators, and runtime request encoding can move to separate files when they grow enough to justify another boundary.
+Expression and statement modules dispatch typed IR nodes to focused lowering modules. Runtime request layout remains in `runtime_calls.rs`, while target-specific call-name and ABI adaptation remains in `entry.rs` and the platform runtime assembly files.
 
 ## LLVM ARM64 boundary
 

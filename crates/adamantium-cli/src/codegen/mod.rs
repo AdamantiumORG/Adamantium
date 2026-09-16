@@ -1,8 +1,12 @@
 mod assembly;
+mod classes;
+mod control_flow;
 mod entry;
 mod expressions;
 mod functions;
 mod lists;
+mod operators;
+mod runtime_calls;
 mod statements;
 
 pub use entry::assembly_entry;

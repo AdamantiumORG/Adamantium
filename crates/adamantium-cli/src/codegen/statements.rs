@@ -68,22 +68,7 @@ impl Generator {
                     self.emit("    call ExitProcess");
                 }
                 Instruction::SetField(object, index, value, hook) => {
-                    self.expression(object);
-                    let receiver = self.save();
-                    self.expression(value);
-                    self.clone_class(value.ty);
-                    let field_value = self.save();
-                    self.load(receiver);
-                    self.emit("    mov r11, rax");
-                    self.load(field_value);
-                    self.emit(format!(
-                        "    mov [r11 + {}], rax\n    mov [r11 + {}], rdx",
-                        index * 16,
-                        index * 16 + 8
-                    ));
-                    if let Some(hook) = hook {
-                        self.call_saved(hook, &[receiver]);
-                    }
+                    self.set_class_field(object, *index, value, hook.as_deref());
                 }
                 Instruction::SetIndex(list, index, value, line) => {
                     self.expression(list);
@@ -102,110 +87,23 @@ impl Generator {
                     self.emit("    mov [r11], rax\n    mov [r11 + 8], rdx");
                 }
                 Instruction::If(condition, yes, no) => {
-                    let else_label = self.label("else");
-                    let end = self.label("if_end");
-                    self.expression(condition);
-                    self.emit(format!("    test rax, rax\n    jz {else_label}"));
-                    self.instructions(yes, function);
-                    self.emit(format!("    jmp {end}\n{else_label}:"));
-                    self.instructions(no, function);
-                    self.emit(format!("{end}:"));
+                    self.if_statement(condition, yes, no, function)
                 }
-                Instruction::While(condition, body) | Instruction::Until(condition, body) => {
-                    let start = self.label("condition");
-                    let end = self.label("loop_end");
-                    self.loop_stack.push((start.clone(), end.clone()));
-                    self.emit(format!("{start}:"));
-                    self.expression(condition);
-                    let jump = if matches!(instruction, Instruction::While(_, _)) {
-                        "jz"
-                    } else {
-                        "jnz"
-                    };
-                    self.emit(format!("    test rax, rax\n    {jump} {end}"));
-                    self.instructions(body, function);
-                    self.emit(format!("    jmp {start}\n{end}:"));
-                    self.loop_stack.pop();
+                Instruction::While(condition, body) => {
+                    self.conditional_loop(condition, body, function, false)
                 }
-                Instruction::Loop(body) => {
-                    let start = self.label("loop");
-                    let end = self.label("loop_end");
-                    self.loop_stack.push((start.clone(), end.clone()));
-                    self.emit(format!("{start}:"));
-                    self.instructions(body, function);
-                    self.emit(format!("    jmp {start}\n{end}:"));
-                    self.loop_stack.pop();
+                Instruction::Until(condition, body) => {
+                    self.conditional_loop(condition, body, function, true)
                 }
-                Instruction::For(slot, start_value, end_value, body) => {
-                    self.expression(start_value);
-                    self.store(*slot);
-                    self.expression(end_value);
-                    let end_slot = self.save();
-                    let condition = self.label("for_condition");
-                    let increment = self.label("for_increment");
-                    let end = self.label("loop_end");
-                    self.loop_stack.push((increment.clone(), end.clone()));
-                    self.emit(format!("{condition}:"));
-                    self.evaluate(9, start_value.ty, start_value.ty, &[*slot, end_slot]);
-                    self.emit(format!("    test rax, rax\n    jz {end}"));
-                    self.instructions(body, function);
-                    self.emit(format!("{increment}:\n    mov rax, 1\n    xor edx, edx"));
-                    let one = self.save();
-                    self.evaluate(0, start_value.ty, start_value.ty, &[*slot, one]);
-                    self.store(*slot);
-                    self.emit(format!("    jmp {condition}\n{end}:"));
-                    self.loop_stack.pop();
+                Instruction::Loop(body) => self.unconditional_loop(body, function),
+                Instruction::For(slot, start, end, body) => {
+                    self.range_loop(*slot, start, end, body, function)
                 }
                 Instruction::ForEach(slot, collection, body) => {
-                    let Type::List(inner) = collection.ty else {
-                        unreachable!("typed for-each collection must be a List")
-                    };
-                    let element_ty = Type::from_id(inner).expect("checked List element type");
-                    self.expression(collection);
-                    let list = self.save();
-                    self.emit("    xor eax, eax\n    xor edx, edx");
-                    let index = self.save();
-                    let condition = self.label("for_each_condition");
-                    let increment = self.label("for_each_increment");
-                    let end = self.label("loop_end");
-                    self.loop_stack.push((increment.clone(), end.clone()));
-                    self.emit(format!("{condition}:"));
-                    self.load(index);
-                    self.emit(format!("    cmp rax, {}\n    jae {end}", memory(list, 8)));
-                    self.load(list);
-                    self.emit("    mov r11, rax");
-                    self.load(index);
-                    self.emit(
-                        "    shl rax, 4\n    add r11, rax\n    mov rax, [r11]\n    mov rdx, [r11 + 8]",
-                    );
-                    self.clone_class(element_ty);
-                    self.store(*slot);
-                    self.instructions(body, function);
-                    self.emit(format!(
-                        "{increment}:\n    mov rax, {}\n    inc rax\n    xor edx, edx",
-                        memory(index, 0)
-                    ));
-                    self.store(index);
-                    self.emit(format!("    jmp {condition}\n{end}:"));
-                    self.loop_stack.pop();
+                    self.collection_loop(*slot, collection, body, function)
                 }
                 Instruction::Match(value, arms, fallback) => {
-                    self.expression(value);
-                    let matched_value = self.save();
-                    let end = self.label("match_end");
-                    for (pattern, body) in arms {
-                        let next = self.label("match_next");
-                        self.expression(pattern);
-                        let pattern = self.save();
-                        self.evaluate(7, value.ty, value.ty, &[matched_value, pattern]);
-                        self.emit(format!("    test rax, rax\n    jz {next}"));
-                        self.instructions(body, function);
-                        self.emit(format!("    jmp {end}\n{next}:"));
-                    }
-                    if let Some(body) = fallback {
-                        self.instructions(body, function);
-                    }
-                    self.emit(format!("{end}:"));
+                    self.match_statement(value, arms, fallback.as_deref(), function)
                 }
                 Instruction::Break => {
                     self.emit(format!("    jmp {}", self.loop_stack.last().unwrap().1))

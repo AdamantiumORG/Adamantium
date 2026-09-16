@@ -1587,11 +1587,11 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 * [x] Separate expression generation
 * [x] Separate statement generation
 * [x] Separate function generation
-* [ ] Separate class generation
+* [x] Separate class generation
 * [x] Separate list generation
-* [ ] Separate control-flow generation
-* [ ] Separate operator generation
-* [ ] Separate runtime-call generation
+* [x] Separate control-flow generation
+* [x] Separate operator generation
+* [x] Separate runtime-call generation
 * [x] Keep generated assembly behavior unchanged during the refactor
 * [x] Run the complete test suite after every refactor stage
 
