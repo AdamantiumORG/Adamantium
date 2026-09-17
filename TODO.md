@@ -1607,14 +1607,14 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 13. Define compiler phase boundaries
 
-* [ ] Clearly define lexer output
-* [ ] Clearly define parser output
-* [ ] Clearly define AST invariants
-* [ ] Clearly define name-resolution output
-* [ ] Clearly define type-checker output
-* [ ] Clearly define semantic-analysis output
-* [ ] Clearly define code-generation input
-* [ ] Document compiler phase responsibilities
+* [x] Clearly define lexer output
+* [x] Clearly define parser output
+* [x] Clearly define AST invariants
+* [x] Clearly define name-resolution output
+* [x] Clearly define type-checker output
+* [x] Clearly define semantic-analysis output
+* [x] Clearly define code-generation input
+* [x] Document compiler phase responsibilities
 
 ### 13a. Complete the Cargo workspace migration
 
