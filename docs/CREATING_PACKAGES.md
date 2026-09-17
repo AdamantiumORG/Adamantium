@@ -9,6 +9,8 @@ Every release needs these assets:
 ```text
 adamantium_packet.wasm
 adamantium_packet.toml
+SHA256SUMS
+adamantium_packet.release.json
 ```
 
 Version `1.4.2` uses tag `adamantium_packet_1_4_2`. The WASM file must be a WebAssembly 1.0 `wasm32-wasip1` command module with a `_start` entry point.
@@ -100,10 +102,29 @@ cp target/wasm32-wasip1/release/text_tools.wasm adamantium_packet.wasm
 
 ## Publishing
 
+Place the finished WASM module and manifest in the package repository root, then generate a validated release bundle:
+
+```text
+adamantium package prepare
+```
+
+The command validates the manifest, exact version, ABI and WASM `_start` export. It writes canonical assets to `target/package-release/`. `SHA256SUMS` contains SHA-256 hashes for the WASM module and canonical manifest. `adamantium_packet.release.json` records format version `1`, package identity, ABI, release tag and both hashes.
+
+Publish or update the corresponding GitHub Release with:
+
+```text
+gh auth login
+adamantium package publish
+```
+
+Publishing creates the tag-shaped release when it does not exist. For an existing release it uploads all generated assets with `--clobber`. Run either command with a package directory argument when the package is outside the current directory.
+
+The equivalent manual commands are:
+
 ```text
 git tag adamantium_packet_1_4_2
 git push origin adamantium_packet_1_4_2
-gh release create adamantium_packet_1_4_2 adamantium_packet.wasm adamantium_packet.toml --generate-notes --verify-tag
+gh release create adamantium_packet_1_4_2 target/package-release/* --generate-notes --target HEAD
 ```
 
 Example release workflow:
@@ -168,7 +189,7 @@ Installed files are stored under `packages/REPOSITORY/VERSION/`. Downloads are c
 - `function ... is not declared` - add `[functions.NAME]` and import the same name.
 - `Adamantium package error` - inspect the package's stderr output.
 
-Checksums, signatures, and a central registry are still planned.
+The installer currently validates the downloaded WASM and manifest. Verification against the published checksum file and package signatures remain planned.
 
 ## Release checklist
 
@@ -178,5 +199,6 @@ Checksums, signatures, and a central registry are still planned.
 - [ ] The package requests minimal filesystem access.
 - [ ] Package tests pass.
 - [ ] The tag uses `adamantium_packet_MAJOR_MINOR_PATCH`.
-- [ ] Both assets are attached to the release.
+- [ ] All four generated assets are attached to the release.
+- [ ] `SHA256SUMS` matches the published WASM and manifest.
 - [ ] A clean project can install, check, build, and run the package.

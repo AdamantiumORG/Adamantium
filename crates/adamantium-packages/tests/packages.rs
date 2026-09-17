@@ -1,5 +1,9 @@
 use adamantium_packages::{Lockfile, Manifest, Requirement, Version, resolve};
 use std::collections::BTreeMap;
+use std::{
+    fs,
+    sync::atomic::{AtomicUsize, Ordering},
+};
 
 #[test]
 fn formats_release_asset() {
@@ -94,4 +98,40 @@ fn detects_dependency_cycles() {
         manifest("B", "1.0.0", &[("https://github.com/example/A", "1.0.0")]),
     );
     assert!(resolve(&[root], &manifests).unwrap_err().contains("cycle"));
+}
+
+#[test]
+fn generates_reproducible_release_assets_and_metadata() {
+    static NEXT: AtomicUsize = AtomicUsize::new(0);
+    let root = std::env::temp_dir().join(format!(
+        "adamantium-package-release-{}-{}",
+        std::process::id(),
+        NEXT.fetch_add(1, Ordering::Relaxed)
+    ));
+    fs::create_dir_all(&root).unwrap();
+    let manifest = root.join("source.toml");
+    let wasm = root.join("source.wasm");
+    fs::write(
+        &manifest,
+        "[package]\nname='Example'\nversion='1.2.3'\nabi='wasi-command-v1'\n",
+    )
+    .unwrap();
+    fs::write(
+        &wasm,
+        wat::parse_str("(module (func (export \"_start\")))").unwrap(),
+    )
+    .unwrap();
+    let bundle =
+        adamantium_packages::generate_release(&manifest, &wasm, &root.join("release")).unwrap();
+    assert_eq!(bundle.tag, "adamantium_packet_1_2_3");
+    assert_eq!(bundle.assets.len(), 4);
+    let checksums = fs::read_to_string(root.join("release/SHA256SUMS")).unwrap();
+    assert!(checksums.contains("adamantium_packet.wasm"));
+    let metadata: adamantium_packages::ReleaseMetadata = serde_json::from_str(
+        &fs::read_to_string(root.join("release/adamantium_packet.release.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(metadata.name, "Example");
+    assert_eq!(metadata.format, 1);
+    fs::remove_dir_all(root).unwrap();
 }

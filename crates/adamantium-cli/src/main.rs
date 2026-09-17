@@ -47,6 +47,8 @@ const HELP: &str = "Adamantium compiler (Windows/Linux x86-64)\n\
 Usage:\n\
   adamantium check [PROJECT_DIRECTORY]\n\
   adamantium install [PROJECT_DIRECTORY]\n\
+  adamantium package prepare [PACKAGE_DIRECTORY]\n\
+  adamantium package publish [PACKAGE_DIRECTORY]\n\
   adamantium clean [PROJECT_DIRECTORY]\n\
   adamantium clear [PROJECT_DIRECTORY]\n\
   adamantium build [PROJECT_DIRECTORY]\n\
@@ -67,6 +69,8 @@ enum Action {
     Version,
     Check(PathBuf),
     Install(PathBuf),
+    PackagePrepare(PathBuf),
+    PackagePublish(PathBuf),
     Clean(PathBuf),
     TestList(PathBuf),
     TestRun(PathBuf, Option<String>, bool),
@@ -95,6 +99,11 @@ fn cli(args: Vec<OsString>) -> Result<ExitCode, String> {
             println!("Checked {}", root.display());
         }
         Action::Install(root) => install_packages(&root)?,
+        Action::PackagePrepare(root) => {
+            let bundle = prepare_package_release(&root)?;
+            println!("Prepared {} at {}", bundle.tag, bundle.directory.display());
+        }
+        Action::PackagePublish(root) => publish_package_release(&root)?,
         Action::Clean(root) => clean_project(&root)?,
         Action::TestList(root) => list_tests(&root)?,
         Action::TestRun(root, filter, verbose) => {
@@ -162,6 +171,18 @@ fn action(args: Vec<OsString>) -> Result<Action, String> {
         let root = args.next().map_or_else(current_directory, Ok)?;
         no_more_args(args)?;
         return Ok(Action::Install(root.into()));
+    }
+    if first == "package" {
+        let command = args
+            .next()
+            .ok_or("adamantium package requires 'prepare' or 'publish'; use --help")?;
+        let root = args.next().map_or_else(current_directory, Ok)?;
+        no_more_args(args)?;
+        return match command.to_string_lossy().as_ref() {
+            "prepare" => Ok(Action::PackagePrepare(root.into())),
+            "publish" => Ok(Action::PackagePublish(root.into())),
+            _ => Err("adamantium package requires 'prepare' or 'publish'; use --help".into()),
+        };
     }
     if first == "clean" || first == "clear" {
         let root = args.next().map_or_else(current_directory, Ok)?;
@@ -718,6 +739,38 @@ fn install_packages(root: &Path) -> Result<(), String> {
         lock.packages.len(),
         if lock.packages.len() == 1 { "" } else { "s" }
     );
+    Ok(())
+}
+
+fn prepare_package_release(root: &Path) -> Result<adamantium_packages::ReleaseBundle, String> {
+    adamantium_packages::generate_release(
+        &root.join(adamantium_packages::PACKAGE_MANIFEST),
+        &root.join(adamantium_packages::PACKAGE_WASM),
+        &root.join("target/package-release"),
+    )
+}
+
+fn publish_package_release(root: &Path) -> Result<(), String> {
+    let bundle = prepare_package_release(root)?;
+    let exists = Command::new("gh")
+        .args(["release", "view", &bundle.tag])
+        .current_dir(root)
+        .status()
+        .map_err(|error| format!("could not run GitHub CLI: {error}"))?
+        .success();
+    let mut command = Command::new("gh");
+    command.current_dir(root);
+    if exists {
+        command.args(["release", "upload", &bundle.tag]);
+        command.args(&bundle.assets).arg("--clobber");
+    } else {
+        command.args(["release", "create", &bundle.tag]);
+        command
+            .args(&bundle.assets)
+            .args(["--generate-notes", "--target", "HEAD"]);
+    }
+    execute(&mut command, "GitHub Release publishing")?;
+    println!("Published {}", bundle.tag);
     Ok(())
 }
 

@@ -1724,12 +1724,12 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 21. Implement package publishing
 
-* [ ] Define package publishing format
-* [ ] Implement package metadata generation
-* [ ] Implement package release generation
-* [ ] Implement package checksums
-* [ ] Implement GitHub Release publishing
-* [ ] Document package publishing
+* [x] Define package publishing format
+* [x] Implement package metadata generation
+* [x] Implement package release generation
+* [x] Implement package checksums
+* [x] Implement GitHub Release publishing
+* [x] Document package publishing
 
 ---
 

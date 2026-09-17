@@ -10,3 +10,8 @@ adamantium-wasm = { path = "../adamantium-wasm" }
 adamantium-diagnostics = { path = "../adamantium-diagnostics" }
 serde.workspace = true
 toml.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+
+[dev-dependencies]
+wat.workspace = true

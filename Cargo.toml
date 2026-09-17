@@ -14,6 +14,7 @@ toml = "0.8"
 rustc_apfloat = "=0.2.3"
 wat = "1"
 wasmparser = "0.228"
+sha2 = "0.10"
 
 [profile.release]
 panic = "abort"

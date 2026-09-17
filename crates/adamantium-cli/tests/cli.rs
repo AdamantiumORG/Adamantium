@@ -19,6 +19,7 @@ fn help_and_version_are_available() {
         assert!(stdout.contains("adamantium build [PROJECT_DIRECTORY]"));
         assert!(stdout.contains("adamantium check [PROJECT_DIRECTORY]"));
         assert!(stdout.contains("adamantium run [PROJECT_DIRECTORY]"));
+        assert!(stdout.contains("adamantium package prepare [PACKAGE_DIRECTORY]"));
     }
 
     let output = adamantium().arg("--version").output().unwrap();
@@ -27,6 +28,45 @@ fn help_and_version_are_available() {
         String::from_utf8_lossy(&output.stdout).trim(),
         format!("adamantium {}", env!("CARGO_PKG_VERSION"))
     );
+}
+
+#[test]
+fn package_prepare_generates_valid_release_assets() {
+    let root = std::env::temp_dir().join(format!(
+        "adamantium-cli-package-{}-{}",
+        std::process::id(),
+        NEXT_PROJECT.fetch_add(1, Ordering::Relaxed)
+    ));
+    fs::create_dir_all(&root).unwrap();
+    fs::write(
+        root.join("adamantium_packet.toml"),
+        "[package]\nname='Example'\nversion='2.1.0'\nabi='wasi-command-v1'\n",
+    )
+    .unwrap();
+    fs::write(
+        root.join("adamantium_packet.wasm"),
+        wat::parse_str("(module (func (export \"_start\")))").unwrap(),
+    )
+    .unwrap();
+    let output = adamantium()
+        .args(["package", "prepare", root.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let release = root.join("target/package-release");
+    for asset in [
+        "adamantium_packet.wasm",
+        "adamantium_packet.toml",
+        "SHA256SUMS",
+        "adamantium_packet.release.json",
+    ] {
+        assert!(release.join(asset).is_file(), "missing {asset}");
+    }
+    fs::remove_dir_all(root).unwrap();
 }
 
 #[test]

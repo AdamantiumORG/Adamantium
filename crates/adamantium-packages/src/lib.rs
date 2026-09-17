@@ -1,7 +1,12 @@
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::str::FromStr;
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct Version {
@@ -249,4 +254,96 @@ pub fn release_asset(version: &str) -> Result<String, adamantium_diagnostics::Di
         "adamantium_packet_{}_{}_{}.wasm",
         version.major, version.minor, version.patch
     ))
+}
+
+pub const PACKAGE_MANIFEST: &str = "adamantium_packet.toml";
+pub const PACKAGE_WASM: &str = "adamantium_packet.wasm";
+pub const PACKAGE_CHECKSUMS: &str = "SHA256SUMS";
+pub const RELEASE_METADATA: &str = "adamantium_packet.release.json";
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct ReleaseMetadata {
+    pub format: u32,
+    pub name: String,
+    pub version: String,
+    pub abi: String,
+    pub tag: String,
+    pub wasm_sha256: String,
+    pub manifest_sha256: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ReleaseBundle {
+    pub directory: PathBuf,
+    pub tag: String,
+    pub assets: Vec<PathBuf>,
+}
+
+pub fn release_tag(version: &str) -> Result<String, String> {
+    let version = version.parse::<Version>()?;
+    Ok(format!(
+        "adamantium_packet_{}_{}_{}",
+        version.major, version.minor, version.patch
+    ))
+}
+
+pub fn generate_release(
+    manifest_path: &Path,
+    wasm_path: &Path,
+    output: &Path,
+) -> Result<ReleaseBundle, String> {
+    let manifest_source = fs::read_to_string(manifest_path)
+        .map_err(|error| format!("could not read {}: {error}", manifest_path.display()))?;
+    let manifest = Manifest::parse(&manifest_source)?;
+    let wasm = fs::read(wasm_path)
+        .map_err(|error| format!("could not read {}: {error}", wasm_path.display()))?;
+    adamantium_wasm::validate_package(&wasm)
+        .map_err(|error| format!("invalid package WASM: {error}"))?;
+    let canonical_manifest = toml::to_string_pretty(&manifest)
+        .map_err(|error| format!("cannot serialize package manifest: {error}"))?;
+    let wasm_hash = sha256(&wasm);
+    let manifest_hash = sha256(canonical_manifest.as_bytes());
+    let tag = release_tag(&manifest.package.version)?;
+    let metadata = ReleaseMetadata {
+        format: 1,
+        name: manifest.package.name.clone(),
+        version: manifest.package.version.clone(),
+        abi: manifest.package.abi.clone(),
+        tag: tag.clone(),
+        wasm_sha256: wasm_hash.clone(),
+        manifest_sha256: manifest_hash.clone(),
+    };
+    fs::create_dir_all(output)
+        .map_err(|error| format!("could not create {}: {error}", output.display()))?;
+    let wasm_output = output.join(PACKAGE_WASM);
+    let manifest_output = output.join(PACKAGE_MANIFEST);
+    let checksums_output = output.join(PACKAGE_CHECKSUMS);
+    let metadata_output = output.join(RELEASE_METADATA);
+    fs::write(&wasm_output, wasm).map_err(|error| error.to_string())?;
+    fs::write(&manifest_output, canonical_manifest).map_err(|error| error.to_string())?;
+    fs::write(
+        &checksums_output,
+        format!("{wasm_hash}  {PACKAGE_WASM}\n{manifest_hash}  {PACKAGE_MANIFEST}\n"),
+    )
+    .map_err(|error| error.to_string())?;
+    fs::write(
+        &metadata_output,
+        serde_json::to_string_pretty(&metadata)
+            .map_err(|error| format!("cannot serialize release metadata: {error}"))?,
+    )
+    .map_err(|error| error.to_string())?;
+    Ok(ReleaseBundle {
+        directory: output.to_path_buf(),
+        tag,
+        assets: vec![
+            wasm_output,
+            manifest_output,
+            checksums_output,
+            metadata_output,
+        ],
+    })
+}
+
+fn sha256(bytes: &[u8]) -> String {
+    format!("{:x}", Sha256::digest(bytes))
 }
