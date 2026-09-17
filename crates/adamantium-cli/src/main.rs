@@ -1053,11 +1053,7 @@ fn link(target: &Path, name: &str, obj: &Path, runtime: &Path, exe: &Path) -> Re
         }
         command.arg("-no-pie").arg(obj).arg(runtime);
         command
-            .args(
-                libraries
-                    .split_whitespace()
-                    .filter(|library| !use_bundled_zig || *library != "-lgcc_s"),
-            )
+            .args(linux_runtime_libraries(libraries))
             .arg("-o")
             .arg(exe);
         return execute(&mut command, "Linux C linker");
@@ -1123,6 +1119,32 @@ fn link(target: &Path, name: &str, obj: &Path, runtime: &Path, exe: &Path) -> Re
             .arg(format!("@{}", response.display())),
         "Microsoft linker through the Visual Studio x64 environment",
     )
+}
+
+fn linux_runtime_libraries(libraries: &str) -> Vec<&str> {
+    libraries.split_whitespace().collect()
+}
+
+#[cfg(test)]
+mod linker_tests {
+    use super::linux_runtime_libraries;
+
+    #[test]
+    fn linux_linker_keeps_rust_runtime_libraries() {
+        let libraries = "-lgcc_s -lutil -lrt -lpthread -lm -ldl -lc";
+        assert_eq!(
+            linux_runtime_libraries(libraries),
+            [
+                "-lgcc_s",
+                "-lutil",
+                "-lrt",
+                "-lpthread",
+                "-lm",
+                "-ldl",
+                "-lc"
+            ]
+        );
+    }
 }
 
 fn portable_tools_directory() -> Option<PathBuf> {
