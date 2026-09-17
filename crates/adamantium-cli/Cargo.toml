@@ -13,6 +13,9 @@ path = "src/main.rs"
 adamantium-compiler = { path = "../adamantium-compiler" }
 adamantium-ir = { path = "../adamantium-ir" }
 adamantium-packages = { path = "../adamantium-packages" }
+adamantium-project = { path = "../adamantium-project" }
+adamantium-testing = { path = "../adamantium-testing" }
+adamantium-types = { path = "../adamantium-types" }
 adamantium-wasm = { path = "../adamantium-wasm" }
 toml.workspace = true
 rustc_apfloat.workspace = true

@@ -1,4 +1,7 @@
-use adamantium_ast::Span;
+use rustc_apfloat::{
+    Float, FloatConvert, Round, Status,
+    ieee::{Double, Quad, Single},
+};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PrimitiveType {
@@ -9,7 +12,7 @@ pub enum PrimitiveType {
     None,
 }
 
-pub fn infer_literal(text: &str, _span: Span) -> PrimitiveType {
+pub fn infer_literal(text: &str, _span: adamantium_ast::Span) -> PrimitiveType {
     if text == "None" {
         PrimitiveType::None
     } else if text.starts_with('"') {
@@ -18,5 +21,513 @@ pub fn infer_literal(text: &str, _span: Span) -> PrimitiveType {
         PrimitiveType::Float
     } else {
         PrimitiveType::Int
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Type {
+    I8,
+    I16,
+    I32,
+    I64,
+    U4,
+    U8,
+    U16,
+    U32,
+    U64,
+    F32,
+    F64,
+    F128,
+    String,
+    Bool,
+    None,
+    Enum(u32),
+    Class(u32),
+    Optional(u32),
+    List(u32),
+    Offset(u32),
+}
+
+impl Type {
+    pub fn wide_optional_value(self) -> bool {
+        matches!(
+            self,
+            Self::String | Self::F128 | Self::Class(_) | Self::List(_)
+        )
+    }
+    pub fn parse(name: &str) -> Option<Self> {
+        Some(match name {
+            "i8" => Self::I8,
+            "i16" => Self::I16,
+            "i32" | "int" => Self::I32,
+            "i64" => Self::I64,
+            "u4" => Self::U4,
+            "u8" => Self::U8,
+            "u16" => Self::U16,
+            "u32" | "u" => Self::U32,
+            "u64" => Self::U64,
+            "f32" => Self::F32,
+            "f64" | "float" => Self::F64,
+            "f128" => Self::F128,
+            "string" => Self::String,
+            "bool" => Self::Bool,
+            "None" => Self::None,
+            _ => return None,
+        })
+    }
+    pub fn from_id(id: u32) -> Option<Self> {
+        let payload = id >> 3;
+        match id & 7 {
+            1 => return Some(Self::Enum(payload)),
+            2 => return Some(Self::Class(payload)),
+            3 if Self::from_id(payload).is_some() => return Some(Self::Optional(payload)),
+            4 if Self::from_id(payload).is_some() => return Some(Self::List(payload)),
+            5 if Self::from_id(payload).is_some() => return Some(Self::Offset(payload)),
+            0 => (),
+            _ => return None,
+        }
+        [
+            Self::I8,
+            Self::I16,
+            Self::I32,
+            Self::I64,
+            Self::U4,
+            Self::U8,
+            Self::U16,
+            Self::U32,
+            Self::U64,
+            Self::F32,
+            Self::F64,
+            Self::F128,
+            Self::String,
+            Self::Bool,
+            Self::None,
+        ]
+        .get(payload as usize)
+        .copied()
+    }
+    pub fn id(self) -> u32 {
+        match self {
+            Self::I8 => 0 << 3,
+            Self::I16 => 1 << 3,
+            Self::I32 => 2 << 3,
+            Self::I64 => 3 << 3,
+            Self::U4 => 4 << 3,
+            Self::U8 => 5 << 3,
+            Self::U16 => 6 << 3,
+            Self::U32 => 7 << 3,
+            Self::U64 => 8 << 3,
+            Self::F32 => 9 << 3,
+            Self::F64 => 10 << 3,
+            Self::F128 => 11 << 3,
+            Self::String => 12 << 3,
+            Self::Bool => 13 << 3,
+            Self::None => 14 << 3,
+            Self::Enum(id) => (id << 3) | 1,
+            Self::Class(id) => (id << 3) | 2,
+            Self::Optional(id) => (id << 3) | 3,
+            Self::List(id) => (id << 3) | 4,
+            Self::Offset(id) => (id << 3) | 5,
+        }
+    }
+    pub fn integer(self) -> bool {
+        matches!(
+            self,
+            Self::I8
+                | Self::I16
+                | Self::I32
+                | Self::I64
+                | Self::U4
+                | Self::U8
+                | Self::U16
+                | Self::U32
+                | Self::U64
+        )
+    }
+    pub fn floating(self) -> bool {
+        matches!(self, Self::F32 | Self::F64 | Self::F128)
+    }
+    pub fn numeric(self) -> bool {
+        self.integer() || self.floating()
+    }
+    pub fn unsigned(self) -> bool {
+        matches!(
+            self,
+            Self::U4 | Self::U8 | Self::U16 | Self::U32 | Self::U64
+        )
+    }
+    pub fn bounds(self) -> (i128, i128) {
+        match self {
+            Self::I8 => (i8::MIN as i128, i8::MAX as i128),
+            Self::I16 => (i16::MIN as i128, i16::MAX as i128),
+            Self::I32 => (i32::MIN as i128, i32::MAX as i128),
+            Self::I64 => (i64::MIN as i128, i64::MAX as i128),
+            Self::U4 => (0, 15),
+            Self::U8 => (0, u8::MAX as i128),
+            Self::U16 => (0, u16::MAX as i128),
+            Self::U32 => (0, u32::MAX as i128),
+            Self::U64 => (0, u64::MAX as i128),
+            _ => (0, 0),
+        }
+    }
+}
+impl std::fmt::Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::I8 => "i8",
+            Self::I16 => "i16",
+            Self::I32 => "i32",
+            Self::I64 => "i64",
+            Self::U4 => "u4",
+            Self::U8 => "u8",
+            Self::U16 => "u16",
+            Self::U32 => "u32",
+            Self::U64 => "u64",
+            Self::F32 => "f32",
+            Self::F64 => "f64",
+            Self::F128 => "f128",
+            Self::String => "string",
+            Self::Bool => "bool",
+            Self::None => "None",
+            Self::Enum(_) => "enum",
+            Self::Class(_) => "class",
+            Self::Optional(_) => "optional",
+            Self::List(_) => "List",
+            Self::Offset(_) => "offset",
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[repr(C)]
+pub struct Value {
+    pub lo: u64,
+    pub hi: u64,
+}
+impl Value {
+    pub fn bits(self) -> u128 {
+        (self.hi as u128) << 64 | self.lo as u128
+    }
+    pub fn from_bits(bits: u128) -> Self {
+        Self {
+            lo: bits as u64,
+            hi: (bits >> 64) as u64,
+        }
+    }
+    pub fn integer(self, ty: Type) -> i128 {
+        if ty.unsigned() {
+            self.lo as i128
+        } else {
+            self.lo as i64 as i128
+        }
+    }
+}
+
+pub fn integer(value: i128, ty: Type) -> Result<Value, String> {
+    let (low, high) = ty.bounds();
+    if !ty.integer() || value < low || value > high {
+        return Err(format!("value {value} is outside the range of {ty}"));
+    }
+    Ok(Value {
+        lo: value as u64,
+        hi: 0,
+    })
+}
+fn float_literal<F: Float>(text: &str) -> Result<Value, String> {
+    let result = F::from_str_r(text, Round::NearestTiesToEven)
+        .map_err(|e| format!("invalid floating-point literal: {e:?}"))?;
+    if result
+        .status
+        .intersects(Status::OVERFLOW | Status::INVALID_OP)
+        || !result.value.is_finite()
+    {
+        return Err("floating-point literal is outside the finite range".into());
+    }
+    Ok(Value::from_bits(result.value.to_bits()))
+}
+pub fn literal(text: &str, ty: Type) -> Result<Value, String> {
+    if ty.integer() {
+        return integer(
+            text.parse::<i128>()
+                .map_err(|_| format!("invalid integer literal '{text}' for {ty}"))?,
+            ty,
+        );
+    }
+    match ty {
+        Type::F32 => float_literal::<Single>(text),
+        Type::F64 => float_literal::<Double>(text),
+        Type::F128 => float_literal::<Quad>(text),
+        _ => Err(format!("numeric literal cannot have type {ty}")),
+    }
+}
+
+fn floating<F: Float>(op: u32, a: Value, b: Value, c: Value) -> Result<Value, String> {
+    let (a, b, c) = (
+        F::from_bits(a.bits()),
+        F::from_bits(b.bits()),
+        F::from_bits(c.bits()),
+    );
+    if (7..=12).contains(&op) {
+        let result = match op {
+            7 => a == b,
+            8 => a != b,
+            9 => a < b,
+            10 => a <= b,
+            11 => a > b,
+            12 => a >= b,
+            _ => unreachable!(),
+        };
+        return Ok(Value {
+            lo: result as u64,
+            hi: 0,
+        });
+    }
+    let result = match op {
+        0 => a + b,
+        1 => a - b,
+        2 => a * b,
+        3 => a / b,
+        4 => return Ok(Value::from_bits((-a).to_bits())),
+        6 => {
+            if b > c {
+                return Err("invalid clamp range".into());
+            }
+            return Ok(Value::from_bits(
+                if a < b {
+                    b
+                } else if a > c {
+                    c
+                } else {
+                    a
+                }
+                .to_bits(),
+            ));
+        }
+        _ => return Err("invalid operation".into()),
+    };
+    if result
+        .status
+        .intersects(Status::OVERFLOW | Status::INVALID_OP | Status::DIV_BY_ZERO)
+        || !result.value.is_finite()
+    {
+        return Err("floating-point overflow or division by zero".into());
+    }
+    Ok(Value::from_bits(result.value.to_bits()))
+}
+pub fn operation(op: u32, ty: Type, a: Value, b: Value, c: Value) -> Result<Value, String> {
+    if let Type::Optional(_) = ty
+        && matches!(op, 7 | 8)
+    {
+        return Ok(Value {
+            lo: (if op == 7 { a == b } else { a != b }) as u64,
+            hi: 0,
+        });
+    }
+    if ty.integer() {
+        let (a, b, c) = (a.integer(ty), b.integer(ty), c.integer(ty));
+        if (7..=12).contains(&op) {
+            let result = match op {
+                7 => a == b,
+                8 => a != b,
+                9 => a < b,
+                10 => a <= b,
+                11 => a > b,
+                12 => a >= b,
+                _ => unreachable!(),
+            };
+            return Ok(Value {
+                lo: result as u64,
+                hi: 0,
+            });
+        }
+        let value = match op {
+            0 => a.checked_add(b),
+            1 => a.checked_sub(b),
+            2 => a.checked_mul(b),
+            3 => a.checked_div(b),
+            13 => a.checked_rem(b),
+            4 => a.checked_neg(),
+            6 if b <= c => Some(a.clamp(b, c)),
+            _ => None,
+        }
+        .ok_or("arithmetic overflow, division by zero or invalid clamp range")?;
+        return integer(value, ty);
+    }
+    if matches!(
+        ty,
+        Type::Bool | Type::None | Type::Enum(_) | Type::Offset(_)
+    ) && matches!(op, 7 | 8)
+    {
+        return Ok(Value {
+            lo: (if op == 7 { a == b } else { a != b }) as u64,
+            hi: 0,
+        });
+    }
+    match ty {
+        Type::F32 => floating::<Single>(op, a, b, c),
+        Type::F64 => floating::<Double>(op, a, b, c),
+        Type::F128 => floating::<Quad>(op, a, b, c),
+        _ => Err(format!("arithmetic is not supported for {ty}")),
+    }
+}
+pub fn convert(value: Value, from: Type, to: Type) -> Result<Value, String> {
+    if from == to {
+        return Ok(value);
+    }
+    if let Type::Optional(inner) = to {
+        if from == Type::None {
+            return Ok(Value::default());
+        }
+        if from.id() == inner {
+            if from.wide_optional_value() {
+                return Ok(Value {
+                    lo: Box::into_raw(Box::new(value)) as u64,
+                    hi: 2,
+                });
+            }
+            return Ok(Value {
+                lo: value.lo,
+                hi: 1,
+            });
+        }
+    }
+    if from.integer() && to.integer() {
+        return integer(value.integer(from), to);
+    }
+    if from.integer() && to.floating() {
+        return literal(&value.integer(from).to_string(), to);
+    }
+    if from.floating() && to.floating() {
+        return match (from, to) {
+            (Type::F32, Type::F64) => float_convert::<Single, Double>(value),
+            (Type::F32, Type::F128) => float_convert::<Single, Quad>(value),
+            (Type::F64, Type::F32) => float_convert::<Double, Single>(value),
+            (Type::F64, Type::F128) => float_convert::<Double, Quad>(value),
+            (Type::F128, Type::F32) => float_convert::<Quad, Single>(value),
+            (Type::F128, Type::F64) => float_convert::<Quad, Double>(value),
+            _ => unreachable!(),
+        };
+    }
+    Err(format!("cannot convert {from} to {to}"))
+}
+fn float_convert<F: Float + FloatConvert<T>, T: Float>(value: Value) -> Result<Value, String> {
+    let result = F::from_bits(value.bits()).convert(&mut false);
+    if result
+        .status
+        .intersects(Status::OVERFLOW | Status::INVALID_OP)
+    {
+        return Err("floating-point conversion overflow".into());
+    }
+    Ok(Value::from_bits(result.value.to_bits()))
+}
+pub fn display(value: Value, ty: Type) -> Result<String, String> {
+    if ty.integer() {
+        return Ok(value.integer(ty).to_string());
+    }
+    Ok(match ty {
+        Type::F32 => f32::from_bits(value.lo as u32).to_string(),
+        Type::F64 => f64::from_bits(value.lo).to_string(),
+        Type::F128 => Quad::from_bits(value.bits()).to_string(),
+        Type::String => {
+            if value.lo == 0 && value.hi == 0 {
+                return Ok(String::new());
+            }
+            if value.lo == 0 && value.hi != 0 {
+                return Err("invalid string pointer".into());
+            }
+            let bytes =
+                unsafe { std::slice::from_raw_parts(value.lo as *const u8, value.hi as usize) };
+            String::from_utf8_lossy(bytes).into_owned()
+        }
+        Type::Bool => if value.lo == 0 { "false" } else { "true" }.into(),
+        Type::None => "None".into(),
+        Type::Enum(_) => value.lo.to_string(),
+        Type::Class(_) => "<object>".into(),
+        Type::List(inner) => {
+            if value.lo == 0 && value.hi == 0 {
+                "[]".into()
+            } else {
+                if value.lo == 0 {
+                    return Err("invalid List pointer".into());
+                }
+                let inner = Type::from_id(inner).ok_or("invalid List element type")?;
+                let values = unsafe {
+                    std::slice::from_raw_parts(value.lo as *const Value, value.hi as usize)
+                };
+                let items = values
+                    .iter()
+                    .map(|value| display(*value, inner))
+                    .collect::<Result<Vec<_>, _>>()?;
+                format!("[{}]", items.join(", "))
+            }
+        }
+        Type::Optional(inner) => {
+            if value.hi == 0 {
+                "None".into()
+            } else {
+                let inner = Type::from_id(inner).ok_or("invalid optional type")?;
+                let value = if value.hi == 2 {
+                    if value.lo == 0 {
+                        return Err("invalid boxed optional value".into());
+                    }
+                    unsafe { *(value.lo as *const Value) }
+                } else {
+                    Value {
+                        lo: value.lo,
+                        hi: 0,
+                    }
+                };
+                return display(value, inner);
+            }
+        }
+        Type::Offset(_) => "<offset>".into(),
+        _ => unreachable!("integer values are handled before the type match"),
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn integer_remainder_handles_signs_and_zero() {
+        let value = |number| integer(number, Type::I32).unwrap();
+        assert_eq!(
+            operation(13, Type::I32, value(17), value(5), Value::default())
+                .unwrap()
+                .integer(Type::I32),
+            2
+        );
+        assert_eq!(
+            operation(13, Type::I32, value(-17), value(5), Value::default())
+                .unwrap()
+                .integer(Type::I32),
+            -2
+        );
+        assert!(operation(13, Type::I32, value(1), value(0), Value::default()).is_err());
+    }
+
+    #[test]
+    fn optional_values_distinguish_none_from_zero() {
+        let optional = Type::Optional(Type::I32.id());
+        assert_eq!(Type::from_id(optional.id()), Some(optional));
+        let none = convert(Value::default(), Type::None, optional).unwrap();
+        let zero = convert(integer(0, Type::I32).unwrap(), Type::I32, optional).unwrap();
+        assert_ne!(none, zero);
+        assert_eq!(display(none, optional).unwrap(), "None");
+        assert_eq!(display(zero, optional).unwrap(), "0");
+    }
+
+    #[test]
+    fn recursive_type_ids_preserve_every_wrapper() {
+        let nested = Type::Optional(Type::List(Type::List(Type::I32.id()).id()).id());
+        assert_eq!(Type::from_id(nested.id()), Some(nested));
+        let Type::Optional(list) = Type::from_id(nested.id()).unwrap() else {
+            panic!()
+        };
+        let Type::List(inner_list) = Type::from_id(list).unwrap() else {
+            panic!()
+        };
+        assert_eq!(Type::from_id(inner_list), Some(Type::List(Type::I32.id())));
     }
 }

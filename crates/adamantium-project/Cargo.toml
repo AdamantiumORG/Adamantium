@@ -6,3 +6,4 @@ license-file = "../../LICENCE.md"
 
 [dependencies]
 adamantium-diagnostics = { path = "../adamantium-diagnostics" }
+toml.workspace = true

@@ -13,6 +13,9 @@ dependencies = [
  "adamantium-compiler",
  "adamantium-ir",
  "adamantium-packages",
+ "adamantium-project",
+ "adamantium-testing",
+ "adamantium-types",
  "adamantium-wasm",
  "rustc_apfloat",
  "toml",
@@ -97,12 +100,14 @@ name = "adamantium-project"
 version = "0.1.0"
 dependencies = [
  "adamantium-diagnostics",
+ "toml",
 ]
 
 [[package]]
 name = "adamantium-runtime"
 version = "0.1.0"
 dependencies = [
+ "adamantium-types",
  "adamantium-wasm",
  "rustc_apfloat",
  "wasmi",
@@ -135,6 +140,7 @@ name = "adamantium-types"
 version = "0.1.0"
 dependencies = [
  "adamantium-ast",
+ "rustc_apfloat",
 ]
 
 [[package]]

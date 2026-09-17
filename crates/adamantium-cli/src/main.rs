@@ -1,15 +1,14 @@
 mod codegen;
 mod diagnostics;
-mod language_tests;
 mod packages;
 mod syntax;
 mod typed;
-#[allow(dead_code)] // Shared with the separately linked native runtime.
-#[path = "../../adamantium-runtime/src/types.rs"]
-mod types;
+#[allow(dead_code)]
+mod types {
+    pub use adamantium_types::*;
+}
 
 use std::{
-    collections::HashSet,
     env,
     ffi::OsString,
     fs,
@@ -25,6 +24,22 @@ fn main() -> ExitCode {
             eprintln!("{}", diagnostics::render_errors(&error));
             ExitCode::FAILURE
         }
+    }
+}
+
+struct CliLanguageCompiler;
+
+impl adamantium_testing::LanguageCompiler for CliLanguageCompiler {
+    fn build(&self, project: &Path) -> Result<PathBuf, String> {
+        build(project)
+    }
+
+    fn analyze(&self, project: &Path) -> Result<(), String> {
+        analyze(project).map(|_| ())
+    }
+
+    fn render_diagnostics(&self, errors: &str) -> String {
+        diagnostics::render_errors(errors)
     }
 }
 
@@ -86,7 +101,7 @@ fn cli(args: Vec<OsString>) -> Result<ExitCode, String> {
             return run_tests(&root, filter.as_deref(), verbose);
         }
         Action::LanguageTests(root, verbose) => {
-            return language_tests::run(&root, verbose);
+            return adamantium_testing::run_language_tests(&root, verbose, &CliLanguageCompiler);
         }
         Action::Build(root) => {
             let executable = build(&root)?;
@@ -450,56 +465,8 @@ fn run_tests(root: &Path, filter: Option<&str>, verbose: bool) -> Result<ExitCod
     })
 }
 
-fn valid_project_name(name: &str) -> Result<(), String> {
-    if name.is_empty()
-        || !name
-            .bytes()
-            .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
-    {
-        return Err(
-            "project name must contain only ASCII letters, digits, underscores or hyphens".into(),
-        );
-    }
-    let upper = name.to_ascii_uppercase();
-    if [
-        "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8",
-        "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
-    ]
-    .contains(&upper.as_str())
-    {
-        return Err("project name is a reserved Windows device name".into());
-    }
-    Ok(())
-}
-
 fn create_project(root: &Path) -> Result<(), String> {
-    let name = root
-        .file_name()
-        .and_then(|name| name.to_str())
-        .ok_or("project path must end with a valid UTF-8 project name")?;
-    valid_project_name(name)?;
-    if root.exists() {
-        return Err(format!("{} already exists", root.display()));
-    }
-    fs::create_dir_all(root.join("code"))
-        .map_err(|e| format!("could not create {}: {e}", root.display()))?;
-    fs::create_dir(root.join("target"))
-        .map_err(|e| format!("could not create target directory: {e}"))?;
-    fs::write(
-        root.join("project.toml"),
-        format!("name = \"{name}\"\nversion = \"0.1.0\"\ndescription = \"\"\nauthors = []\n"),
-    )
-    .map_err(|e| format!("could not create project.toml: {e}"))?;
-    fs::write(root.join("requirement.toml"), "[packages]\n")
-        .map_err(|e| format!("could not create requirement.toml: {e}"))?;
-    fs::write(
-        root.join("code/main.ad"),
-        "fun main() {\n    print.newline(\"Hello, Adamantium!\");\n}\n",
-    )
-    .map_err(|e| format!("could not create code/main.ad: {e}"))?;
-    fs::write(root.join(".gitignore"), "/target/\n/packages/\n")
-        .map_err(|e| format!("could not create .gitignore: {e}"))?;
-    Ok(())
+    adamantium_project::create(root)
 }
 
 fn current_directory() -> Result<OsString, String> {
@@ -882,31 +849,8 @@ fn project_sources(root: &Path) -> Result<ProjectSources, String> {
     let root = requested_root
         .canonicalize()
         .map_err(|e| format!("{}: {e}", requested_root.display()))?;
-    let project = read_toml(&root.join("project.toml"))?;
-    let mut errors = Vec::new();
-    let name = project
-        .get("name")
-        .and_then(toml::Value::as_str)
-        .map(str::to_string);
-    if let Some(name) = &name {
-        if let Err(error) = valid_project_name(name) {
-            errors.push(format!("project.toml: {error}"));
-        }
-    } else {
-        errors.push("project.toml: name must be a string".into());
-    }
-    for field in ["version", "description"] {
-        if project.get(field).and_then(toml::Value::as_str).is_none() {
-            errors.push(format!("project.toml: {field} must be a string"));
-        }
-    }
-    if !project
-        .get("authors")
-        .and_then(toml::Value::as_array)
-        .is_some_and(|a| a.iter().all(toml::Value::is_str))
-    {
-        errors.push("project.toml: authors must be an array of strings".into());
-    }
+    let manifest = adamantium_project::read_manifest(&root);
+    let mut errors = manifest.as_ref().err().cloned().unwrap_or_default();
     let requirements = read_toml(&root.join("requirement.toml"))?;
     let packages = match packages(&requirements) {
         Ok(packages) => packages,
@@ -918,15 +862,11 @@ fn project_sources(root: &Path) -> Result<ProjectSources, String> {
     if !errors.is_empty() {
         return Err(diagnostics::multiple_errors(errors));
     }
+    let manifest = manifest.expect("validated project manifest");
     let packages = packages_from_lock(&root, packages)?;
     let mut sources = load_modules(&root.join("code"))?;
     let bindings = packages::load_bindings(&root, &packages, &mut sources)?;
-    Ok((
-        root,
-        name.expect("validated project name"),
-        sources,
-        bindings,
-    ))
+    Ok((root, manifest.name, sources, bindings))
 }
 
 fn packages_from_lock(root: &Path, direct: Vec<Package>) -> Result<Vec<Package>, String> {
@@ -980,59 +920,9 @@ fn analyze_sources(
 }
 
 fn load_modules(code: &Path) -> Result<Vec<(String, String)>, String> {
-    fn visit(
-        module: &str,
-        code: &Path,
-        visiting: &mut Vec<String>,
-        loaded: &mut HashSet<String>,
-        result: &mut Vec<(String, String)>,
-    ) -> Result<(), String> {
-        if loaded.contains(module) {
-            return Ok(());
-        }
-        if let Some(start) = visiting.iter().position(|item| item == module) {
-            let mut cycle = visiting[start..].to_vec();
-            cycle.push(module.to_string());
-            return Err(format!("circular pack dependency: {}", cycle.join(" -> ")));
-        }
-        if !module.is_empty()
-            && !module.split('/').all(|part| {
-                let mut chars = part.chars();
-                chars
-                    .next()
-                    .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
-                    && chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
-            })
-        {
-            return Err(format!("invalid module path '{module}'"));
-        }
-        let path = if module.is_empty() {
-            code.join("main.ad")
-        } else {
-            code.join(format!("{module}.ad"))
-        };
-        let source = fs::read_to_string(&path).map_err(|error| {
-            format!(
-                "could not load module '{}': {}: {error}",
-                if module.is_empty() { "main" } else { module },
-                path.display()
-            )
-        })?;
-        visiting.push(module.to_string());
-        for dependency in syntax::module_dependencies(&source)
-            .map_err(|error| format!("{}:{error}", path.display()))?
-        {
-            visit(&dependency, code, visiting, loaded, result)?;
-        }
-        visiting.pop();
-        loaded.insert(module.to_string());
-        result.push((module.to_string(), source));
-        Ok(())
-    }
-
-    let mut result = Vec::new();
-    visit("", code, &mut Vec::new(), &mut HashSet::new(), &mut result)?;
-    Ok(result)
+    adamantium_project::load_modules(code, |source| {
+        syntax::module_dependencies(source).map_err(|error| error.to_string())
+    })
 }
 
 fn link(target: &Path, name: &str, obj: &Path, runtime: &Path, exe: &Path) -> Result<(), String> {
@@ -1226,10 +1116,7 @@ fn find_vcvars64() -> Option<PathBuf> {
 }
 
 fn read_toml(path: &Path) -> Result<toml::Table, String> {
-    fs::read_to_string(path)
-        .map_err(|e| format!("{}: {e}", path.display()))?
-        .parse()
-        .map_err(|e| format!("{}: {e}", path.display()))
+    adamantium_project::read_toml(path)
 }
 
 fn execute(command: &mut Command, label: &str) -> Result<(), String> {

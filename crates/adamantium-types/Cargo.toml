@@ -6,3 +6,4 @@ license-file = "../../LICENCE.md"
 
 [dependencies]
 adamantium-ast = { path = "../adamantium-ast" }
+rustc_apfloat.workspace = true

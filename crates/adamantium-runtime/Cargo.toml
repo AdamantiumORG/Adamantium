@@ -8,6 +8,7 @@ license-file = "../../LICENCE.md"
 crate-type = ["staticlib", "rlib"]
 
 [dependencies]
+adamantium-types = { path = "../adamantium-types" }
 adamantium-wasm = { path = "../adamantium-wasm" }
 rustc_apfloat = "=0.2.3"
 wasmi = "2.0.0"

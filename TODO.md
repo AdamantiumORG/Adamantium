@@ -1619,14 +1619,14 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 ### 13a. Complete the Cargo workspace migration
 
 * [x] Create the root Cargo workspace
-* [ ] Extract CLI and project loading
+* [x] Extract CLI and project loading
 * [ ] Extract AST, lexer and parser crates
 * [ ] Extract semantics, types and diagnostics crates
 * [ ] Extract codegen, NASM and linker crates
-* [ ] Extract runtime, package and WASM crates
-* [ ] Extract the language testing runner
+* [x] Extract runtime, package and WASM crates
+* [x] Extract the language testing runner
 * [ ] Add standard library, formatter and LSP crates when implemented
-* [ ] Keep the CLI and generated-program behavior stable during extraction
+* [x] Keep the CLI and generated-program behavior stable during extraction
 * [x] Give every workspace crate a dedicated integration test suite
 * [x] Test changed crates and their transitive downstream dependents in CI
 
