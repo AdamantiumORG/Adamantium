@@ -1737,22 +1737,22 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 22. Complete `AdamantiumFiles`
 
-* [ ] Implement file opening
-* [ ] Implement file reading
-* [ ] Implement file writing
-* [ ] Implement file appending
-* [ ] Implement file creation
-* [ ] Implement file deletion
-* [ ] Implement file existence checks
-* [ ] Implement directory creation
-* [ ] Implement directory deletion
-* [ ] Implement directory existence checks
-* [ ] Implement directory listing
-* [ ] Implement file metadata
-* [ ] Implement safe file errors
-* [ ] Define cross-platform behavior
-* [ ] Add documentation
-* [ ] Add tests
+* [x] Implement file opening
+* [x] Implement file reading
+* [x] Implement file writing
+* [x] Implement file appending
+* [x] Implement file creation
+* [x] Implement file deletion
+* [x] Implement file existence checks
+* [x] Implement directory creation
+* [x] Implement directory deletion
+* [x] Implement directory existence checks
+* [x] Implement directory listing
+* [x] Implement file metadata
+* [x] Implement safe file errors
+* [x] Define cross-platform behavior
+* [x] Add documentation
+* [x] Add tests
 
 ### 23. Complete `AdamantiumJson`
 
