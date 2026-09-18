@@ -268,7 +268,7 @@ fn fold(expression: &mut Expression) {
             }),
             _ => None,
         },
-        Kind::Convert(value) => constant(value)
+        Kind::Convert(value) if !matches!(expression.ty, Type::Optional(_)) => constant(value)
             .and_then(|constant| types::convert(constant, value.ty, expression.ty).ok()),
         _ => None,
     };
@@ -342,15 +342,15 @@ fn comparison_code(operator: ComparisonOperator) -> u32 {
 fn pure(expression: &Expression) -> bool {
     match &expression.kind {
         Kind::Constant(_) | Kind::String(_) | Kind::Variable(_) | Kind::Address(_) => true,
-        Kind::Negate(v)
-        | Kind::Not(v)
-        | Kind::Convert(v)
-        | Kind::StringLength(v, _)
-        | Kind::Field(v, _) => pure(v),
-        Kind::Binary(_, a, b) | Kind::Compare(_, a, b) | Kind::Logical(_, a, b) => {
-            pure(a) && pure(b)
-        }
-        Kind::List(values) => values.iter().all(pure),
+        Kind::Not(v) => pure(v),
+        Kind::Logical(_, a, b) => pure(a) && pure(b),
+        Kind::Negate(_)
+        | Kind::Convert(_)
+        | Kind::StringLength(_, _)
+        | Kind::Field(_, _)
+        | Kind::Binary(_, _, _)
+        | Kind::Compare(_, _, _)
+        | Kind::List(_) => false,
         Kind::Call(_, _)
         | Kind::Construct(_, _, _)
         | Kind::MethodCall(_, _, _)
@@ -669,5 +669,51 @@ mod tests {
                 .collect::<Vec<_>>(),
             ["main", "helper"]
         );
+    }
+
+    #[test]
+    fn preserves_unused_expressions_that_can_raise_runtime_errors() {
+        let maximum = Expression {
+            ty: Type::I8,
+            kind: Kind::Constant(types::integer(127, Type::I8).unwrap()),
+        };
+        let one = Expression {
+            ty: Type::I8,
+            kind: Kind::Constant(types::integer(1, Type::I8).unwrap()),
+        };
+        let overflowing = Expression {
+            ty: Type::I8,
+            kind: Kind::Binary(ArithmeticOperator::Add, Box::new(maximum), Box::new(one)),
+        };
+        let mut function = function("main", vec![Instruction::Assign(0, overflowing)]);
+        function.types[0] = Type::I8;
+        let program = Program {
+            functions: vec![function],
+            class_sizes: Vec::new(),
+            classes: Vec::new(),
+            package_functions: HashMap::new(),
+        };
+        let program = optimize(program, "main", Level::O2);
+        assert!(matches!(
+            program.functions[0].instructions[0],
+            Instruction::Call(Expression {
+                kind: Kind::Binary(..),
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn keeps_wide_optional_allocation_in_the_generated_program() {
+        let source = Expression {
+            ty: Type::F128,
+            kind: Kind::Constant(types::literal("1.25", Type::F128).unwrap()),
+        };
+        let mut expression = Expression {
+            ty: Type::Optional(Type::F128.id()),
+            kind: Kind::Convert(Box::new(source)),
+        };
+        optimize_expression(&mut expression, &HashMap::new());
+        assert!(matches!(expression.kind, Kind::Convert(_)));
     }
 }
