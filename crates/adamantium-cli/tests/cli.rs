@@ -70,6 +70,59 @@ fn package_prepare_generates_valid_release_assets() {
 }
 
 #[test]
+fn fmt_formats_source_ids_idempotently_and_keeps_project_valid() {
+    let base = std::env::temp_dir().join(format!(
+        "adamantium-cli-fmt-{}-{}",
+        std::process::id(),
+        NEXT_PROJECT.fetch_add(1, Ordering::Relaxed)
+    ));
+    fs::create_dir_all(base.join("code")).unwrap();
+    fs::write(
+        base.join("project.toml"),
+        "name=\"FmtProject\"\nversion=\"1.0.0\"\ndescription=\"\"\nauthors=[]\n",
+    )
+    .unwrap();
+    fs::write(base.join("requirement.toml"), "[packages]\n").unwrap();
+    let messy = "fun main(){var value=1+2;print.newline(value);}";
+    fs::write(base.join("code/main.ad"), messy).unwrap();
+
+    let output = adamantium()
+        .args(["fmt", base.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let formatted = fs::read_to_string(base.join("code/main.ad")).unwrap();
+    assert_eq!(
+        formatted,
+        "fun main() {\n    var value = 1 + 2;\n    print.newline(value);\n}\n"
+    );
+
+    let second = adamantium()
+        .args(["fmt", base.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(second.status.success());
+    assert!(String::from_utf8_lossy(&second.stdout).contains("Formatted 0 source file(s)"));
+
+    let checked = adamantium()
+        .args(["check", base.to_str().unwrap()])
+        .env("ADAMANTIUM_NASM", "missing-nasm-for-fmt-test")
+        .env("ADAMANTIUM_LINKER", "missing-linker-for-fmt-test")
+        .output()
+        .unwrap();
+    assert!(
+        checked.status.success(),
+        "{}",
+        String::from_utf8_lossy(&checked.stderr)
+    );
+    fs::remove_dir_all(base).unwrap();
+}
+
+#[test]
 fn check_analyzes_projects_without_build_tools_or_artifacts() {
     let base = std::env::temp_dir().join(format!(
         "adamantium-cli-check-{}-{}",

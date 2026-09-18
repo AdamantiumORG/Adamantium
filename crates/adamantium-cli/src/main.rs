@@ -1,5 +1,6 @@
 mod codegen;
 mod diagnostics;
+mod formatter;
 mod optimizer;
 mod packages;
 mod syntax;
@@ -47,6 +48,7 @@ impl adamantium_testing::LanguageCompiler for CliLanguageCompiler {
 const HELP: &str = "Adamantium compiler (Windows/Linux x86-64)\n\
 Usage:\n\
   adamantium check [PROJECT_DIRECTORY]\n\
+  adamantium fmt [PROJECT_DIRECTORY]\n\
   adamantium install [PROJECT_DIRECTORY]\n\
   adamantium package prepare [PACKAGE_DIRECTORY]\n\
   adamantium package publish [PACKAGE_DIRECTORY]\n\
@@ -69,6 +71,7 @@ enum Action {
     Help,
     Version,
     Check(PathBuf),
+    Format(PathBuf),
     Install(PathBuf),
     PackagePrepare(PathBuf),
     PackagePublish(PathBuf),
@@ -98,6 +101,10 @@ fn cli(args: Vec<OsString>) -> Result<ExitCode, String> {
         Action::Check(root) => {
             check(&root)?;
             println!("Checked {}", root.display());
+        }
+        Action::Format(root) => {
+            let changed = format_project(&root)?;
+            println!("Formatted {changed} source file(s) in {}", root.display());
         }
         Action::Install(root) => install_packages(&root)?,
         Action::PackagePrepare(root) => {
@@ -171,6 +178,11 @@ fn action(args: Vec<OsString>) -> Result<Action, String> {
         let root = args.next().map_or_else(current_directory, Ok)?;
         no_more_args(args)?;
         return Ok(Action::Check(root.into()));
+    }
+    if first == "fmt" {
+        let root = args.next().map_or_else(current_directory, Ok)?;
+        no_more_args(args)?;
+        return Ok(Action::Format(root.into()));
     }
     if first == "install" {
         let root = args.next().map_or_else(current_directory, Ok)?;
@@ -272,7 +284,7 @@ fn action(args: Vec<OsString>) -> Result<Action, String> {
         && let Some(command) = closest_name(
             &text,
             &[
-                "build", "check", "clean", "clear", "install", "new", "run", "test",
+                "build", "check", "clean", "clear", "fmt", "install", "new", "run", "test",
             ],
         )
     {
@@ -645,6 +657,54 @@ fn clean_project(root: &Path) -> Result<(), String> {
     fs::remove_dir_all(&target)
         .map_err(|error| format!("could not clean {}: {error}", target.display()))?;
     println!("Cleaned {}", target.display());
+    Ok(())
+}
+
+fn format_project(root: &Path) -> Result<usize, String> {
+    let requested_root = root;
+    let root = requested_root
+        .canonicalize()
+        .map_err(|e| format!("{}: {e}", requested_root.display()))?;
+    if let Err(errors) = adamantium_project::read_manifest(&root) {
+        return Err(diagnostics::multiple_errors(errors));
+    }
+    let mut files = Vec::new();
+    collect_ad_files(&root.join("code"), &mut files)?;
+    let mut changed = 0;
+    for path in files {
+        let original = fs::read_to_string(&path)
+            .map_err(|error| format!("could not read {}: {error}", path.display()))?;
+        let formatted = formatter::format_source(&original)
+            .map_err(|error| format!("{}: {error}", path.display()))?;
+        if formatted != original {
+            fs::write(&path, formatted)
+                .map_err(|error| format!("could not write {}: {error}", path.display()))?;
+            println!("Formatted {}", display_path(&path));
+            changed += 1;
+        }
+    }
+    Ok(changed)
+}
+
+fn display_path(path: &Path) -> String {
+    let display = path.display().to_string();
+    display.strip_prefix(r"\\?\").unwrap_or(&display).to_owned()
+}
+
+fn collect_ad_files(directory: &Path, files: &mut Vec<PathBuf>) -> Result<(), String> {
+    let mut entries = fs::read_dir(directory)
+        .map_err(|e| format!("could not read {}: {e}", directory.display()))?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("could not read {}: {e}", directory.display()))?;
+    entries.sort_by_key(|entry| entry.file_name());
+    for entry in entries {
+        let path = entry.path();
+        if path.is_dir() {
+            collect_ad_files(&path, files)?;
+        } else if path.extension().is_some_and(|extension| extension == "ad") {
+            files.push(path);
+        }
+    }
     Ok(())
 }
 

@@ -2,7 +2,7 @@ name: Proof HTML
 
 on:
   workflow_run:
-    workflows: ["CI", "Linux CLI", "Windows CLI"]
+    workflows: ["CLI Tests"]
     types:
       - completed
   workflow_dispatch:
@@ -15,8 +15,19 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  gate:
+    name: Require upstream success
+    if: ${{ github.event_name != 'workflow_dispatch' && github.event.workflow_run.conclusion != 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - shell: bash
+        run: |
+          echo "Workflow '${{ github.event.workflow_run.name }}' concluded with '${{ github.event.workflow_run.conclusion }}'; not running Proof HTML."
+          exit 1
+
   proof-html:
-    name: Check documentation links after ${{ github.event.workflow_run.name || 'manual run' }}
+    name: Check documentation links
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
 

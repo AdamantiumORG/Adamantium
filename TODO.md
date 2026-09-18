@@ -1224,7 +1224,7 @@ Create the official standard library.
 
 # 50. Tooling
 
-* [ ] `adamantium fmt`
+* [x] `adamantium fmt`
 * [x] `adamantium test`
 * [x] `adamantium check`
 * [x] `adamantium build`
@@ -1837,13 +1837,13 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 28. Implement `adamantium fmt`
 
-* [ ] Define formatting rules
-* [ ] Implement formatter
-* [ ] Make formatting deterministic
-* [ ] Preserve comments
-* [ ] Format nested structures correctly
-* [ ] Add formatter tests
-* [ ] Add `adamantium fmt`
+* [x] Define formatting rules
+* [x] Implement formatter
+* [x] Make formatting deterministic
+* [x] Preserve comments
+* [x] Format nested structures correctly
+* [x] Add formatter tests
+* [x] Add `adamantium fmt`
 
 ### 29. Implement `adamantium doctor`
 
@@ -2074,7 +2074,7 @@ Do not skip ahead to later phases unless a current task is blocked.
 25. [ ] Implement Professional Mode
 26. [ ] Implement compiler optimizations
 27. [ ] Add optimization levels
-28. [ ] Implement `adamantium fmt`
+28. [x] Implement `adamantium fmt`
 29. [ ] Implement `adamantium doctor`
 30. [ ] Implement VS Code syntax highlighting
 31. [ ] Implement the Adamantium LSP

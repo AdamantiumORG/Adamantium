@@ -1,0 +1,56 @@
+name: Full CI
+
+on:
+  workflow_run:
+    workflows: ["Affected Tests"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.id || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  gate:
+    name: Require upstream success
+    if: ${{ github.event.workflow_run.conclusion != 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - shell: bash
+        run: |
+          echo "Workflow '${{ github.event.workflow_run.name }}' concluded with '${{ github.event.workflow_run.conclusion }}'; stopping pipeline."
+          exit 1
+
+  ci:
+    name: CI (${{ matrix.os }})
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install NASM on Windows
+        if: runner.os == 'Windows'
+        run: choco install nasm --yes --no-progress
+      - name: Install NASM on Linux
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install --yes nasm
+      - name: Configure Windows x64 linker
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Run all workspace tests
+        run: cargo test --locked --workspace --all-targets

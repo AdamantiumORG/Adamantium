@@ -14,6 +14,7 @@ rm -rf "$project_root"
 adamantium --version
 help_output="$(adamantium --help)"
 grep -Fq "adamantium build [PROJECT_DIRECTORY]" <<< "$help_output"
+grep -Fq "adamantium fmt [PROJECT_DIRECTORY]" <<< "$help_output"
 grep -Fq "adamantium run [PROJECT_DIRECTORY]" <<< "$help_output"
 grep -Fq "adamantium test run" <<< "$help_output"
 
@@ -32,6 +33,20 @@ cat > "$project_root/code/tests.ad" <<'ADAMANTIUM'
 #[test]
 fun linux_cli_test() {
     print.newline("Linux test works");
+}
+ADAMANTIUM
+
+cat > "$project_root/code/main.ad" <<'ADAMANTIUM'
+fun main(){var value=1+2;print.newline(value);}
+ADAMANTIUM
+fmt_output="$(adamantium fmt "$project_root")"
+grep -Fq "Formatted 1 source file(s)" <<< "$fmt_output"
+grep -Fq "    var value = 1 + 2;" "$project_root/code/main.ad"
+second_fmt="$(adamantium fmt "$project_root")"
+grep -Fq "Formatted 0 source file(s)" <<< "$second_fmt"
+cat > "$project_root/code/main.ad" <<'ADAMANTIUM'
+fun main() {
+    print.newline("Linux CLI works");
 }
 ADAMANTIUM
 
