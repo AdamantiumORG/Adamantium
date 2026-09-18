@@ -2,6 +2,7 @@
 
 ## Language
 
+- [Adamantium 0.1 language specification](language/specification.md)
 - [Variables](language/variables.md)
 - [Types](language/types.md)
 - [Functions](language/functions.md)

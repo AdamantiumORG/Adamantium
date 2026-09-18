@@ -1360,18 +1360,18 @@ Create clear compiler diagnostics.
 
 # 57. Final Language Specification
 
-* [ ] Freeze syntax
-* [ ] Freeze keyword list
-* [ ] Freeze type system
-* [ ] Freeze conversion rules
-* [ ] Freeze memory model
-* [ ] Freeze alias semantics
-* [ ] Freeze class lifecycle
-* [ ] Freeze module system
-* [ ] Freeze package system
+* [x] Freeze syntax - Adamantium 0.1 language contract
+* [x] Freeze keyword list
+* [x] Freeze type system
+* [x] Freeze conversion rules
+* [x] Freeze memory model
+* [x] Freeze alias semantics
+* [x] Freeze class lifecycle
+* [x] Freeze module system
+* [x] Freeze package system
 * [ ] Freeze async semantics
-* [ ] Freeze test system
-* [ ] Write complete language specification
+* [x] Freeze test system
+* [x] Write complete language specification - `docs/language/specification.md`
 * [ ] Write compiler specification
 * [ ] Write standard library specification
 
@@ -1921,27 +1921,27 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 35. Freeze the core language
 
-* [ ] Freeze syntax
-* [ ] Freeze keywords
-* [ ] Freeze type system
-* [ ] Freeze type inference
-* [ ] Freeze conversion rules
-* [ ] Freeze function semantics
-* [ ] Freeze class semantics
-* [ ] Freeze enum semantics
-* [ ] Freeze generic semantics
-* [ ] Freeze trait semantics
-* [ ] Freeze memory model
-* [ ] Freeze alias semantics
-* [ ] Freeze offset semantics
-* [ ] Freeze module system
-* [ ] Freeze package system
-* [ ] Freeze error handling
-* [ ] Freeze test system
+* [x] Freeze syntax
+* [x] Freeze keywords
+* [x] Freeze type system
+* [x] Freeze type inference
+* [x] Freeze conversion rules
+* [x] Freeze function semantics
+* [x] Freeze class semantics
+* [x] Freeze enum semantics
+* [x] Freeze generic semantics
+* [x] Freeze trait semantics
+* [x] Freeze memory model
+* [x] Freeze alias semantics
+* [x] Freeze offset semantics
+* [x] Freeze module system
+* [x] Freeze package system
+* [x] Freeze error handling
+* [x] Freeze test system
 
 ### 36. Write the complete specifications
 
-* [ ] Write the complete Adamantium Language Specification
+* [x] Write the complete Adamantium Language Specification - `docs/language/specification.md`
 * [ ] Write the compiler specification
 * [ ] Write the memory-safety specification
 * [ ] Write the package specification
