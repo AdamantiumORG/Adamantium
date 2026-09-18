@@ -426,7 +426,7 @@ use utils::[dodawanie, odejmowanie];
 * [x] Implement imports
 * [x] Implement multiple imports with `module:[a,b]`
 * [x] Implement qualified module access with `module:symbol`
-* [ ] Import only public symbols - top-level visibility is pending
+* [x] Import only public symbols
 * [x] Detect duplicate and conflicting imports
 * [x] Detect missing symbols
 
@@ -534,7 +534,7 @@ match value {
 * [x] Implement literal and enum pattern matching
 * [x] Implement wildcard `_`
 * [x] Implement enum matching
-* [ ] Detect non-exhaustive matches where required
+* [x] Detect non-exhaustive matches where required
 * [x] Detect unreachable branches after wildcard `_`
 * [x] Detect duplicate match patterns
 
@@ -861,22 +861,22 @@ adamantium-async = "1.0"
 
 Official file-system library.
 
-* [ ] Create `AdamantiumFiles`
-* [ ] Implement file opening
-* [ ] Implement file reading
-* [ ] Implement file writing
-* [ ] Implement file appending
-* [ ] Implement file creation
-* [ ] Implement file deletion
-* [ ] Implement file existence checks
-* [ ] Implement directory creation
-* [ ] Implement directory deletion
-* [ ] Implement directory existence checks
-* [ ] Implement directory listing
-* [ ] Implement file metadata
-* [ ] Implement safe file errors
-* [ ] Add documentation
-* [ ] Add tests
+* [x] Create `AdamantiumFiles`
+* [x] Implement file opening
+* [x] Implement file reading
+* [x] Implement file writing
+* [x] Implement file appending
+* [x] Implement file creation
+* [x] Implement file deletion
+* [x] Implement file existence checks
+* [x] Implement directory creation
+* [x] Implement directory deletion
+* [x] Implement directory existence checks
+* [x] Implement directory listing
+* [x] Implement file metadata
+* [x] Implement safe file errors
+* [x] Add documentation
+* [x] Add tests
 
 ---
 
@@ -1016,12 +1016,12 @@ assert(value, "message");
 * [x] Implement dependency installation - download WASM and manifest assets
 * [x] Validate package manifests, ABI types, versions, and WASM headers
 * [x] Implement dependency versions - `MAJOR.MINOR.PATCH` maps to `adamantium_packet_MAJOR_MINOR_PATCH`
-* [ ] Implement dependency locking
-* [ ] Implement package cache
-* [ ] Implement package publishing
+* [x] Implement dependency locking
+* [x] Implement package cache
+* [x] Implement package publishing
 * [ ] Implement package registry
 * [x] Detect duplicate dependency declarations through TOML validation
-* [ ] Detect dependency cycles
+* [x] Detect dependency cycles
 * [x] Add `adamantium install`
 
 ---
@@ -1136,25 +1136,25 @@ Adamantium must remain memory-safe.
 * [x] Bundle NASM 3.02 in the portable Windows distribution
 * [x] Discover bundled `tools/nasm.exe` automatically
 * [ ] Remove the remaining Visual Studio linker and Windows SDK requirement
-* [ ] Add optimization passes
+* [x] Add optimization passes
 * [x] Validate generated assembly - NASM assembly and native EXE regression tests
 
 ---
 
 # 46. Optimization
 
-* [ ] Constant folding
-* [ ] Constant propagation
-* [ ] Dead-code elimination
-* [ ] Dead-function elimination
-* [ ] Expression simplification
+* [x] Constant folding
+* [x] Constant propagation
+* [x] Dead-code elimination
+* [x] Dead-function elimination
+* [x] Expression simplification
 * [ ] Inline small functions
-* [ ] Optimize local variables
-* [ ] Optimize function calls
-* [ ] Optimize generated assembly
-* [ ] Add optimization levels
-* [ ] Benchmark compiler output
-* [ ] Benchmark generated programs
+* [x] Optimize local variables
+* [x] Optimize function calls
+* [x] Optimize generated assembly
+* [x] Add optimization levels
+* [x] Benchmark compiler output
+* [x] Benchmark generated programs
 
 ---
 
@@ -1189,16 +1189,16 @@ Create the official standard library.
 * [x] Functions - typed parameters and named-result behavior
 * [x] Classes
 * [x] Enums
-* [ ] Modules
-* [ ] Packages
-* [ ] Aliases
-* [ ] Memory safety
-* [ ] Error handling
+* [x] Modules
+* [x] Packages
+* [x] Aliases
+* [x] Memory safety
+* [x] Error handling
 * [ ] Async
-* [ ] Testing
+* [x] Testing
 * [ ] Standard library
-* [ ] CLI reference
-* [ ] Compiler reference
+* [x] CLI reference
+* [x] Compiler reference
 * [ ] Professional mode
 * [x] Examples
 * [ ] Tutorials
@@ -1260,7 +1260,7 @@ Create the official standard library.
 * [x] Build a standalone CLI that does not require Rust on user machines
 * [x] Bundle and checksum the official NASM Windows binary
 * [ ] Publish installer
-* [ ] Publish packages directly on GitHub Releases
+* [x] Publish packages directly on GitHub Releases
 
 ---
 
@@ -1275,7 +1275,7 @@ Create the official standard library.
 * [x] Class tests - parsing, typing, visibility, construction, mutation and native copying
 * [x] Enum tests
 * [x] Alias tests
-* [ ] Memory-safety tests
+* [x] Memory-safety tests
 * [x] Code generation tests
 * [x] NASM generation tests
 * [x] Runtime tests
@@ -1353,8 +1353,8 @@ Create clear compiler diagnostics.
 * [x] Nightly releases
 * [ ] Release notes
 * [ ] Changelog
-* [ ] Version compatibility rules
-* [ ] Package compatibility rules
+* [x] Version compatibility rules
+* [x] Package compatibility rules
 
 ---
 
@@ -1372,7 +1372,7 @@ Create clear compiler diagnostics.
 * [ ] Freeze async semantics
 * [x] Freeze test system
 * [x] Write complete language specification - `docs/language/specification.md`
-* [ ] Write compiler specification
+* [x] Write compiler specification - `docs/compiler/`
 * [ ] Write standard library specification
 
 ---
@@ -1382,13 +1382,13 @@ Create clear compiler diagnostics.
 * [ ] Complete compiler
 * [ ] Complete CLI
 * [ ] Complete core language
-* [ ] Complete memory-safety system
+* [x] Complete memory-safety system
 * [ ] Complete standard library
 * [ ] Complete package manager
 * [ ] Complete testing system
 * [ ] Complete documentation
 * [ ] Complete VS Code support
-* [ ] Complete CI/CD
+* [x] Complete CI/CD
 * [ ] Complete cross-platform builds
 * [ ] Perform security audit
 * [ ] Perform performance benchmarks
@@ -1429,14 +1429,14 @@ The recommended implementation order is:
 22. [x] `adamantium run`
 23. [x] `adamantium check`
 24. [x] Test system
-25. [ ] `AdamantiumFiles`
+25. [x] `AdamantiumFiles`
 26. [ ] `AdamantiumJson`
 27. [ ] Package manager
 28. [ ] `adamantium-async`
 29. [ ] Async compiler support
 30. [x] Generics
 31. [x] Traits
-32. [ ] Optimization
+32. [x] Optimization
 33. [ ] Documentation
 34. [ ] VS Code support
 35. [x] CI/CD - push and pull-request validation workflows
@@ -1905,14 +1905,14 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 ### 34. Complete release infrastructure
 
 * [ ] Define semantic versioning rules
-* [ ] Define compatibility rules
+* [x] Define compatibility rules
 * [ ] Define development releases
-* [ ] Define nightly releases
+* [x] Define nightly releases
 * [ ] Define stable releases
 * [ ] Generate changelogs
 * [ ] Generate release notes
-* [ ] Publish release binaries
-* [ ] Publish package releases
+* [x] Publish release binaries - portable Nightly archives
+* [x] Publish package releases
 * [ ] Create Windows installer
 
 ---
@@ -1942,12 +1942,12 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 ### 36. Write the complete specifications
 
 * [x] Write the complete Adamantium Language Specification - `docs/language/specification.md`
-* [ ] Write the compiler specification
-* [ ] Write the memory-safety specification
-* [ ] Write the package specification
+* [x] Write the compiler specification - `docs/compiler/`
+* [x] Write the memory-safety specification - `docs/MEMORY_SAFETY.md`
+* [x] Write the package specification - `docs/CREATING_PACKAGES.md` and `docs/packages/WASM_ABI.md`
 * [x] Write the WASM ABI specification
 * [ ] Write the standard-library specification
-* [ ] Write the CLI specification
+* [x] Write the CLI specification - command reference in `README.md`
 
 ---
 
@@ -2017,16 +2017,16 @@ Async should be implemented **only after the core language, runtime, package sys
 ### 41. Prepare the stable release
 
 * [ ] Complete core language
-* [ ] Complete memory-safety system
+* [x] Complete memory-safety system
 * [ ] Complete runtime
 * [ ] Complete standard library
 * [ ] Complete package manager
-* [ ] Complete WASM package system
+* [x] Complete WASM package system
 * [ ] Complete testing system
 * [ ] Complete CLI
 * [ ] Complete documentation
 * [ ] Complete VS Code support
-* [ ] Complete CI/CD
+* [x] Complete CI/CD
 * [ ] Complete supported platform builds
 * [ ] Complete security audit
 * [ ] Complete performance benchmarks
@@ -2048,32 +2048,32 @@ The following list is the **single source of truth for what should be worked on 
 Do not skip ahead to later phases unless a current task is blocked.
 
 1. [x] Complete nested lexical scopes
-2. [ ] Complete public/private import enforcement
-3. [ ] Implement exhaustive `match`
-4. [ ] Implement explicit `exit(code = ...)`
+2. [x] Complete public/private import enforcement
+3. [x] Implement exhaustive `match`
+4. [x] Implement explicit `exit(code = ...)`
 5. [x] Finalize alias semantics
 6. [x] Implement remaining alias APIs
 7. [x] Complete memory-safety regression tests
 8. [x] Complete the List runtime
-9. [ ] Complete string operations
+9. [x] Complete string operations
 10. [x] Complete runtime error handling
-11. [ ] Refactor `codegen.rs`
-12. [ ] Refactor the compiler frontend
-13. [ ] Define compiler phase boundaries
+11. [x] Refactor `codegen.rs`
+12. [x] Refactor the compiler frontend
+13. [x] Define compiler phase boundaries
 14. [ ] Create the complete language regression suite
-15. [ ] Create compile-fail tests
+15. [x] Create compile-fail tests
 16. [ ] Complete parallel test execution
 17. [ ] Implement assertions
-18. [ ] Complete package installation
+18. [x] Complete package installation
 19. [ ] Implement package security
 20. [x] Implement WASM package loading
-21. [ ] Implement package publishing
-22. [ ] Complete `AdamantiumFiles`
+21. [x] Implement package publishing
+22. [x] Complete `AdamantiumFiles`
 23. [ ] Complete `AdamantiumJson`
 24. [ ] Create the core standard library
 25. [ ] Implement Professional Mode
-26. [ ] Implement compiler optimizations
-27. [ ] Add optimization levels
+26. [x] Implement compiler optimizations
+27. [x] Add optimization levels
 28. [x] Implement `adamantium fmt`
 29. [ ] Implement `adamantium doctor`
 30. [ ] Implement VS Code syntax highlighting
@@ -2081,7 +2081,7 @@ Do not skip ahead to later phases unless a current task is blocked.
 32. [ ] Remove the Windows linker dependency
 33. [ ] Complete cross-platform behavior
 34. [ ] Complete release infrastructure
-35. [ ] Freeze the core language
+35. [x] Freeze the core language
 36. [ ] Write the complete language specifications
 37. [ ] Design async
 38. [ ] Implement `adamantium-async`
