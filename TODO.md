@@ -2047,7 +2047,7 @@ The following list is the **single source of truth for what should be worked on 
 
 Do not skip ahead to later phases unless a current task is blocked.
 
-1. [ ] Complete nested lexical scopes
+1. [x] Complete nested lexical scopes
 2. [ ] Complete public/private import enforcement
 3. [ ] Implement exhaustive `match`
 4. [ ] Implement explicit `exit(code = ...)`
