@@ -25,6 +25,7 @@ $helpOutput = (& adamantium --help | Out-String)
 if ($LASTEXITCODE -ne 0) { throw 'adamantium --help failed.' }
 foreach ($command in @(
     'adamantium build [PROJECT_DIRECTORY]',
+    'adamantium fmt [PROJECT_DIRECTORY]',
     'adamantium run [PROJECT_DIRECTORY]',
     'adamantium test run'
 )) {
@@ -60,6 +61,34 @@ fun windows_cli_test() {
 [System.IO.File]::WriteAllText(
     (Join-Path $projectRoot 'code/tests.ad'),
     $testSource,
+    [System.Text.UTF8Encoding]::new($false)
+)
+
+$messySource = @'
+fun main(){var value=1+2;print.newline(value);}
+'@
+[System.IO.File]::WriteAllText(
+    (Join-Path $projectRoot 'code/main.ad'),
+    $messySource,
+    [System.Text.UTF8Encoding]::new($false)
+)
+$fmtOutput = (& adamantium fmt $projectRoot | Out-String)
+if ($LASTEXITCODE -ne 0) { throw 'adamantium fmt failed.' }
+if (-not $fmtOutput.Contains('Formatted 1 source file(s)')) {
+    throw "adamantium fmt did not report one changed file: '$fmtOutput'."
+}
+$formattedFile = [System.IO.File]::ReadAllText((Join-Path $projectRoot 'code/main.ad'))
+if (-not $formattedFile.Contains('    var value = 1 + 2;')) {
+    throw 'adamantium fmt did not reformat the messy source.'
+}
+$secondFmt = (& adamantium fmt $projectRoot | Out-String)
+if ($LASTEXITCODE -ne 0) { throw 'second adamantium fmt failed.' }
+if (-not $secondFmt.Contains('Formatted 0 source file(s)')) {
+    throw "adamantium fmt is not idempotent: '$secondFmt'."
+}
+[System.IO.File]::WriteAllText(
+    (Join-Path $projectRoot 'code/main.ad'),
+    $mainSource,
     [System.Text.UTF8Encoding]::new($false)
 )
 
