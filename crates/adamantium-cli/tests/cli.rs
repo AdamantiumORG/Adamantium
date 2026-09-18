@@ -217,6 +217,15 @@ fn invalid_cli_arguments_are_rejected() {
 }
 
 #[test]
+fn rejects_invalid_or_repeated_optimization_levels() {
+    for arguments in [vec!["build", "-O3"], vec!["build", "-O0", "-O2"]] {
+        let output = adamantium().args(arguments).output().unwrap();
+        assert_eq!(output.status.code(), Some(1));
+        assert!(String::from_utf8_lossy(&output.stderr).contains("optimization"));
+    }
+}
+
+#[test]
 fn reports_multiple_independent_manifest_errors() {
     let base = std::env::temp_dir().join(format!(
         "adamantium-cli-multiple-errors-{}-{}",

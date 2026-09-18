@@ -6,17 +6,44 @@ use crate::{
 };
 use adamantium_ir::typed::{ArithmeticOperator, ComparisonOperator, LogicalOperator};
 
-pub fn optimize(mut program: Program, entry: &str) -> Program {
-    for function in &mut program.functions {
-        optimize_function(function);
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum Level {
+    O0,
+    #[default]
+    O1,
+    O2,
+}
+
+impl Level {
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "-O0" => Some(Self::O0),
+            "-O1" => Some(Self::O1),
+            "-O2" => Some(Self::O2),
+            _ => None,
+        }
     }
-    remove_dead_functions(&mut program, entry);
+}
+
+pub fn optimize(mut program: Program, entry: &str, level: Level) -> Program {
+    if level == Level::O0 {
+        return program;
+    }
+    for function in &mut program.functions {
+        optimize_function(function, level);
+    }
+    if level == Level::O2 {
+        remove_dead_functions(&mut program, entry);
+    }
     program
 }
 
-fn optimize_function(function: &mut Function) {
+fn optimize_function(function: &mut Function, level: Level) {
     let mut constants = HashMap::new();
     optimize_block(&mut function.instructions, &mut constants);
+    if level != Level::O2 {
+        return;
+    }
     let mut used = HashSet::new();
     if let Some(result) = function.result {
         used.insert(result);
@@ -608,7 +635,7 @@ mod tests {
             classes: Vec::new(),
             package_functions: HashMap::new(),
         };
-        program = optimize(program, "main");
+        program = optimize(program, "main", Level::O2);
         assert_eq!(program.functions.len(), 1);
         assert_eq!(program.functions[0].instructions.len(), 2);
         let Instruction::Print(expression, _) = &program.functions[0].instructions[0] else {
@@ -633,7 +660,7 @@ mod tests {
             classes: Vec::new(),
             package_functions: HashMap::new(),
         };
-        let program = optimize(program, "main");
+        let program = optimize(program, "main", Level::O2);
         assert_eq!(
             program
                 .functions

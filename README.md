@@ -49,6 +49,7 @@ adamantium run
 - Value aliases, offsets, and memory-safety diagnostics
 - Project tests and file-based language conformance tests
 - Native Windows and Linux x86-64 output
+- Configurable `-O0`, `-O1`, and `-O2` optimization levels
 
 ## Installation
 
@@ -96,6 +97,7 @@ Useful commands:
 ```text
 adamantium check
 adamantium build
+adamantium build -O2
 adamantium run
 adamantium test list
 adamantium test run

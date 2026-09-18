@@ -1,0 +1,14 @@
+fun calculate(value:int) result:int {
+    result = value * 1 + 0;
+}
+
+fun deadfunc() result:None {
+    print.newline("dead");
+}
+
+fun main() {
+    var total = 0;
+    for index in 0..10000 {
+        total = total + calculate(index);
+    }
+}

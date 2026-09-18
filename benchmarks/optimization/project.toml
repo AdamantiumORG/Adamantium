@@ -1,0 +1,4 @@
+name = "OptimizationBenchmark"
+version = "0.1.0"
+description = "Deterministic compiler and generated-code optimization benchmark"
+authors = ["Adamantium Developers"]

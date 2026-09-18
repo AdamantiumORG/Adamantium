@@ -32,7 +32,7 @@ struct CliLanguageCompiler;
 
 impl adamantium_testing::LanguageCompiler for CliLanguageCompiler {
     fn build(&self, project: &Path) -> Result<PathBuf, String> {
-        build(project)
+        build(project, optimizer::Level::default())
     }
 
     fn analyze(&self, project: &Path) -> Result<(), String> {
@@ -52,8 +52,8 @@ Usage:\n\
   adamantium package publish [PACKAGE_DIRECTORY]\n\
   adamantium clean [PROJECT_DIRECTORY]\n\
   adamantium clear [PROJECT_DIRECTORY]\n\
-  adamantium build [PROJECT_DIRECTORY]\n\
-  adamantium run [PROJECT_DIRECTORY] [--name value ...]\n\
+  adamantium build [PROJECT_DIRECTORY] [-O0|-O1|-O2]\n\
+  adamantium run [PROJECT_DIRECTORY] [-O0|-O1|-O2] [--name value ...]\n\
   adamantium test list [PROJECT_DIRECTORY]\n\
   adamantium test run [PROJECT_DIRECTORY] [TEST_NAME] [--verbose]\n\
   adamantium test language [SUITE_DIRECTORY] [--verbose]\n\
@@ -76,8 +76,8 @@ enum Action {
     TestList(PathBuf),
     TestRun(PathBuf, Option<String>, bool),
     LanguageTests(PathBuf, bool),
-    Build(PathBuf),
-    Run(PathBuf, Vec<OsString>),
+    Build(PathBuf, optimizer::Level),
+    Run(PathBuf, optimizer::Level, Vec<OsString>),
     New(PathBuf),
 }
 
@@ -113,12 +113,12 @@ fn cli(args: Vec<OsString>) -> Result<ExitCode, String> {
         Action::LanguageTests(root, verbose) => {
             return adamantium_testing::run_language_tests(&root, verbose, &CliLanguageCompiler);
         }
-        Action::Build(root) => {
-            let executable = build(&root)?;
+        Action::Build(root, level) => {
+            let executable = build(&root, level)?;
             println!("Built {}", executable.display());
         }
-        Action::Run(root, arguments) => {
-            let executable = build(&root)?;
+        Action::Run(root, level, arguments) => {
+            let executable = build(&root, level)?;
             eprintln!("Built {}", executable.display());
             let status = Command::new(&executable)
                 .current_dir(&root)
@@ -159,9 +159,13 @@ fn action(args: Vec<OsString>) -> Result<Action, String> {
         return Ok(Action::New(root.into()));
     }
     if first == "build" {
-        let root = args.next().map_or_else(current_directory, Ok)?;
-        no_more_args(args)?;
-        return Ok(Action::Build(root.into()));
+        let (level, remaining) = optimization_arguments(args.collect())?;
+        let root = match remaining.as_slice() {
+            [] => current_directory()?.into(),
+            [root] => root.into(),
+            _ => return Err("too many arguments for 'adamantium build'; use --help".into()),
+        };
+        return Ok(Action::Build(root, level));
     }
     if first == "check" {
         let root = args.next().map_or_else(current_directory, Ok)?;
@@ -191,7 +195,7 @@ fn action(args: Vec<OsString>) -> Result<Action, String> {
         return Ok(Action::Clean(root.into()));
     }
     if first == "run" {
-        let remaining = args.collect::<Vec<_>>();
+        let (level, remaining) = optimization_arguments(args.collect())?;
         let (root, arguments) = if remaining
             .first()
             .is_some_and(|argument| !argument.to_string_lossy().starts_with('-'))
@@ -200,7 +204,7 @@ fn action(args: Vec<OsString>) -> Result<Action, String> {
         } else {
             (PathBuf::from(current_directory()?), remaining)
         };
-        return Ok(Action::Run(root, arguments));
+        return Ok(Action::Run(root, level, arguments));
     }
     if first == "test" {
         let command = args
@@ -277,7 +281,29 @@ fn action(args: Vec<OsString>) -> Result<Action, String> {
         ));
     }
     no_more_args(args)?;
-    Ok(Action::Build(first.into()))
+    Ok(Action::Build(first.into(), optimizer::Level::default()))
+}
+
+fn optimization_arguments(
+    args: Vec<OsString>,
+) -> Result<(optimizer::Level, Vec<OsString>), String> {
+    let mut level = None;
+    let mut remaining = Vec::new();
+    for argument in args {
+        let text = argument.to_string_lossy();
+        if let Some(parsed) = optimizer::Level::parse(&text) {
+            if level.replace(parsed).is_some() {
+                return Err("only one optimization level may be specified".into());
+            }
+        } else if text.starts_with("-O") {
+            return Err(format!(
+                "unknown optimization level '{text}'; expected -O0, -O1, or -O2"
+            ));
+        } else {
+            remaining.push(argument);
+        }
+    }
+    Ok((level.unwrap_or_default(), remaining))
 }
 
 fn closest_name<'a>(input: &str, choices: &'a [&str]) -> Option<&'a str> {
@@ -455,6 +481,7 @@ fn run_tests(root: &Path, filter: Option<&str>, verbose: bool) -> Result<ExitCod
             &program,
             "__adamantium_test_entry",
             &output_name,
+            optimizer::Level::default(),
         )?;
         let output = Command::new(executable)
             .current_dir(&root)
@@ -505,9 +532,9 @@ fn no_more_args(mut args: impl Iterator<Item = OsString>) -> Result<(), String> 
     }
 }
 
-fn build(root: &Path) -> Result<PathBuf, String> {
+fn build(root: &Path, level: optimizer::Level) -> Result<PathBuf, String> {
     let (root, name, statements) = analyze(root)?;
-    emit_executable(&root, &name, &statements, "main", &name)
+    emit_executable(&root, &name, &statements, "main", &name, level)
 }
 
 fn emit_executable(
@@ -516,6 +543,7 @@ fn emit_executable(
     statements: &typed::Program,
     entry: &str,
     output_name: &str,
+    level: optimizer::Level,
 ) -> Result<PathBuf, String> {
     let target = root.join("target");
     fs::create_dir_all(&target).map_err(|e| e.to_string())?;
@@ -538,8 +566,12 @@ fn emit_executable(
         );
     }
     fs::write(&runtime, runtime_bytes).map_err(|e| e.to_string())?;
-    let optimized = optimizer::optimize(statements.clone(), entry);
-    fs::write(&asm, codegen::assembly_entry(&optimized, entry)).map_err(|e| e.to_string())?;
+    let optimized = optimizer::optimize(statements.clone(), entry, level);
+    fs::write(
+        &asm,
+        codegen::assembly_entry(&optimized, entry, level == optimizer::Level::O2),
+    )
+    .map_err(|e| e.to_string())?;
     let nasm = env::var_os("ADAMANTIUM_NASM").unwrap_or_else(|| {
         let bundled = env::current_exe().ok().and_then(|executable| {
             executable.parent().map(|parent| {

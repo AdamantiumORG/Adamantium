@@ -61,7 +61,7 @@ fn string_operations_generate_runtime_evaluation_calls() {
         r#"fun main() { var value="a"+"b"; print.newline(value.length); print.newline(value[1]); print.newline(value=="ab"); }"#,
     )
     .unwrap();
-    let assembly = crate::codegen::assembly_entry(&program, "main");
+    let assembly = crate::codegen::assembly_entry(&program, "main", false);
     for operation in [0, 7, 14, 15] {
         assert!(
             assembly.contains(&format!("mov dword [rbp - 8], {operation}"))
@@ -434,7 +434,7 @@ fn exit_codes_are_typed_and_range_checked() {
 #[test]
 fn explicit_exit_code_is_emitted_for_the_platform_runtime() {
     let program = checked("fun main() { exit(code=23); }").unwrap();
-    let assembly = crate::codegen::assembly_entry(&program, "main");
+    let assembly = crate::codegen::assembly_entry(&program, "main", false);
     assert!(assembly.contains("mov rax, 23"), "{assembly}");
     assert!(assembly.contains("mov ecx, eax"), "{assembly}");
     let exit_call = if cfg!(target_os = "linux") {

@@ -1822,14 +1822,14 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 27. Add optimization levels
 
-* [ ] Define `-O0`
-* [ ] Define `-O1`
-* [ ] Define `-O2`
-* [ ] Define optimization defaults
-* [ ] Add optimization CLI options
-* [ ] Add optimization tests
-* [ ] Benchmark compiler performance
-* [ ] Benchmark generated program performance
+* [x] Define `-O0`
+* [x] Define `-O1`
+* [x] Define `-O2`
+* [x] Define optimization defaults
+* [x] Add optimization CLI options
+* [x] Add optimization tests
+* [x] Benchmark compiler performance
+* [x] Benchmark generated program performance
 
 ---
 

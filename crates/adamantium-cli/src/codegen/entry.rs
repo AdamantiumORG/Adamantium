@@ -27,7 +27,7 @@ fn cli_entry(function: &Function) -> String {
     text
 }
 
-pub fn assembly_entry(program: &Program, entry: &str) -> String {
+pub fn assembly_entry(program: &Program, entry: &str, optimize: bool) -> String {
     let runtime = if cfg!(target_os = "linux") {
         include_str!("../runtime-linux.asm")
     } else {
@@ -124,5 +124,9 @@ pub fn assembly_entry(program: &Program, entry: &str) -> String {
         }
         generator.text.push_str(&generated);
     }
-    super::assembly::optimize(generator.text)
+    if optimize {
+        super::assembly::optimize(generator.text)
+    } else {
+        generator.text
+    }
 }
