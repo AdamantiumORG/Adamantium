@@ -1,41 +1,33 @@
 name: CLI Tests
 
 on:
-  workflow_run:
-    workflows: ["Full CI"]
-    types: [completed]
+  workflow_call:
+    inputs:
+      head_sha:
+        description: Commit that passed the preceding CI stages
+        required: true
+        type: string
+      publish_nightly:
+        description: Publish portable Nightly archives
+        required: true
+        type: boolean
 
 permissions:
   contents: read
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.workflow_run.id || github.run_id }}
-  cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  gate:
-    name: Require upstream success
-    if: ${{ github.event.workflow_run.conclusion != 'success' }}
-    runs-on: ubuntu-latest
-    steps:
-      - shell: bash
-        run: |
-          echo "Workflow '${{ github.event.workflow_run.name }}' concluded with '${{ github.event.workflow_run.conclusion }}'; stopping pipeline."
-          exit 1
-
   cli-windows:
     name: Test CLI (Windows x86-64)
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
       - name: Check out tested commit
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ inputs.head_sha }}
           persist-credentials: false
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -67,14 +59,13 @@ jobs:
 
   cli-linux:
     name: Test CLI (Linux x86-64)
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: Check out tested commit
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ inputs.head_sha }}
           persist-credentials: false
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -102,8 +93,8 @@ jobs:
 
   nightly-windows:
     name: Publish Windows Nightly
-    if: ${{ success() && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == github.event.repository.default_branch }}
-    needs: cli-windows
+    if: ${{ success() && inputs.publish_nightly }}
+    needs: [cli-windows, cli-linux]
     permissions:
       contents: write
     runs-on: windows-latest
@@ -111,12 +102,12 @@ jobs:
     concurrency:
       group: adamantium-nightly-release
     env:
-      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+      HEAD_SHA: ${{ inputs.head_sha }}
     steps:
       - name: Check out tested commit
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ inputs.head_sha }}
           persist-credentials: false
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -180,8 +171,8 @@ jobs:
 
   nightly-linux:
     name: Publish Linux Nightly
-    if: ${{ success() && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == github.event.repository.default_branch }}
-    needs: cli-linux
+    if: ${{ success() && inputs.publish_nightly }}
+    needs: [cli-windows, cli-linux]
     permissions:
       contents: write
     runs-on: ubuntu-latest
@@ -189,12 +180,12 @@ jobs:
     concurrency:
       group: adamantium-nightly-release
     env:
-      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+      HEAD_SHA: ${{ inputs.head_sha }}
     steps:
       - name: Check out tested commit
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ inputs.head_sha }}
           persist-credentials: false
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable

@@ -1,15 +1,17 @@
 name: Quality
 
 on:
-  push:
-  pull_request:
+  workflow_call:
+    outputs:
+      crates:
+        description: A JSON array containing changed crates and their dependents
+        value: ${{ jobs.affected.outputs.crates }}
+      cli:
+        description: Whether the CLI is affected
+        value: ${{ jobs.affected.outputs.cli }}
 
 permissions:
   contents: read
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
@@ -49,15 +51,6 @@ jobs:
           echo "cli=${cli}" >> "$GITHUB_OUTPUT"
           printf '%s\n' "$crates" > affected-crates.txt
           printf '%s\n' "$cli" > affected-cli.txt
-      - name: Upload affected crate list
-        uses: actions/upload-artifact@v4
-        with:
-          name: affected-crates
-          path: |
-            affected-crates.txt
-            affected-cli.txt
-          if-no-files-found: error
-
   quality:
     name: Quality gates for all crates
     runs-on: ubuntu-latest

@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Quality
+    uses: ./.github/workflows/quality.yml
+
+  affected-tests:
+    name: Affected Tests
+    needs: quality
+    uses: ./.github/workflows/affected-tests.yml
+    with:
+      crates: ${{ needs.quality.outputs.crates }}
+
+  full-ci:
+    name: Full CI
+    needs: affected-tests
+    uses: ./.github/workflows/full-ci.yml
+
+  cli-tests:
+    name: CLI Tests
+    needs: full-ci
+    permissions:
+      contents: write
+    uses: ./.github/workflows/cli-tests.yml
+    with:
+      head_sha: ${{ github.sha }}
+      publish_nightly: ${{ github.event_name == 'push' && github.ref_name == github.event.repository.default_branch }}
+
+  proof-html:
+    name: Proof HTML
+    needs: cli-tests
+    uses: ./.github/workflows/proof-html.yml

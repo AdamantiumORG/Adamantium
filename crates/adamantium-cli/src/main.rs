@@ -670,18 +670,21 @@ fn format_project(root: &Path) -> Result<usize, String> {
     }
     let mut files = Vec::new();
     collect_ad_files(&root.join("code"), &mut files)?;
-    let mut changed = 0;
+    let mut pending_writes = Vec::new();
     for path in files {
         let original = fs::read_to_string(&path)
             .map_err(|error| format!("could not read {}: {error}", path.display()))?;
         let formatted = formatter::format_source(&original)
             .map_err(|error| format!("{}: {error}", path.display()))?;
         if formatted != original {
-            fs::write(&path, formatted)
-                .map_err(|error| format!("could not write {}: {error}", path.display()))?;
-            println!("Formatted {}", display_path(&path));
-            changed += 1;
+            pending_writes.push((path, formatted));
         }
+    }
+    let changed = pending_writes.len();
+    for (path, formatted) in pending_writes {
+        fs::write(&path, formatted)
+            .map_err(|error| format!("could not write {}: {error}", path.display()))?;
+        println!("Formatted {}", display_path(&path));
     }
     Ok(changed)
 }
@@ -699,9 +702,16 @@ fn collect_ad_files(directory: &Path, files: &mut Vec<PathBuf>) -> Result<(), St
     entries.sort_by_key(|entry| entry.file_name());
     for entry in entries {
         let path = entry.path();
-        if path.is_dir() {
+        let file_type = entry
+            .file_type()
+            .map_err(|e| format!("could not inspect {}: {e}", path.display()))?;
+        if file_type.is_symlink() {
+            continue;
+        }
+        if file_type.is_dir() {
             collect_ad_files(&path, files)?;
-        } else if path.extension().is_some_and(|extension| extension == "ad") {
+        } else if file_type.is_file() && path.extension().is_some_and(|extension| extension == "ad")
+        {
             files.push(path);
         }
     }

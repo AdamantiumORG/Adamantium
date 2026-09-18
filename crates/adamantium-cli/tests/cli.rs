@@ -123,6 +123,41 @@ fn fmt_formats_source_ids_idempotently_and_keeps_project_valid() {
 }
 
 #[test]
+fn fmt_does_not_partially_write_a_project_when_a_later_file_is_invalid() {
+    let base = std::env::temp_dir().join(format!(
+        "adamantium-cli-fmt-atomic-{}-{}",
+        std::process::id(),
+        NEXT_PROJECT.fetch_add(1, Ordering::Relaxed)
+    ));
+    fs::create_dir_all(base.join("code")).unwrap();
+    fs::write(
+        base.join("project.toml"),
+        "name=\"FmtAtomic\"\nversion=\"1.0.0\"\ndescription=\"\"\nauthors=[]\n",
+    )
+    .unwrap();
+    fs::write(base.join("requirement.toml"), "[packages]\n").unwrap();
+    let valid_but_messy = "fun helper(){print.newline(1);}";
+    fs::write(base.join("code/a.ad"), valid_but_messy).unwrap();
+    fs::write(
+        base.join("code/z.ad"),
+        "fun broken() { print.newline(\"unterminated); }",
+    )
+    .unwrap();
+
+    let output = adamantium()
+        .args(["fmt", base.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(
+        fs::read_to_string(base.join("code/a.ad")).unwrap(),
+        valid_but_messy
+    );
+
+    fs::remove_dir_all(base).unwrap();
+}
+
+#[test]
 fn check_analyzes_projects_without_build_tools_or_artifacts() {
     let base = std::env::temp_dir().join(format!(
         "adamantium-cli-check-{}-{}",

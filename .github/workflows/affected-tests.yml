@@ -1,63 +1,32 @@
 name: Affected Tests
 
 on:
-  workflow_run:
-    workflows: ["Quality"]
-    types: [completed]
+  workflow_call:
+    inputs:
+      crates:
+        description: A JSON array containing crates to test
+        required: true
+        type: string
 
 permissions:
   contents: read
-  actions: read
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.workflow_run.id || github.run_id }}
-  cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  crates:
-    name: Load affected crates
-    runs-on: ubuntu-latest
-    outputs:
-      crates: ${{ steps.load.outputs.crates }}
-      cli: ${{ steps.load.outputs.cli }}
-    steps:
-      - name: Require upstream success
-        if: ${{ github.event.workflow_run.conclusion != 'success' }}
-        shell: bash
-        run: |
-          echo "Workflow '${{ github.event.workflow_run.name }}' concluded with '${{ github.event.workflow_run.conclusion }}'; stopping pipeline."
-          exit 1
-      - name: Download affected crate list
-        uses: actions/download-artifact@v4
-        with:
-          name: affected-crates
-          path: affected
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ github.token }}
-      - id: load
-        name: Read affected crate list
-        shell: bash
-        run: |
-          echo "crates=$(cat affected/affected-crates.txt)" >> "$GITHUB_OUTPUT"
-          echo "cli=$(cat affected/affected-cli.txt)" >> "$GITHUB_OUTPUT"
-
   test:
     name: ${{ matrix.crate }} (${{ matrix.os }})
-    needs: crates
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        crate: ${{ fromJSON(needs.crates.outputs.crates) }}
+        crate: ${{ fromJSON(inputs.crates) }}
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
       - name: Install NASM on Windows

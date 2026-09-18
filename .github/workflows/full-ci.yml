@@ -1,34 +1,17 @@
 name: Full CI
 
 on:
-  workflow_run:
-    workflows: ["Affected Tests"]
-    types: [completed]
+  workflow_call:
 
 permissions:
   contents: read
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.workflow_run.id || github.run_id }}
-  cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  gate:
-    name: Require upstream success
-    if: ${{ github.event.workflow_run.conclusion != 'success' }}
-    runs-on: ubuntu-latest
-    steps:
-      - shell: bash
-        run: |
-          echo "Workflow '${{ github.event.workflow_run.name }}' concluded with '${{ github.event.workflow_run.conclusion }}'; stopping pipeline."
-          exit 1
-
   ci:
     name: CI (${{ matrix.os }})
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
@@ -38,7 +21,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
       - name: Install NASM on Windows
