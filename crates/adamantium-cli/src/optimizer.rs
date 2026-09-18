@@ -134,27 +134,30 @@ fn optimize_statement(statement: &mut Instruction, constants: &mut HashMap<usize
             constants.clear();
         }
         Instruction::While(condition, body) | Instruction::Until(condition, body) => {
-            optimize_expression(condition, constants);
-            let mut inner = constants.clone();
-            optimize_block(body, &mut inner);
+            // A value known before a loop may be changed by an earlier iteration.
+            // Substituting it in the condition or body can turn a terminating loop
+            // into an infinite one, so loops start a fresh propagation environment.
             constants.clear();
+            optimize_expression(condition, constants);
+            let mut inner = HashMap::new();
+            optimize_block(body, &mut inner);
         }
         Instruction::Loop(body) => {
-            let mut inner = constants.clone();
-            optimize_block(body, &mut inner);
             constants.clear();
+            let mut inner = HashMap::new();
+            optimize_block(body, &mut inner);
         }
         Instruction::For(slot, start, end, body) => {
             optimize_expression(start, constants);
             optimize_expression(end, constants);
-            let mut inner = constants.clone();
+            let mut inner = HashMap::new();
             inner.remove(slot);
             optimize_block(body, &mut inner);
             constants.clear();
         }
         Instruction::ForEach(slot, value, body) => {
             optimize_expression(value, constants);
-            let mut inner = constants.clone();
+            let mut inner = HashMap::new();
             inner.remove(slot);
             optimize_block(body, &mut inner);
             constants.clear();
@@ -715,5 +718,69 @@ mod tests {
         };
         optimize_expression(&mut expression, &HashMap::new());
         assert!(matches!(expression.kind, Kind::Convert(_)));
+    }
+
+    #[test]
+    fn does_not_propagate_pre_loop_constants_into_repeated_iterations() {
+        let variable = || Expression {
+            ty: Type::I32,
+            kind: Kind::Variable(0),
+        };
+        let increment = Expression {
+            ty: Type::I32,
+            kind: Kind::Binary(
+                ArithmeticOperator::Add,
+                Box::new(variable()),
+                Box::new(value(1)),
+            ),
+        };
+        let stop = Expression {
+            ty: Type::Bool,
+            kind: Kind::Compare(
+                ComparisonOperator::Equal,
+                Box::new(variable()),
+                Box::new(value(2)),
+            ),
+        };
+        let program = Program {
+            functions: vec![function(
+                "main",
+                vec![
+                    Instruction::Assign(0, value(0)),
+                    Instruction::Loop(vec![
+                        Instruction::Assign(0, increment),
+                        Instruction::If(stop, vec![Instruction::Break], Vec::new()),
+                    ]),
+                ],
+            )],
+            class_sizes: Vec::new(),
+            classes: Vec::new(),
+            package_functions: HashMap::new(),
+        };
+
+        let program = optimize(program, "main", Level::O1);
+        let Instruction::Loop(body) = &program.functions[0].instructions[1] else {
+            panic!("loop expected");
+        };
+        assert!(matches!(
+            body.as_slice(),
+            [
+                Instruction::Assign(
+                    0,
+                    Expression {
+                        kind: Kind::Binary(_, _, _),
+                        ..
+                    }
+                ),
+                Instruction::If(
+                    Expression {
+                        kind: Kind::Compare(_, _, _),
+                        ..
+                    },
+                    _,
+                    _
+                )
+            ]
+        ));
     }
 }

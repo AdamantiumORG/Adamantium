@@ -1648,10 +1648,10 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 * [x] Add trait tests
 * [x] Add module tests
 * [x] Add import tests
-* [ ] Add alias tests
+* [x] Add alias tests
 * [x] Add memory-safety tests
-* [ ] Add control-flow tests
-* [ ] Add error-handling tests
+* [x] Add control-flow tests
+* [x] Add error-handling tests
 
 ### 15. Add compile-fail tests
 
@@ -2060,7 +2060,7 @@ Do not skip ahead to later phases unless a current task is blocked.
 11. [x] Refactor `codegen.rs`
 12. [x] Refactor the compiler frontend
 13. [x] Define compiler phase boundaries
-14. [ ] Create the complete language regression suite
+14. [x] Create the complete language regression suite
 15. [x] Create compile-fail tests
 16. [ ] Complete parallel test execution
 17. [ ] Implement assertions

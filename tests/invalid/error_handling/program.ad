@@ -1,0 +1,2 @@
+fun value() result:int { result=1; var failure=try { return result; }; }
+fun main() {}

@@ -1,0 +1,7 @@
+fun main() {
+    var success=try { print.newline("inside"); };
+    print.newline(success);
+    var failure=try { panic("caught"); };
+    print.newline(failure);
+    print.newline("continued");
+}

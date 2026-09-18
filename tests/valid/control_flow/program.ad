@@ -1,0 +1,29 @@
+fun main() {
+    var total=0;
+    for value in 0..3 {
+        total=+value;
+    }
+    while total<5 {
+        total=+1;
+    }
+    until total>=7 {
+        total=+1;
+    }
+    if total==7 then {
+        print.newline(total);
+    } else {
+        print.newline(0);
+    }
+    match total {
+        7 => { print.newline("seven"); }
+        _ => { print.newline("other"); }
+    }
+    var iterations=0;
+    loop {
+        iterations=+1;
+        if iterations==2 then {
+            break;
+        }
+    }
+    print.newline(iterations);
+}

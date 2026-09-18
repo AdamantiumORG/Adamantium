@@ -1,0 +1,12 @@
+fun main() {
+    var root=10;
+    var alias=root.as_variable;
+    root=20;
+    print.newline(alias);
+    alias=15;
+    print.newline(root);
+    alias.disconnect;
+    root=25;
+    print.newline(root);
+    print.newline(alias);
+}

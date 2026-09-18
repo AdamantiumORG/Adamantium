@@ -1,0 +1,4 @@
+inside
+None
+Adamantium program panicked at line 4: caught
+continued
