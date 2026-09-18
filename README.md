@@ -1,6 +1,6 @@
-[![CI](https://github.com/AdamantiumORG/Adamantium/actions/workflows/ci.yml/badge.svg)](https://github.com/AdamantiumORG/Adamantium/actions/workflows/ci.yml)
-[![Linux CLI](https://github.com/AdamantiumORG/Adamantium/actions/workflows/cli-linux.yml/badge.svg)](https://github.com/AdamantiumORG/Adamantium/actions/workflows/cli-linux.yml)
-[![Windows CLI](https://github.com/AdamantiumORG/Adamantium/actions/workflows/cli-windows.yml/badge.svg)](https://github.com/AdamantiumORG/Adamantium/actions/workflows/cli-windows.yml)
+[![Quality](https://github.com/AdamantiumORG/Adamantium/actions/workflows/quality.yml/badge.svg)](https://github.com/AdamantiumORG/Adamantium/actions/workflows/quality.yml)
+[![Full CI](https://github.com/AdamantiumORG/Adamantium/actions/workflows/full-ci.yml/badge.svg)](https://github.com/AdamantiumORG/Adamantium/actions/workflows/full-ci.yml)
+[![CLI Tests](https://github.com/AdamantiumORG/Adamantium/actions/workflows/cli-tests.yml/badge.svg)](https://github.com/AdamantiumORG/Adamantium/actions/workflows/cli-tests.yml)
 [![License: GPL](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://opensource.org/licenses/gpl-3-0)
 
 # Adamantium

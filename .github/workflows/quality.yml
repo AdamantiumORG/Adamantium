@@ -1,0 +1,80 @@
+name: Quality
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  affected:
+    name: Find affected crates
+    runs-on: ubuntu-latest
+    outputs:
+      crates: ${{ steps.graph.outputs.crates }}
+      cli: ${{ steps.graph.outputs.cli }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - id: graph
+        name: Compute changed crates and downstream dependents
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${BASE_SHA}" || "${BASE_SHA}" =~ ^0+$ ]]; then
+            crates="$(cargo run -q -p adamantium-testing --bin affected-crates -- --changed Cargo.toml)"
+          else
+            crates="$(cargo run -q -p adamantium-testing --bin affected-crates -- "${BASE_SHA}" "${HEAD_SHA}")"
+          fi
+          if echo "$crates" | grep -q '"adamantium-cli"'; then
+            cli=true
+          else
+            cli=false
+          fi
+          echo "crates=${crates}" >> "$GITHUB_OUTPUT"
+          echo "cli=${cli}" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$crates" > affected-crates.txt
+          printf '%s\n' "$cli" > affected-cli.txt
+      - name: Upload affected crate list
+        uses: actions/upload-artifact@v4
+        with:
+          name: affected-crates
+          path: |
+            affected-crates.txt
+            affected-cli.txt
+          if-no-files-found: error
+
+  quality:
+    name: Quality gates for all crates
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Check formatting
+        run: cargo fmt --all --check
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: typos@1.49.0
+      - name: Check spelling
+        run: typos .
+      - name: Clippy on all crates
+        run: cargo clippy --locked --workspace --all-targets -- -D warnings
