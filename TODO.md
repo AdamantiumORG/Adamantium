@@ -1809,16 +1809,16 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 26. Implement safe optimization passes
 
-* [ ] Implement constant folding
-* [ ] Implement constant propagation
-* [ ] Implement dead-code elimination
-* [ ] Implement dead-function elimination
-* [ ] Implement expression simplification
-* [ ] Optimize local variables
-* [ ] Optimize function calls
-* [ ] Optimize generated assembly
-* [ ] Verify every optimization preserves program behavior
-* [ ] Add optimization regression tests
+* [x] Implement constant folding
+* [x] Implement constant propagation
+* [x] Implement dead-code elimination
+* [x] Implement dead-function elimination
+* [x] Implement expression simplification
+* [x] Optimize local variables
+* [x] Optimize function calls
+* [x] Optimize generated assembly
+* [x] Verify every optimization preserves program behavior
+* [x] Add optimization regression tests
 
 ### 27. Add optimization levels
 

@@ -1,5 +1,6 @@
 mod codegen;
 mod diagnostics;
+mod optimizer;
 mod packages;
 mod syntax;
 mod typed;
@@ -537,7 +538,8 @@ fn emit_executable(
         );
     }
     fs::write(&runtime, runtime_bytes).map_err(|e| e.to_string())?;
-    fs::write(&asm, codegen::assembly_entry(statements, entry)).map_err(|e| e.to_string())?;
+    let optimized = optimizer::optimize(statements.clone(), entry);
+    fs::write(&asm, codegen::assembly_entry(&optimized, entry)).map_err(|e| e.to_string())?;
     let nasm = env::var_os("ADAMANTIUM_NASM").unwrap_or_else(|| {
         let bundled = env::current_exe().ok().and_then(|executable| {
             executable.parent().map(|parent| {

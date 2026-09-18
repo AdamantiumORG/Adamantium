@@ -42,11 +42,13 @@ pub mod typed {
         Or,
     }
 
+    #[derive(Clone)]
     pub struct Expression<T, V> {
         pub ty: T,
         pub kind: ExpressionKind<T, V>,
     }
 
+    #[derive(Clone)]
     pub enum ExpressionKind<T, V> {
         Constant(V),
         String(Vec<u8>),
@@ -84,6 +86,7 @@ pub mod typed {
 
     pub type MatchBranch<T, V> = (Expression<T, V>, Vec<Statement<T, V>>);
 
+    #[derive(Clone)]
     pub enum Statement<T, V> {
         Noop,
         Assign(usize, Expression<T, V>),
@@ -117,6 +120,7 @@ pub mod typed {
         Return,
     }
 
+    #[derive(Clone)]
     pub struct Function<T, V> {
         pub name: String,
         pub parameters: usize,
@@ -126,6 +130,7 @@ pub mod typed {
         pub parameter_names: Vec<String>,
     }
 
+    #[derive(Clone)]
     pub struct Program<T, V> {
         pub functions: Vec<Function<T, V>>,
         pub class_sizes: Vec<usize>,

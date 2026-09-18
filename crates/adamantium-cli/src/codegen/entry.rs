@@ -124,5 +124,5 @@ pub fn assembly_entry(program: &Program, entry: &str) -> String {
         }
         generator.text.push_str(&generated);
     }
-    generator.text
+    super::assembly::optimize(generator.text)
 }

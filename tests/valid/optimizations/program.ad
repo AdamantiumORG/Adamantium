@@ -1,0 +1,15 @@
+fun helper(a:int) r:int {
+    r = a + 0;
+}
+
+fun deadfunc() r:None {
+    print.newline("unreachable function");
+}
+
+fun main() {
+    var ignored = 40 + 2;
+    var a = 2 + 3;
+    var b = a * 1;
+    print.newline(b);
+    print.newline(helper(b));
+}

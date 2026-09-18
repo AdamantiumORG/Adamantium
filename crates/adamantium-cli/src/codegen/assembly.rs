@@ -1,5 +1,21 @@
 use super::*;
 
+pub(super) fn optimize(text: String) -> String {
+    let mut result = String::with_capacity(text.len());
+    for line in text.lines() {
+        let instruction = line.trim();
+        if matches!(
+            instruction,
+            "mov rax, rax" | "mov rdx, rdx" | "add rsp, 0" | "sub rsp, 0"
+        ) {
+            continue;
+        }
+        result.push_str(line);
+        result.push('\n');
+    }
+    result
+}
+
 impl Generator {
     pub(super) fn error_target(&self) -> &str {
         self.error_targets
@@ -38,5 +54,14 @@ impl Generator {
         let slot = self.reserve(1);
         self.store(slot);
         slot
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn removes_redundant_register_and_stack_instructions() {
+        let assembly = "start:\n    mov rax, rax\n    sub rsp, 0\n    mov rax, 1\n".to_string();
+        assert_eq!(super::optimize(assembly), "start:\n    mov rax, 1\n");
     }
 }
