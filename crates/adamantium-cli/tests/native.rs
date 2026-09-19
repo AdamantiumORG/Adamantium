@@ -15,7 +15,7 @@ fn native_test_runner_reports_passes_failures_and_filters() {
     let project = Project::new("fun main() {}");
     fs::write(
         project.0.join("code/tests.ad"),
-        "#[test]\nfun passing() { print.newline(\"pass output\"); }\n#[test]\nfun failing() { panic(\"expected failure\"); }\n",
+        "&TestsFile:Parallel[2]\n&TestsFile:StopOnFailed:DontStopStarted\n#[test]\nfun passing() { assert(true); print.newline(\"pass output\"); }\n#[test]\nfun failing() { assert(false, \"expected failure\"); }\n",
     )
     .unwrap();
     let all = Command::new(env!("CARGO_BIN_EXE_adamantium"))
@@ -28,6 +28,7 @@ fn native_test_runner_reports_passes_failures_and_filters() {
     assert!(stdout.contains("test passing ... ok"));
     assert!(stdout.contains("test failing ... FAILED"));
     assert!(stdout.contains("1 passed; 1 failed"));
+    assert!(String::from_utf8_lossy(&all.stderr).contains("expected failure"));
 
     let filtered = Command::new(env!("CARGO_BIN_EXE_adamantium"))
         .args(["test", "run"])
@@ -37,6 +38,33 @@ fn native_test_runner_reports_passes_failures_and_filters() {
         .unwrap();
     assert!(filtered.status.success());
     assert!(String::from_utf8_lossy(&filtered.stdout).contains("pass output"));
+}
+
+#[test]
+#[ignore = "requires NASM and Visual Studio C++ build tools"]
+fn native_stop_on_failed_does_not_start_later_tests() {
+    let project = Project::new("fun main() {}");
+    fs::write(
+        project.0.join("code/tests.ad"),
+        "&TestsFile:Parallel\n&TestsFile:StopOnFailed\n#[test]\nfun first() { assert(false); }\n#[test]\nfun second() { print.newline(\"must not run\"); }\n",
+    )
+    .unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_adamantium"))
+        .args(["test", "run"])
+        .arg(&project.0)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("test first ... FAILED"), "{stdout}");
+    assert!(
+        stdout.contains("1 test(s) not run after the first failure"),
+        "{stdout}"
+    );
+    assert!(!stdout.contains("test second"), "{stdout}");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("expected true, found false"), "{stderr}");
+    assert!(stderr.contains("at line "), "{stderr}");
 }
 
 #[test]

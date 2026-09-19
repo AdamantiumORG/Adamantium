@@ -450,6 +450,7 @@ impl Parser {
                     "and",
                     "panic",
                     "warn",
+                    "assert",
                     "exit",
                     "define",
                     "trait",
@@ -1169,6 +1170,17 @@ impl Parser {
                 let message = self.expression(0)?;
                 self.symbol(')')?;
                 Statement::Message(message, word == "panic", position)
+            }
+            Token::Word(word) if word == "assert" => {
+                self.symbol('(')?;
+                let value = self.expression(0)?;
+                let message = if self.take(Token::Symbol(',')) {
+                    Some(self.expression(0)?)
+                } else {
+                    None
+                };
+                self.symbol(')')?;
+                Statement::Assert(value, message, position)
             }
             Token::Word(word) if word == "exit" => {
                 self.symbol('(')?;
@@ -2584,6 +2596,12 @@ fn parse_tokens(tokens: Vec<(Token, Position)>) -> Result<Program, String> {
             }
             Statement::MethodCall(expr) => validate_expr(expr, signatures)?,
             Statement::Message(expr, _, _) => validate_expr(expr, signatures)?,
+            Statement::Assert(value, message, _) => {
+                validate_expr(value, signatures)?;
+                if let Some(message) = message {
+                    validate_expr(message, signatures)?;
+                }
+            }
             Statement::If(condition, yes, no) => {
                 validate_expr(condition, signatures)?;
                 for statement in yes.iter().chain(no) {

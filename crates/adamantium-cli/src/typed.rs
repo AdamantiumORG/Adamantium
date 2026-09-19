@@ -854,6 +854,26 @@ impl Checker<'_> {
                 *panic,
                 position.line(),
             ),
+            Statement::Assert(value, message, position) => {
+                let condition = self.expression(value, Some(Type::Bool))?;
+                let message = match message {
+                    Some(message) => self.expression(message, Some(Type::String))?,
+                    None => Expression {
+                        ty: Type::String,
+                        kind: Kind::String(
+                            b"assertion failed: expected true, found false".to_vec(),
+                        ),
+                    },
+                };
+                Instruction::If(
+                    Expression {
+                        ty: Type::Bool,
+                        kind: Kind::Not(Box::new(condition)),
+                    },
+                    vec![Instruction::Message(message, true, position.line())],
+                    Vec::new(),
+                )
+            }
             Statement::Return => Instruction::Return,
             Statement::Exit(code) => Instruction::Exit(
                 code.as_ref()

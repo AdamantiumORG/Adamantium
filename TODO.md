@@ -970,17 +970,17 @@ and:
 &TestsFile:Parallel[5]
 ```
 
-* [ ] Implement `Parallel`
-* [ ] Implement `Parallel[n]`
-* [ ] Automatically determine parallelism when no limit is specified
-* [ ] Limit concurrently running tests
-* [ ] Implement `StopOnFailed`
-* [ ] Implement `StopOnFailed:DontStopStarted`
-* [ ] Stop scheduling new tests after failure
-* [ ] Allow already-started tests to finish
-* [ ] Wait for started tests before finishing
-* [ ] Report all completed results
-* [ ] Validate invalid `TestsFile` directives
+* [x] Implement `Parallel`
+* [x] Implement `Parallel[n]`
+* [x] Automatically determine parallelism when no limit is specified
+* [x] Limit concurrently running tests
+* [x] Implement `StopOnFailed`
+* [x] Implement `StopOnFailed:DontStopStarted`
+* [x] Stop scheduling new tests after failure
+* [x] Allow already-started tests to finish
+* [x] Wait for started tests before finishing
+* [x] Report all completed results
+* [x] Validate invalid `TestsFile` directives
 
 ---
 
@@ -998,11 +998,11 @@ and:
 assert(value, "message");
 ```
 
-* [ ] Implement `assert`
-* [ ] Implement assertion messages
-* [ ] Show source line on failure
-* [ ] Show expected/actual values where possible
-* [ ] Integrate assertions with the test runner
+* [x] Implement `assert`
+* [x] Implement assertion messages
+* [x] Show source line on failure
+* [x] Show expected/actual values where possible
+* [x] Integrate assertions with the test runner
 
 ---
 
@@ -1664,24 +1664,24 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 16. Complete parallel test execution
 
-* [ ] Implement `Parallel`
-* [ ] Implement `Parallel[n]`
-* [ ] Detect available CPU parallelism
-* [ ] Limit concurrent tests
-* [ ] Implement `StopOnFailed`
-* [ ] Implement `StopOnFailed:DontStopStarted`
-* [ ] Wait for already-started tests
-* [ ] Report all completed tests
-* [ ] Add test-directive validation
+* [x] Implement `Parallel`
+* [x] Implement `Parallel[n]`
+* [x] Detect available CPU parallelism
+* [x] Limit concurrent tests
+* [x] Implement `StopOnFailed`
+* [x] Implement `StopOnFailed:DontStopStarted`
+* [x] Wait for already-started tests
+* [x] Report all completed tests
+* [x] Add test-directive validation
 
 ### 17. Implement assertions
 
-* [ ] Implement `assert(value)`
-* [ ] Implement `assert(value, message)`
-* [ ] Show source location on assertion failure
-* [ ] Show expected and actual values where possible
-* [ ] Integrate assertions with the test runner
-* [ ] Add assertion tests
+* [x] Implement `assert(value)`
+* [x] Implement `assert(value, message)`
+* [x] Show source location on assertion failure
+* [x] Show expected and actual values where possible
+* [x] Integrate assertions with the test runner
+* [x] Add assertion tests
 
 ---
 
@@ -2062,8 +2062,8 @@ Do not skip ahead to later phases unless a current task is blocked.
 13. [x] Define compiler phase boundaries
 14. [x] Create the complete language regression suite
 15. [x] Create compile-fail tests
-16. [ ] Complete parallel test execution
-17. [ ] Implement assertions
+16. [x] Complete parallel test execution
+17. [x] Implement assertions
 18. [x] Complete package installation
 19. [ ] Implement package security
 20. [x] Implement WASM package loading

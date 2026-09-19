@@ -2,6 +2,40 @@
 
 Project tests live in `code/tests.ad`, use `#[test]`, and run with `adamantium test run`.
 
+## Assertions
+
+Use `assert(value)` for a boolean condition. A false condition fails the current
+test, reports its source line, and prints `expected true, found false`.
+
+```adamantium
+#[test]
+fun addition_works() {
+    assert(2 + 2 == 4);
+    assert(4 > 2, "four should be greater than two");
+}
+```
+
+The optional second argument must be a string and replaces the default failure
+message.
+
+## Test file directives
+
+Directives must appear at the beginning of `tests.ad`, before test declarations.
+
+```adamantium
+&TestsFile:Parallel[4]
+&TestsFile:StopOnFailed:DontStopStarted
+```
+
+`Parallel` uses the machine's available parallelism. `Parallel[n]` limits the
+number of concurrently running tests to the positive integer `n`. Without a
+parallel directive, tests run sequentially.
+
+`StopOnFailed` stops before starting another test after the first failure.
+`StopOnFailed:DontStopStarted` also stops scheduling new tests, while tests that
+already started in parallel are allowed to finish. Completed results are always
+reported in declaration order.
+
 Compiler language tests live under `tests/valid` and `tests/invalid`. Each case contains:
 
 ```text

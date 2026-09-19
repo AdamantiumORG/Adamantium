@@ -82,6 +82,7 @@ pub enum Statement {
     SetIndex(Expr, Expr, Expr, Position),
     MethodCall(Expr),
     Message(Expr, bool, Position),
+    Assert(Expr, Option<Expr>, Position),
     If(Expr, Vec<Statement>, Vec<Statement>),
     While(Expr, Vec<Statement>),
     Until(Expr, Vec<Statement>),

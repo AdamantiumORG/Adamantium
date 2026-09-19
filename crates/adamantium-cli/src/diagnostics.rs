@@ -141,6 +141,12 @@ pub fn warnings(program: &Program) -> Vec<String> {
                 }
                 Statement::Print(expr, _) => visit(expr, &mut reads, &mut calls),
                 Statement::Message(expr, _, _) => visit(expr, &mut reads, &mut calls),
+                Statement::Assert(value, message, _) => {
+                    visit(value, &mut reads, &mut calls);
+                    if let Some(message) = message {
+                        visit(message, &mut reads, &mut calls);
+                    }
+                }
                 Statement::Call(call) => visit_call(call, &mut reads, &mut calls),
                 Statement::SetField(object, _, value) => {
                     visit(object, &mut reads, &mut calls);
@@ -332,6 +338,12 @@ fn visit_statement(
         Statement::Print(expr, _)
         | Statement::MethodCall(expr)
         | Statement::Message(expr, _, _) => visit(expr, reads, calls),
+        Statement::Assert(value, message, _) => {
+            visit(value, reads, calls);
+            if let Some(message) = message {
+                visit(message, reads, calls);
+            }
+        }
         Statement::Call(call) => visit_call(call, reads, calls),
         Statement::SetField(object, _, value) => {
             visit(object, reads, calls);

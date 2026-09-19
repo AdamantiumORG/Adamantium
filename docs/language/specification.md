@@ -27,7 +27,7 @@ block comments use `/*` and `*/`. Identifiers are case-sensitive.
 The frozen reserved-word set is:
 
 ```text
-and break ch changeable class continue define else enum exit false for fun if
+and assert break ch changeable class continue define else enum exit false for fun if
 implements in List loop match not offset oofset or pack panic print priv pub
 return static stc then trait true until use var variable warn while
 ```

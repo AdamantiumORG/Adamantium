@@ -11,11 +11,17 @@ mod types {
 }
 
 use std::{
+    collections::VecDeque,
     env,
     ffi::OsString,
     fs,
     path::{Path, PathBuf},
     process::{Command, ExitCode},
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
+    },
+    thread,
 };
 
 fn main() -> ExitCode {
@@ -352,16 +358,110 @@ struct TestDefinition {
     name: String,
 }
 
-fn test_source(root: &Path) -> Result<(String, Vec<TestDefinition>), String> {
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+enum StopOnFailed {
+    #[default]
+    Disabled,
+    StopStarted,
+    DontStopStarted,
+}
+
+#[derive(Default)]
+struct TestOptions {
+    parallel: Option<usize>,
+    stop_on_failed: StopOnFailed,
+}
+
+fn test_source(root: &Path) -> Result<(String, Vec<TestDefinition>, TestOptions), String> {
     let path = root.join("code/tests.ad");
     let source =
         fs::read_to_string(&path).map_err(|error| format!("{}: {error}", path.display()))?;
     let mut output = String::new();
     let mut tests = Vec::new();
+    let mut options = TestOptions::default();
     let mut awaiting_test = false;
+    let mut found_declaration = false;
     for (index, line) in source.lines().enumerate() {
         let trimmed = line.trim();
         let mut output_line = line.to_string();
+        if let Some(directive) = trimmed.strip_prefix("&TestsFile:") {
+            if found_declaration || awaiting_test {
+                return Err(format!(
+                    "{}:{}: TestsFile directives must appear before test declarations",
+                    path.display(),
+                    index + 1
+                ));
+            }
+            match directive {
+                "Parallel" => {
+                    if options.parallel.is_some() {
+                        return Err(format!(
+                            "{}:{}: duplicate Parallel directive",
+                            path.display(),
+                            index + 1
+                        ));
+                    }
+                    options.parallel = Some(
+                        thread::available_parallelism()
+                            .map(usize::from)
+                            .unwrap_or(1),
+                    );
+                }
+                "StopOnFailed" => {
+                    if options.stop_on_failed != StopOnFailed::Disabled {
+                        return Err(format!(
+                            "{}:{}: duplicate StopOnFailed directive",
+                            path.display(),
+                            index + 1
+                        ));
+                    }
+                    options.stop_on_failed = StopOnFailed::StopStarted;
+                }
+                "StopOnFailed:DontStopStarted" => {
+                    if options.stop_on_failed != StopOnFailed::Disabled {
+                        return Err(format!(
+                            "{}:{}: duplicate StopOnFailed directive",
+                            path.display(),
+                            index + 1
+                        ));
+                    }
+                    options.stop_on_failed = StopOnFailed::DontStopStarted;
+                }
+                _ if directive.starts_with("Parallel[") && directive.ends_with(']') => {
+                    if options.parallel.is_some() {
+                        return Err(format!(
+                            "{}:{}: duplicate Parallel directive",
+                            path.display(),
+                            index + 1
+                        ));
+                    }
+                    let limit = &directive[9..directive.len() - 1];
+                    let limit = limit.parse::<usize>().map_err(|_| {
+                        format!(
+                            "{}:{}: Parallel limit must be a positive integer",
+                            path.display(),
+                            index + 1
+                        )
+                    })?;
+                    if limit == 0 {
+                        return Err(format!(
+                            "{}:{}: Parallel limit must be greater than zero",
+                            path.display(),
+                            index + 1
+                        ));
+                    }
+                    options.parallel = Some(limit);
+                }
+                _ => {
+                    return Err(format!(
+                        "{}:{}: invalid TestsFile directive '{directive}'",
+                        path.display(),
+                        index + 1
+                    ));
+                }
+            }
+            continue;
+        }
         if trimmed == "#[test]" {
             if awaiting_test {
                 return Err(format!(
@@ -371,7 +471,11 @@ fn test_source(root: &Path) -> Result<(String, Vec<TestDefinition>), String> {
                 ));
             }
             awaiting_test = true;
+            found_declaration = true;
             continue;
+        }
+        if !trimmed.is_empty() && !trimmed.starts_with("//") {
+            found_declaration = true;
         }
         if awaiting_test && !trimmed.is_empty() && !trimmed.starts_with("//") {
             let rest = trimmed.strip_prefix("fun ").ok_or_else(|| {
@@ -427,7 +531,51 @@ fn test_source(root: &Path) -> Result<(String, Vec<TestDefinition>), String> {
     if tests.is_empty() {
         return Err(format!("{}: no #[test] functions found", path.display()));
     }
-    Ok((output, tests))
+    Ok((output, tests, options))
+}
+
+#[cfg(test)]
+mod test_directive_tests {
+    use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    static NEXT: AtomicUsize = AtomicUsize::new(0);
+
+    fn project(source: &str) -> PathBuf {
+        let root = env::temp_dir().join(format!(
+            "adamantium-test-directives-{}-{}",
+            std::process::id(),
+            NEXT.fetch_add(1, Ordering::Relaxed)
+        ));
+        fs::create_dir_all(root.join("code")).unwrap();
+        fs::write(root.join("code/tests.ad"), source).unwrap();
+        root
+    }
+
+    #[test]
+    fn parses_parallel_and_stop_directives() {
+        let root = project(
+            "&TestsFile:Parallel[3]\n&TestsFile:StopOnFailed:DontStopStarted\n#[test]\nfun works() {}\n",
+        );
+        let (_, tests, options) = test_source(&root).unwrap();
+        assert_eq!(tests.len(), 1);
+        assert_eq!(options.parallel, Some(3));
+        assert_eq!(options.stop_on_failed, StopOnFailed::DontStopStarted);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn rejects_invalid_test_file_directives() {
+        for directive in [
+            "&TestsFile:Parallel[0]",
+            "&TestsFile:Parallel[no]",
+            "&TestsFile:Unknown",
+        ] {
+            let root = project(&format!("{directive}\n#[test]\nfun works() {{}}\n"));
+            assert!(test_source(&root).is_err(), "{directive}");
+            fs::remove_dir_all(root).unwrap();
+        }
+    }
 }
 
 fn test_program(
@@ -454,7 +602,7 @@ fn list_tests(root: &Path) -> Result<(), String> {
     let canonical = root
         .canonicalize()
         .map_err(|error| format!("{}: {error}", root.display()))?;
-    let (source, tests) = test_source(&canonical)?;
+    let (source, tests, _) = test_source(&canonical)?;
     for test in &tests {
         test_program(&canonical, &source, test)?;
         println!("{}", test.name);
@@ -466,7 +614,7 @@ fn run_tests(root: &Path, filter: Option<&str>, verbose: bool) -> Result<ExitCod
     let canonical = root
         .canonicalize()
         .map_err(|error| format!("{}: {error}", root.display()))?;
-    let (source, all_tests) = test_source(&canonical)?;
+    let (source, all_tests, options) = test_source(&canonical)?;
     let tests = all_tests
         .into_iter()
         .filter(|test| filter.is_none_or(|filter| test.name == filter))
@@ -477,13 +625,12 @@ fn run_tests(root: &Path, filter: Option<&str>, verbose: bool) -> Result<ExitCod
             |name| format!("test '{name}' was not found"),
         ));
     }
-    let mut passed = 0;
-    let mut failed = 0;
     println!(
         "running {} test{}",
         tests.len(),
         if tests.len() == 1 { "" } else { "s" }
     );
+    let mut prepared = VecDeque::new();
     for (index, test) in tests.iter().enumerate() {
         let (root, project_name, program) = test_program(&canonical, &source, test)?;
         let output_name = format!("{}_test_{index}", project_name);
@@ -495,10 +642,56 @@ fn run_tests(root: &Path, filter: Option<&str>, verbose: bool) -> Result<ExitCod
             &output_name,
             optimizer::Level::default(),
         )?;
-        let output = Command::new(executable)
-            .current_dir(&root)
-            .output()
-            .map_err(|error| format!("could not run test '{}': {error}", test.name))?;
+        prepared.push_back((index, test.clone(), root, executable));
+    }
+    let worker_limit = match options.stop_on_failed {
+        StopOnFailed::StopStarted => 1,
+        _ => options.parallel.unwrap_or(1),
+    }
+    .max(1)
+    .min(prepared.len());
+    let queue = Arc::new(Mutex::new(prepared));
+    let results = Arc::new(Mutex::new(
+        (0..tests.len()).map(|_| None).collect::<Vec<_>>(),
+    ));
+    let stop = Arc::new(AtomicBool::new(false));
+    thread::scope(|scope| {
+        for _ in 0..worker_limit {
+            let queue = Arc::clone(&queue);
+            let results = Arc::clone(&results);
+            let stop = Arc::clone(&stop);
+            scope.spawn(move || {
+                loop {
+                    if stop.load(Ordering::Acquire)
+                        && options.stop_on_failed != StopOnFailed::Disabled
+                    {
+                        break;
+                    }
+                    let Some((index, test, root, executable)) = queue.lock().unwrap().pop_front()
+                    else {
+                        break;
+                    };
+                    let result = Command::new(executable).current_dir(root).output();
+                    if result.as_ref().is_ok_and(|output| !output.status.success())
+                        || result.is_err()
+                    {
+                        stop.store(true, Ordering::Release);
+                    }
+                    results.lock().unwrap()[index] = Some((test, result));
+                }
+            });
+        }
+    });
+    let mut passed = 0;
+    let mut failed = 0;
+    let mut skipped = 0;
+    for result in Arc::into_inner(results).unwrap().into_inner().unwrap() {
+        let Some((test, output)) = result else {
+            skipped += 1;
+            continue;
+        };
+        let output =
+            output.map_err(|error| format!("could not run test '{}': {error}", test.name))?;
         if output.status.success() {
             passed += 1;
             println!("test {} ... ok", test.name);
@@ -514,6 +707,9 @@ fn run_tests(root: &Path, filter: Option<&str>, verbose: bool) -> Result<ExitCod
                 eprint!("{}", String::from_utf8_lossy(&output.stderr));
             }
         }
+    }
+    if skipped != 0 {
+        println!("{skipped} test(s) not run after the first failure");
     }
     println!(
         "\ntest result: {}. {passed} passed; {failed} failed",

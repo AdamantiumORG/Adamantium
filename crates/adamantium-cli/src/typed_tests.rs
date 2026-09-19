@@ -409,6 +409,21 @@ fn checks_comparisons_conditions_and_integer_ranges() {
 }
 
 #[test]
+fn assertions_require_boolean_values_and_string_messages() {
+    assert!(checked("fun main() { assert(true); assert(1==1, \"ok\"); }").is_ok());
+    let value = match checked("fun main() { assert(1); }") {
+        Err(error) => error,
+        Ok(_) => panic!("non-boolean assertion must be rejected"),
+    };
+    assert!(value.contains("i32 to bool"), "{value}");
+    let message = match checked("fun main() { assert(true, 1); }") {
+        Err(error) => error,
+        Ok(_) => panic!("non-string assertion message must be rejected"),
+    };
+    assert!(message.contains("i32 to string"), "{message}");
+}
+
+#[test]
 fn exit_codes_are_typed_and_range_checked() {
     for source in [
         "fun main() { exit(); }",

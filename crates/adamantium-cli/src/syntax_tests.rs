@@ -932,6 +932,13 @@ fn parses_try_blocks_as_expressions() {
 }
 
 #[test]
+fn parses_assertions_with_optional_messages() {
+    assert!(parse("fun main() { assert(true); assert(1==1, \"numbers must match\"); }").is_ok());
+    assert!(parse("fun main() { assert(); }").is_err());
+    assert!(parse("fun main() { assert(true, \"message\", \"extra\"); }").is_err());
+}
+
+#[test]
 fn try_blocks_reject_control_flow_that_would_skip_cleanup() {
     for source in [
         "fun value() result:int { result=1; var error=try { return result; }; } fun main() {}",
