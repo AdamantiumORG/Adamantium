@@ -45,7 +45,7 @@ command = "file-exists"
 
 `package.name` is the identifier used in Adamantium code. It may differ from the repository name. `name`, `version`, and `abi` are required. `description`, `authors`, `license`, and `repository` are optional metadata. Names contain ASCII letters, digits, `_`, or `-`. The current ABI is `wasi-command-v1`.
 
-Versions use an exact, canonical `MAJOR.MINOR.PATCH` value. Version ranges, pre-release labels, build metadata, missing components, and leading zeroes are rejected. The manifest version must equal the requested version.
+Package manifests use an exact, canonical `MAJOR.MINOR.PATCH` value. Version ranges, pre-release labels, build metadata, missing components, and leading zeroes are rejected. A requirement normally matches that manifest version exactly. A project may instead request `nightly`; `adamantium install` then downloads assets from the continuously updated `adamantium_packet_nightly` release. Nightly assets still contain a concrete package manifest version and are refreshed on every install.
 
 The optional `[dependencies]` table maps a public GitHub repository URL to an exact version. `adamantium install` resolves all transitive dependencies, rejects cycles and version mismatches, and writes the complete deterministic graph to `adamantium.lock`. Commit this lockfile so every machine and CI job uses the same versions.
 
@@ -159,6 +159,13 @@ Add the exact GitHub release version:
 ```toml
 [packages]
 "https://github.com/community/TextTools" = "1.4.2"
+```
+
+To follow the latest tested development package:
+
+```toml
+[packages]
+"https://github.com/community/TextTools" = "nightly"
 ```
 
 Then install and import it:

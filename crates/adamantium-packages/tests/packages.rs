@@ -16,9 +16,19 @@ fn formats_release_asset() {
 #[test]
 fn versions_are_exact_and_canonical() {
     assert_eq!("1.20.3".parse::<Version>().unwrap().to_string(), "1.20.3");
+    assert_eq!("nightly".parse::<Version>().unwrap().to_string(), "nightly");
     for invalid in ["1", "1.2", "1.2.3.4", "01.2.3", "1.2.3-beta", "a.2.3"] {
         assert!(invalid.parse::<Version>().is_err(), "accepted {invalid}");
     }
+}
+
+#[test]
+fn nightly_requirements_accept_concrete_release_manifests() {
+    let root = Requirement::new("https://github.com/example/App", "nightly").unwrap();
+    let mut manifests = BTreeMap::new();
+    manifests.insert(root.source.clone(), manifest("App", "1.2.3", &[]));
+    let lock = resolve(&[root], &manifests).unwrap();
+    assert_eq!(lock.packages[0].version, "nightly");
 }
 
 fn manifest(name: &str, version: &str, dependencies: &[(&str, &str)]) -> Manifest {

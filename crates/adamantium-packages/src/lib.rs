@@ -13,12 +13,21 @@ pub struct Version {
     pub major: u64,
     pub minor: u64,
     pub patch: u64,
+    nightly: bool,
 }
 
 impl FromStr for Version {
     type Err = String;
 
     fn from_str(value: &str) -> Result<Self, Self::Err> {
+        if value == "nightly" {
+            return Ok(Self {
+                major: 0,
+                minor: 0,
+                patch: 0,
+                nightly: true,
+            });
+        }
         let parts = value.split('.').collect::<Vec<_>>();
         if parts.len() != 3 {
             return Err("version must have the form MAJOR.MINOR.PATCH".into());
@@ -34,13 +43,24 @@ impl FromStr for Version {
             major: parse(parts[0])?,
             minor: parse(parts[1])?,
             patch: parse(parts[2])?,
+            nightly: false,
         })
+    }
+}
+
+impl Version {
+    pub fn is_nightly(&self) -> bool {
+        self.nightly
     }
 }
 
 impl fmt::Display for Version {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "{}.{}.{}", self.major, self.minor, self.patch)
+        if self.nightly {
+            formatter.write_str("nightly")
+        } else {
+            write!(formatter, "{}.{}.{}", self.major, self.minor, self.patch)
+        }
     }
 }
 
@@ -89,7 +109,12 @@ impl Manifest {
         let manifest: Self =
             toml::from_str(source).map_err(|error| format!("invalid package manifest: {error}"))?;
         validate_identifier(&manifest.package.name, "package name")?;
-        manifest.package.version.parse::<Version>()?;
+        let version = manifest.package.version.parse::<Version>()?;
+        if version.is_nightly() {
+            return Err(
+                "package manifests must declare a concrete MAJOR.MINOR.PATCH version".into(),
+            );
+        }
         if manifest.package.abi != "wasi-command-v1" {
             return Err(format!(
                 "unsupported package ABI '{}'",
@@ -172,7 +197,9 @@ pub fn resolve(
         let manifest = manifests
             .get(&requirement.source)
             .ok_or_else(|| format!("missing manifest for dependency '{}'", requirement.source))?;
-        if manifest.package.version != requirement.version.to_string() {
+        if !requirement.version.is_nightly()
+            && manifest.package.version != requirement.version.to_string()
+        {
             return Err(format!(
                 "package '{}' requested version {}, but its manifest declares {}",
                 requirement.name, requirement.version, manifest.package.version
@@ -249,6 +276,13 @@ pub fn release_asset(version: &str) -> Result<String, adamantium_diagnostics::Di
     let version = version.parse::<Version>().map_err(|error| {
         adamantium_diagnostics::Diagnostic::error("E400", error, Default::default())
     })?;
+    if version.is_nightly() {
+        return Err(adamantium_diagnostics::Diagnostic::error(
+            "E610",
+            "nightly is a release channel, not a package manifest version",
+            Default::default(),
+        ));
+    }
     let _validates_wasm = adamantium_wasm::is_module(adamantium_wasm::MAGIC);
     Ok(format!(
         "adamantium_packet_{}_{}_{}.wasm",
@@ -281,6 +315,9 @@ pub struct ReleaseBundle {
 
 pub fn release_tag(version: &str) -> Result<String, String> {
     let version = version.parse::<Version>()?;
+    if version.is_nightly() {
+        return Err("nightly is a release channel, not a package manifest version".into());
+    }
     Ok(format!(
         "adamantium_packet_{}_{}_{}",
         version.major, version.minor, version.patch

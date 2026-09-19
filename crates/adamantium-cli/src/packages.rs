@@ -137,7 +137,7 @@ fn parse_manifest(path: &Path, expected_version: &str) -> Result<Manifest, Strin
         ));
     }
     let version = field("version")?;
-    if version != expected_version {
+    if expected_version != "nightly" && version != expected_version {
         return Err(format!(
             "{}: manifest version '{version}' does not match requirement '{expected_version}'",
             path.display()

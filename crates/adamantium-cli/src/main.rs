@@ -997,9 +997,9 @@ fn install_packages(root: &Path) -> Result<(), String> {
         fs::create_dir_all(&cache)
             .map_err(|error| format!("could not create {}: {error}", cache.display()))?;
         let cached_wasm = cache.join("adamantium_packet.wasm");
-        if !valid_wasm_file(&cached_wasm) {
+        if package.version == "nightly" || !valid_wasm_file(&cached_wasm) {
             let temporary = cache.join("adamantium_packet.wasm.download");
-            let tag = format!("adamantium_packet_{}", package.version.replace('.', "_"));
+            let tag = package_release_tag(&package.version);
             let url = format!(
                 "{}/releases/download/{tag}/adamantium_packet.wasm",
                 package.source
@@ -1090,15 +1090,16 @@ fn collect_package_manifests(
     let manifest = match fs::read_to_string(&manifest_path)
         .ok()
         .and_then(|source| adamantium_packages::Manifest::parse(&source).ok())
-        .filter(|manifest| manifest.package.version == package.version)
-    {
+        .filter(|manifest| {
+            package.version != "nightly" && manifest.package.version == package.version
+        }) {
         Some(manifest) => {
             packages::validate_manifest(&manifest_path, &package.version)?;
             manifest
         }
         None => {
             let temporary = cache.join("adamantium_packet.toml.download");
-            let tag = format!("adamantium_packet_{}", package.version.replace('.', "_"));
+            let tag = package_release_tag(&package.version);
             let url = format!(
                 "{}/releases/download/{tag}/adamantium_packet.toml",
                 package.source
@@ -1107,7 +1108,7 @@ fn collect_package_manifests(
             let source = fs::read_to_string(&temporary)
                 .map_err(|error| format!("could not read package manifest: {error}"))?;
             let manifest = adamantium_packages::Manifest::parse(&source)?;
-            if manifest.package.version != package.version {
+            if package.version != "nightly" && manifest.package.version != package.version {
                 return Err(format!(
                     "package '{}' manifest declares version {}, expected {}",
                     package.name, manifest.package.version, package.version
@@ -1133,6 +1134,14 @@ fn collect_package_manifests(
         )?;
     }
     Ok(())
+}
+
+fn package_release_tag(version: &str) -> String {
+    if version == "nightly" {
+        "adamantium_packet_nightly".into()
+    } else {
+        format!("adamantium_packet_{}", version.replace('.', "_"))
+    }
 }
 
 fn package_cache_directory(root: &Path, package: &Package) -> Result<PathBuf, String> {
@@ -1511,12 +1520,18 @@ mod package_tests {
         let table = r#"[packages]
 "https://github.com/AdmerPRO/Math" = "1.2.3"
 "https://github.com/community/text-tools" = "0.4.0"
+"https://github.com/AdamantiumORG/Json" = "nightly"
 "#
         .parse::<toml::Table>()
         .unwrap();
         assert_eq!(
             packages(&table).unwrap(),
             [
+                Package {
+                    name: "Json".into(),
+                    source: "https://github.com/AdamantiumORG/Json".into(),
+                    version: "nightly".into(),
+                },
                 Package {
                     name: "Math".into(),
                     source: "https://github.com/AdmerPRO/Math".into(),
@@ -1576,5 +1591,11 @@ mod package_tests {
         ] {
             assert!(packages(&manifest.parse().unwrap()).is_err(), "{manifest}");
         }
+    }
+
+    #[test]
+    fn selects_the_nightly_release_tag() {
+        assert_eq!(package_release_tag("nightly"), "adamantium_packet_nightly");
+        assert_eq!(package_release_tag("1.2.3"), "adamantium_packet_1_2_3");
     }
 }
