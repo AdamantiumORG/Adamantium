@@ -91,7 +91,7 @@ enum Action {
 }
 
 type SourceFiles = Vec<(String, String)>;
-type ProjectSources = (PathBuf, String, SourceFiles, Vec<packages::Binding>);
+type ProjectSources = (PathBuf, String, SourceFiles, Vec<packages::Binding>, bool);
 
 #[derive(Debug, PartialEq)]
 struct Package {
@@ -583,7 +583,7 @@ fn test_program(
     tests_source: &str,
     test: &TestDefinition,
 ) -> Result<(PathBuf, String, typed::Program), String> {
-    let (root, project_name, mut sources, bindings) = project_sources(root)?;
+    let (root, project_name, mut sources, bindings, professional) = project_sources(root)?;
     let main = sources
         .iter_mut()
         .find(|(module, _)| module.is_empty())
@@ -594,7 +594,7 @@ fn test_program(
         "\nfun __adamantium_test_entry() result:None {{ {}(); }}\n",
         test.name
     ));
-    let program = analyze_sources(&root, &sources, bindings)?;
+    let program = analyze_sources(&root, &sources, bindings, professional)?;
     Ok((root, project_name, program))
 }
 
@@ -1192,8 +1192,8 @@ fn download_package_file(
 }
 
 fn analyze(root: &Path) -> Result<(PathBuf, String, typed::Program), String> {
-    let (root, name, sources, bindings) = project_sources(root)?;
-    let statements = analyze_sources(&root, &sources, bindings)?;
+    let (root, name, sources, bindings, professional) = project_sources(root)?;
+    let statements = analyze_sources(&root, &sources, bindings, professional)?;
     Ok((root, name, statements))
 }
 
@@ -1218,8 +1218,26 @@ fn project_sources(root: &Path) -> Result<ProjectSources, String> {
     let manifest = manifest.expect("validated project manifest");
     let packages = packages_from_lock(&root, packages)?;
     let mut sources = load_modules(&root.join("code"))?;
+    if manifest.professional {
+        for (module, source) in &sources {
+            syntax::validate_professional(source).map_err(|error| {
+                let file = if module.is_empty() { "main" } else { module };
+                format!(
+                    "{}:{}",
+                    root.join(format!("code/{file}.ad")).display(),
+                    error
+                )
+            })?;
+        }
+    }
     let bindings = packages::load_bindings(&root, &packages, &mut sources)?;
-    Ok((root, manifest.name, sources, bindings))
+    Ok((
+        root,
+        manifest.name,
+        sources,
+        bindings,
+        manifest.professional,
+    ))
 }
 
 fn packages_from_lock(root: &Path, direct: Vec<Package>) -> Result<Vec<Package>, String> {
@@ -1256,10 +1274,11 @@ fn analyze_sources(
     root: &Path,
     sources: &[(String, String)],
     bindings: Vec<packages::Binding>,
+    professional: bool,
 ) -> Result<typed::Program, String> {
     let source_path = root.join("code/main.ad");
-    let parsed =
-        syntax::parse_modules(sources).map_err(|e| format!("{}:{e}", source_path.display()))?;
+    let parsed = syntax::parse_modules_with_mode(sources, professional)
+        .map_err(|e| format!("{}:{e}", source_path.display()))?;
     let mut statements =
         typed::check(&parsed).map_err(|e| format!("{}:{e}", source_path.display()))?;
     statements.package_functions = bindings

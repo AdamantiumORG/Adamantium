@@ -14,6 +14,7 @@
 - [Modules](language/modules.md)
 - [Memory](language/memory.md)
 - [Errors](language/errors.md)
+- [Professional Mode](language/professional.md)
 
 ## Compiler
 

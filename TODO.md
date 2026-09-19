@@ -778,12 +778,13 @@ Configuration:
 professional = true
 ```
 
-* [ ] Implement `professional` setting
-* [ ] Require explicit mutability in professional mode
-* [ ] Require explicit concrete types
-* [ ] Reject implicit variable declarations where required
-* [ ] Reject generic `int` where an exact type is required
-* [ ] Improve compiler diagnostics for professional mode
+* [x] Implement `professional` setting
+* [x] Require explicit types for all variable declarations
+* [x] Make variables static by default and require `ch` for mutation
+* [x] Require explicit concrete types
+* [x] Reject implicit variable declarations where required
+* [x] Reject generic `int` where an exact type is required
+* [x] Improve compiler diagnostics for professional mode
 
 Example:
 
@@ -884,21 +885,21 @@ Official file-system library.
 
 Official JSON library.
 
-* [ ] Create `AdamantiumJson`
-* [ ] Implement JSON parsing
-* [ ] Implement JSON serialization
-* [ ] Implement JSON objects
-* [ ] Implement JSON arrays
-* [ ] Implement JSON strings
-* [ ] Implement JSON numbers
-* [ ] Implement JSON booleans
-* [ ] Implement JSON `null`
-* [ ] Implement JSON type checking
-* [ ] Implement JSON file loading
-* [ ] Implement JSON file saving
-* [ ] Implement malformed JSON errors
-* [ ] Add documentation
-* [ ] Add tests
+* [x] Create `AdamantiumJson`
+* [x] Implement JSON parsing
+* [x] Implement JSON serialization
+* [x] Implement JSON objects
+* [x] Implement JSON arrays
+* [x] Implement JSON strings
+* [x] Implement JSON numbers
+* [x] Implement JSON booleans
+* [x] Implement JSON `null`
+* [x] Implement JSON type checking
+* [x] Implement JSON file loading
+* [x] Implement JSON file saving
+* [x] Implement malformed JSON errors
+* [x] Add documentation
+* [x] Add tests
 
 ---
 
@@ -1162,8 +1163,8 @@ Adamantium must remain memory-safe.
 
 Create the official standard library.
 
-* [ ] String utilities
-* [ ] Math
+* [x] String utilities
+* [x] Math
 * [ ] Collections
 * [ ] Date/time
 * [ ] Random numbers
@@ -1172,7 +1173,7 @@ Create the official standard library.
 * [ ] Networking
 * [ ] File system
 * [ ] JSON
-* [ ] Error handling
+* [x] Error handling
 * [ ] Async
 * [ ] Testing
 
@@ -1196,10 +1197,10 @@ Create the official standard library.
 * [x] Error handling
 * [ ] Async
 * [x] Testing
-* [ ] Standard library
+* [x] Standard library
 * [x] CLI reference
 * [x] Compiler reference
-* [ ] Professional mode
+* [x] Professional mode
 * [x] Examples
 * [ ] Tutorials
 
@@ -1430,7 +1431,7 @@ The recommended implementation order is:
 23. [x] `adamantium check`
 24. [x] Test system
 25. [x] `AdamantiumFiles`
-26. [ ] `AdamantiumJson`
+26. [x] `AdamantiumJson`
 27. [ ] Package manager
 28. [ ] `adamantium-async`
 29. [ ] Async compiler support
@@ -1756,36 +1757,36 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 23. Complete `AdamantiumJson`
 
-* [ ] Implement JSON parsing
-* [ ] Implement JSON serialization
-* [ ] Implement JSON objects
-* [ ] Implement JSON arrays
-* [ ] Implement JSON strings
-* [ ] Implement JSON numbers
-* [ ] Implement JSON booleans
-* [ ] Implement JSON `null`
-* [ ] Implement JSON type checking
-* [ ] Implement JSON file loading
-* [ ] Implement JSON file saving
-* [ ] Implement malformed JSON errors
-* [ ] Add documentation
-* [ ] Add tests
+* [x] Implement JSON parsing
+* [x] Implement JSON serialization
+* [x] Implement JSON objects
+* [x] Implement JSON arrays
+* [x] Implement JSON strings
+* [x] Implement JSON numbers
+* [x] Implement JSON booleans
+* [x] Implement JSON `null`
+* [x] Implement JSON type checking
+* [x] Implement JSON file loading
+* [x] Implement JSON file saving
+* [x] Implement malformed JSON errors
+* [x] Add documentation
+* [x] Add tests
 
 ### 24. Create the core standard library
 
-* [ ] Create the official standard-library repository
-* [ ] Define standard-library module structure
-* [ ] Implement string utilities
-* [ ] Implement math utilities
+* [x] Create the official standard-library repository
+* [x] Define standard-library module structure
+* [x] Implement string utilities
+* [x] Implement math utilities
 * [ ] Implement collections
 * [ ] Implement date/time
 * [ ] Implement random numbers
 * [ ] Implement environment variables
 * [ ] Implement process management
 * [ ] Implement networking
-* [ ] Implement error utilities
-* [ ] Document the standard library
-* [ ] Add standard-library tests
+* [x] Implement error utilities
+* [x] Document the standard library
+* [x] Add standard-library tests
 
 ---
 
@@ -1793,15 +1794,16 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 25. Implement Professional Mode
 
-* [ ] Implement `professional = true`
-* [ ] Require explicit mutability declarations
-* [ ] Require explicit concrete types
-* [ ] Reject implicit declarations where required
-* [ ] Reject generic `int` where an exact integer type is required
-* [ ] Validate all Professional Mode restrictions during semantic analysis
-* [ ] Improve Professional Mode diagnostics
-* [ ] Add Professional Mode tests
-* [ ] Document Professional Mode
+* [x] Implement `professional = true`
+* [x] Require explicit types for variables, function signatures and class fields
+* [x] Make variables static by default and require `ch` for mutation
+* [x] Require explicit concrete types
+* [x] Reject implicit declarations where required
+* [x] Reject generic `int` where an exact integer type is required
+* [x] Validate all Professional Mode restrictions during semantic analysis
+* [x] Improve Professional Mode diagnostics
+* [x] Add Professional Mode tests
+* [x] Document Professional Mode
 
 ---
 
@@ -2069,9 +2071,9 @@ Do not skip ahead to later phases unless a current task is blocked.
 20. [x] Implement WASM package loading
 21. [x] Implement package publishing
 22. [x] Complete `AdamantiumFiles`
-23. [ ] Complete `AdamantiumJson`
-24. [ ] Create the core standard library
-25. [ ] Implement Professional Mode
+23. [x] Complete `AdamantiumJson`
+24. [x] Create the core standard library
+25. [x] Implement Professional Mode
 26. [x] Implement compiler optimizations
 27. [x] Add optimization levels
 28. [x] Implement `adamantium fmt`

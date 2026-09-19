@@ -1,6 +1,43 @@
 use super::*;
 
 #[test]
+fn professional_mode_requires_explicit_concrete_types() {
+    assert!(validate_professional("fun main() { var value=10:i32; }").is_ok());
+    assert!(validate_professional("fun main() { var ch value=10:i32; }").is_ok());
+    assert!(validate_professional("fun main() { var static value=10:i32; }").is_ok());
+    assert!(validate_professional("fun main() { var value=10; }").is_err());
+    assert!(validate_professional("fun main() { var value=10:int; }").is_err());
+    assert!(validate_professional("fun add(value:int) result:i32 { result=value; }").is_err());
+    assert!(
+        validate_professional("class Item(pub value:int) { fun __new__() {} } fun main() {}")
+            .is_err()
+    );
+
+    let static_by_default = parse_modules_with_mode(
+        &[(
+            String::new(),
+            "fun main() { var value=10:i32; value=20; }".into(),
+        )],
+        true,
+    )
+    .unwrap_err();
+    assert!(
+        static_by_default.contains("cannot modify static variable 'value'"),
+        "{static_by_default}"
+    );
+    assert!(
+        parse_modules_with_mode(
+            &[(
+                String::new(),
+                "fun main() { var ch value=10:i32; value=20; }".into(),
+            )],
+            true,
+        )
+        .is_ok()
+    );
+}
+
+#[test]
 fn refactored_frontend_preserves_single_and_multifile_results() {
     let source = "fun main() { var value=1+2; print.newline(value); }";
     let single = parse(source).unwrap();

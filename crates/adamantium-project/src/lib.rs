@@ -10,6 +10,7 @@ pub struct Manifest {
     pub version: String,
     pub description: String,
     pub authors: Vec<String>,
+    pub professional: bool,
 }
 
 #[derive(Debug)]
@@ -74,7 +75,7 @@ pub fn create(root: &Path) -> Result<(), String> {
         .map_err(|e| format!("could not create target directory: {e}"))?;
     fs::write(
         root.join("project.toml"),
-        format!("name = \"{name}\"\nversion = \"0.1.0\"\ndescription = \"\"\nauthors = []\n"),
+        format!("name = \"{name}\"\nversion = \"0.1.0\"\ndescription = \"\"\nauthors = []\nprofessional = false\n"),
     )
     .map_err(|e| format!("could not create project.toml: {e}"))?;
     fs::write(root.join("requirement.toml"), "[packages]\n")
@@ -120,6 +121,16 @@ pub fn read_manifest(root: &Path) -> Result<Manifest, Vec<String>> {
     if authors.is_none() {
         errors.push("project.toml: authors must be an array of strings".into());
     }
+    let professional = match table.get("professional") {
+        Some(value) => match value.as_bool() {
+            Some(value) => value,
+            None => {
+                errors.push("project.toml: professional must be a boolean".into());
+                false
+            }
+        },
+        None => false,
+    };
     if !errors.is_empty() {
         return Err(errors);
     }
@@ -128,6 +139,7 @@ pub fn read_manifest(root: &Path) -> Result<Manifest, Vec<String>> {
         version: version.unwrap(),
         description: description.unwrap(),
         authors: authors.unwrap(),
+        professional,
     })
 }
 

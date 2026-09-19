@@ -42,6 +42,7 @@ struct TraitDefinition {
     methods: Vec<TraitMethod>,
 }
 struct Parser {
+    professional: bool,
     tokens: Vec<(Token, Position)>,
     cursor: usize,
     bindings: HashMap<String, Binding>,
@@ -1078,11 +1079,12 @@ impl Parser {
                     || self.take(Token::Word("stc".into()))
                 {
                     false
-                } else {
-                    if !self.take(Token::Word("ch".into())) {
-                        self.take(Token::Word("changeable".into()));
-                    }
+                } else if self.take(Token::Word("ch".into()))
+                    || self.take(Token::Word("changeable".into()))
+                {
                     true
+                } else {
+                    !self.professional
                 };
                 let name = self.name()?;
                 self.symbol('=')?;
@@ -2160,7 +2162,15 @@ fn module_prefix(module: &str) -> String {
     format!("admod__{}__", module.replace('/', "__"))
 }
 
+#[cfg(test)]
 pub fn parse_modules(files: &[(String, String)]) -> Result<Program, String> {
+    parse_modules_with_mode(files, false)
+}
+
+pub fn parse_modules_with_mode(
+    files: &[(String, String)],
+    professional: bool,
+) -> Result<Program, String> {
     let mut token_files = Vec::new();
     let mut exports = HashMap::new();
     for (module, source) in files {
@@ -2431,17 +2441,18 @@ pub fn parse_modules(files: &[(String, String)]) -> Result<Program, String> {
         }
     }
     combined.push((Token::End, Position { line: 1, column: 1 }));
-    parse_tokens(combined)
+    parse_tokens(combined, professional)
 }
 
 #[cfg(test)]
 pub fn parse(source: &str) -> Result<Program, String> {
-    parse_tokens(lex(source)?)
+    parse_tokens(lex(source)?, false)
 }
 
-fn parse_tokens(tokens: Vec<(Token, Position)>) -> Result<Program, String> {
+fn parse_tokens(tokens: Vec<(Token, Position)>, professional: bool) -> Result<Program, String> {
     let tokens = expand_generics(tokens)?;
     let mut parser = Parser {
+        professional,
         tokens,
         cursor: 0,
         bindings: HashMap::new(),
