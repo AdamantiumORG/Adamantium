@@ -8,8 +8,25 @@
 Adamantium is a programming language for beginners and experienced developers. Its compiler is written in Rust and translates Adamantium source code into NASM assembly, then builds native Windows or Linux x86-64 executables.
 
 ```adamantium
+fun fibonacci(n: i32) r: i32 {
+    var a = 0;
+    var b = 1;
+    var i = 0;
+
+    while i < n {
+        print(a);
+
+        var next = a + b;
+        a = b;
+        b = next;
+        i = i + 1;
+    }
+
+    r = a;
+}
+
 fun main() {
-    print.newline("Hello from Adamantium!");
+    fibonacci(10);
 }
 ```
 
