@@ -46,6 +46,7 @@ fun main() {
     print.newline("Windows CLI works");
 }
 '@
+$mainSource = $mainSource.Replace("`r`n", "`n") + "`n"
 [System.IO.File]::WriteAllText(
     (Join-Path $projectRoot 'code/main.ad'),
     $mainSource,
@@ -58,6 +59,7 @@ fun windows_cli_test() {
     print.newline("Windows test works");
 }
 '@
+$testSource = $testSource.Replace("`r`n", "`n") + "`n"
 [System.IO.File]::WriteAllText(
     (Join-Path $projectRoot 'code/tests.ad'),
     $testSource,
@@ -67,6 +69,7 @@ fun windows_cli_test() {
 $messySource = @'
 fun main(){var value=1+2;print.newline(value);}
 '@
+$messySource = $messySource.Replace("`r`n", "`n") + "`n"
 [System.IO.File]::WriteAllText(
     (Join-Path $projectRoot 'code/main.ad'),
     $messySource,
