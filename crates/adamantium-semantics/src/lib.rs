@@ -1,5 +1,14 @@
 pub fn analyze(source: &str) -> Vec<adamantium_diagnostics::Diagnostic> {
-    let parsed = adamantium_parser::parse(source);
+    let parsed = match adamantium_parser::parse(source) {
+        Ok(parsed) => parsed,
+        Err(error) => {
+            return vec![adamantium_diagnostics::Diagnostic::error(
+                "E100",
+                error.message,
+                error.span,
+            )];
+        }
+    };
     let _default_type = adamantium_types::infer_literal("0", Default::default());
     let mut seen = std::collections::HashSet::new();
     parsed

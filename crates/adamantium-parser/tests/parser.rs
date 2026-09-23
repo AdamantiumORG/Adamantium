@@ -1,4 +1,5 @@
 #[test]
 fn parses_identifier_stream() {
-    assert_eq!(adamantium_parser::parse("fun main").identifiers.len(), 2);
+    let parsed = adamantium_parser::parse("fun main() {}").unwrap();
+    assert_eq!(parsed.identifiers[0].name, "main");
 }

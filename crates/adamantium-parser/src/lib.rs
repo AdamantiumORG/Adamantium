@@ -1,17 +1,19 @@
 use adamantium_ast::Identifier;
-use adamantium_lexer::lex_words;
+use adamantium_lexer::{LexError, TokenKind, lex};
 
 #[derive(Debug)]
 pub struct ParsedFile {
     pub identifiers: Vec<Identifier>,
 }
 
-pub fn parse(source: &str) -> ParsedFile {
-    ParsedFile {
-        identifiers: lex_words(source)
+pub fn parse(source: &str) -> Result<ParsedFile, LexError> {
+    Ok(ParsedFile {
+        identifiers: lex(source)?
             .into_iter()
-            .filter(|token| token.text.chars().next().is_some_and(char::is_alphabetic))
-            .map(|token| Identifier::new(token.text, token.span))
+            .filter_map(|token| match token.kind {
+                TokenKind::Identifier(name) => Some(Identifier::new(name, token.span)),
+                _ => None,
+            })
             .collect(),
-    }
+    })
 }
