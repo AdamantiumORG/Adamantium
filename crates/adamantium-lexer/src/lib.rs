@@ -29,6 +29,7 @@ pub enum TokenKind {
     Pipe,
     Ampersand,
     Dollar,
+    Eof,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -98,29 +99,43 @@ impl fmt::Display for LexError {
 impl std::error::Error for LexError {}
 
 pub fn lex(source: &str) -> Result<Vec<Token>, LexError> {
-    Lexer::new(source).run()
+    let mut lexer = Lexer::new(source);
+    let mut tokens = Vec::new();
+    loop {
+        let token = lexer.next_token()?;
+        let finished = token.kind == TokenKind::Eof;
+        tokens.push(token);
+        if finished {
+            return Ok(tokens);
+        }
+    }
 }
 
-struct Lexer {
-    input: Vec<char>,
-    cursor: usize,
+pub struct Lexer<'src> {
+    source: &'src str,
+    position: usize,
     line: usize,
     column: usize,
 }
 
-impl Lexer {
-    fn new(source: &str) -> Self {
+impl<'src> Lexer<'src> {
+    pub fn new(source: &'src str) -> Self {
         Self {
-            input: source.chars().collect(),
-            cursor: 0,
+            source,
+            position: 0,
             line: 1,
             column: 1,
         }
     }
 
-    fn run(mut self) -> Result<Vec<Token>, LexError> {
-        let mut tokens = Vec::new();
-        while let Some(character) = self.peek() {
+    pub fn next_token(&mut self) -> Result<Token, LexError> {
+        loop {
+            let Some(character) = self.peek() else {
+                return Ok(Token {
+                    kind: TokenKind::Eof,
+                    span: self.span(),
+                });
+            };
             let span = self.span();
             if character.is_whitespace() {
                 self.advance();
@@ -152,22 +167,21 @@ impl Lexer {
                     span,
                 })?
             };
-            tokens.push(Token { kind, span });
+            return Ok(Token { kind, span });
         }
-        Ok(tokens)
     }
 
     fn peek(&self) -> Option<char> {
-        self.input.get(self.cursor).copied()
+        self.source.get(self.position..)?.chars().next()
     }
 
     fn peek_next(&self) -> Option<char> {
-        self.input.get(self.cursor + 1).copied()
+        self.source.get(self.position..)?.chars().nth(1)
     }
 
     fn advance(&mut self) -> Option<char> {
         let character = self.peek()?;
-        self.cursor += 1;
+        self.position += character.len_utf8();
         if character == '\n' {
             self.line += 1;
             self.column = 1;

@@ -1,4 +1,4 @@
-use adamantium_lexer::{Keyword, TokenKind, lex};
+use adamantium_lexer::{Keyword, Lexer, TokenKind, lex};
 
 #[test]
 fn separates_tokens_without_whitespace() {
@@ -16,6 +16,7 @@ fn separates_tokens_without_whitespace() {
             TokenKind::Plus,
             TokenKind::Identifier("b".into()),
             TokenKind::Semicolon,
+            TokenKind::Eof,
         ]
     );
 }
@@ -32,10 +33,26 @@ fn separates_calls_and_tracks_positions() {
             &TokenKind::Comma,
             &TokenKind::Identifier("b".into()),
             &TokenKind::RightParen,
+            &TokenKind::Eof,
         ]
     );
     assert_eq!(tokens[0].span.line, 2);
     assert_eq!(tokens[0].span.column, 1);
+}
+
+#[test]
+fn exposes_a_streaming_scanner() {
+    let mut lexer = Lexer::new("foo+1");
+    assert_eq!(
+        lexer.next_token().unwrap().kind,
+        TokenKind::Identifier("foo".into())
+    );
+    assert_eq!(lexer.next_token().unwrap().kind, TokenKind::Plus);
+    assert_eq!(
+        lexer.next_token().unwrap().kind,
+        TokenKind::Number("1".into())
+    );
+    assert_eq!(lexer.next_token().unwrap().kind, TokenKind::Eof);
 }
 
 #[test]

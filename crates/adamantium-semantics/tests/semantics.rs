@@ -1,4 +1,5 @@
 #[test]
 fn reports_duplicate_identifiers() {
-    assert_eq!(adamantium_semantics::analyze("name name").len(), 1);
+    let tokens = adamantium_lexer::lex("name name").unwrap();
+    assert_eq!(adamantium_semantics::analyze(&tokens).len(), 1);
 }

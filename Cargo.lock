@@ -37,6 +37,7 @@ dependencies = [
  "adamantium-codegen",
  "adamantium-diagnostics",
  "adamantium-ir",
+ "adamantium-lexer",
  "adamantium-linker",
  "adamantium-nasm",
  "adamantium-packages",
@@ -123,6 +124,7 @@ name = "adamantium-semantics"
 version = "0.1.0"
 dependencies = [
  "adamantium-diagnostics",
+ "adamantium-lexer",
  "adamantium-parser",
  "adamantium-types",
 ]

@@ -5,6 +5,7 @@ edition.workspace = true
 license-file = "../../LICENCE.md"
 
 [dependencies]
+adamantium-lexer = { path = "../adamantium-lexer" }
 adamantium-parser = { path = "../adamantium-parser" }
 adamantium-semantics = { path = "../adamantium-semantics" }
 adamantium-diagnostics = { path = "../adamantium-diagnostics" }
