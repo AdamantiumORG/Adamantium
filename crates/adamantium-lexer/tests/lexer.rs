@@ -56,6 +56,18 @@ fn exposes_a_streaming_scanner() {
 }
 
 #[test]
+fn spans_slice_the_exact_utf8_source_text() {
+    let source = "var text=\"żółw\";";
+    let tokens = lex(source).unwrap();
+    assert_eq!(tokens[0].text(source), "var");
+    assert_eq!(tokens[1].text(source), "text");
+    assert_eq!(tokens[3].text(source), "\"żółw\"");
+    assert_eq!(tokens[3].span.start, 9);
+    assert_eq!(tokens[3].span.end, 18);
+    assert_eq!(tokens.last().unwrap().text(source), "");
+}
+
+#[test]
 fn lexes_literals_comments_and_reports_errors() {
     let tokens = lex("/* x */ 12.5e-2 \"line\\ntext\"").unwrap();
     assert_eq!(tokens[0].kind, TokenKind::Number("12.5e-2".into()));

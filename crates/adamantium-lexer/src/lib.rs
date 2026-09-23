@@ -80,6 +80,12 @@ pub struct Token {
     pub span: Span,
 }
 
+impl Token {
+    pub fn text<'src>(&self, source: &'src str) -> &'src str {
+        &source[self.span.start..self.span.end]
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LexError {
     pub message: String,
@@ -136,7 +142,7 @@ impl<'src> Lexer<'src> {
                     span: self.span(),
                 });
             };
-            let span = self.span();
+            let mut span = self.span();
             if character.is_whitespace() {
                 self.advance();
                 continue;
@@ -167,6 +173,7 @@ impl<'src> Lexer<'src> {
                     span,
                 })?
             };
+            span.end = self.position;
             return Ok(Token { kind, span });
         }
     }
@@ -193,6 +200,8 @@ impl<'src> Lexer<'src> {
 
     fn span(&self) -> Span {
         Span {
+            start: self.position,
+            end: self.position,
             line: self.line,
             column: self.column,
         }
