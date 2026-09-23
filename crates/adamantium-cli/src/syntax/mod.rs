@@ -4,9 +4,11 @@ mod lexer;
 mod parser;
 mod tokens;
 
+#[allow(unused_imports)]
 pub use ast::*;
 #[cfg(test)]
 pub use parser::parse_modules;
+#[allow(unused_imports)]
 pub use parser::{module_dependencies, package_dependencies, parse_modules_with_mode};
 
 pub fn validate_professional(source: &str) -> Result<(), String> {

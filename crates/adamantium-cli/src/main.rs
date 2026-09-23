@@ -26,7 +26,14 @@ use std::{
 
 fn main() -> ExitCode {
     debug_assert!(!adamantium_compiler::pipeline_layers().is_empty());
-    match cli(env::args_os().skip(1).collect()) {
+    let arguments = env::args_os().skip(1).collect();
+    let panic_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(|_| {}));
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| cli(arguments)));
+    std::panic::set_hook(panic_hook);
+    match result.unwrap_or_else(|_| {
+        Err("internal compiler error: the frontend rejected input unexpectedly; please report this source file".into())
+    }) {
         Ok(code) => code,
         Err(error) => {
             eprintln!("{}", diagnostics::render_errors(&error));

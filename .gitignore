@@ -2,5 +2,6 @@
 /target/
 /crates/*/target/
 /example-project/target/
+/fuzz/target/
 /dist/
 /packages/

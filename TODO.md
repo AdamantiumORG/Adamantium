@@ -1921,6 +1921,17 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 # Phase 12 - Language Specification Freeze
 
+### Compiler hardening baseline
+
+* [x] Freeze core syntax
+* [x] Freeze primitive type semantics
+* [x] Freeze memory semantics
+* [x] Improve diagnostics with stable codes, source highlighting and suggestions
+* [ ] Complete parser error recovery for multiple grammar errors in one module
+* [x] Prevent compiler panics from escaping on user input
+* [x] Maintain the complete language regression suite
+* [x] Add deterministic malformed-input testing and a `cargo-fuzz` frontend target
+
 ### 35. Freeze the core language
 
 * [x] Freeze syntax

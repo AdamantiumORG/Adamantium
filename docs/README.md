@@ -22,6 +22,7 @@
 - [Parser](compiler/parser.md)
 - [Type checker](compiler/typechecker.md)
 - [Code generation](compiler/codegen.md)
+- [Core stability and compiler hardening](compiler/stability.md)
 
 ## Tooling and packages
 

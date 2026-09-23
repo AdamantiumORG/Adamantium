@@ -38,7 +38,9 @@ fn render_error(error: &str) -> String {
 
 fn classify(error: &str) -> (&'static str, &'static str) {
     let lower = error.to_ascii_lowercase();
-    if lower.contains("project.toml") || lower.contains("requirement.toml") {
+    if lower.contains("internal compiler error") {
+        ("E900", "compiler invariant")
+    } else if lower.contains("project.toml") || lower.contains("requirement.toml") {
         ("E400", "project configuration")
     } else if lower.contains("nasm") || lower.contains("linker") || lower.contains("build tools") {
         ("E500", "native toolchain")
@@ -65,7 +67,9 @@ fn classify(error: &str) -> (&'static str, &'static str) {
 
 fn suggestion(error: &str) -> Option<&'static str> {
     let lower = error.to_ascii_lowercase();
-    if lower.contains("expected ';'") {
+    if lower.contains("internal compiler error") {
+        Some("report the source file and compiler version so this compiler bug can be reproduced")
+    } else if lower.contains("expected ';'") {
         Some("add `;` at the end of the statement")
     } else if lower.contains("must declare fun main") {
         Some("add `fun main() { }` to code/main.ad")
