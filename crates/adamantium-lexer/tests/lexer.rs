@@ -68,6 +68,34 @@ fn spans_slice_the_exact_utf8_source_text() {
 }
 
 #[test]
+fn operators_use_maximal_munch() {
+    let source = "= == != < <= > >= -> => || && .. ::";
+    let tokens = lex(source).unwrap();
+    assert_eq!(
+        tokens.iter().map(|token| &token.kind).collect::<Vec<_>>(),
+        [
+            &TokenKind::Equals,
+            &TokenKind::EqualEqual,
+            &TokenKind::NotEqual,
+            &TokenKind::Less,
+            &TokenKind::LessEqual,
+            &TokenKind::Greater,
+            &TokenKind::GreaterEqual,
+            &TokenKind::Arrow,
+            &TokenKind::FatArrow,
+            &TokenKind::LogicalOr,
+            &TokenKind::LogicalAnd,
+            &TokenKind::Range,
+            &TokenKind::DoubleColon,
+            &TokenKind::Eof,
+        ]
+    );
+    for token in &tokens[..tokens.len() - 1] {
+        assert_eq!(token.text(source).len(), token.span.end - token.span.start);
+    }
+}
+
+#[test]
 fn lexes_literals_comments_and_reports_errors() {
     let tokens = lex("/* x */ 12.5e-2 \"line\\ntext\"").unwrap();
     assert_eq!(tokens[0].kind, TokenKind::Number("12.5e-2".into()));

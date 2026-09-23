@@ -18,17 +18,27 @@ pub enum TokenKind {
     Comma,
     Dot,
     Equals,
+    EqualEqual,
+    FatArrow,
     Plus,
     Minus,
+    Arrow,
     Star,
     Slash,
     Percent,
     Bang,
+    NotEqual,
     Less,
+    LessEqual,
     Greater,
+    GreaterEqual,
     Pipe,
+    LogicalOr,
     Ampersand,
+    LogicalAnd,
     Dollar,
+    Range,
+    DoubleColon,
     Eof,
 }
 
@@ -167,8 +177,7 @@ impl<'src> Lexer<'src> {
                 self.advance();
                 TokenKind::String(self.string(span)?)
             } else {
-                self.advance();
-                symbol(character).ok_or_else(|| LexError {
+                self.operator_or_punctuation().ok_or_else(|| LexError {
                     message: format!("unexpected character {character:?}"),
                     span,
                 })?
@@ -296,6 +305,31 @@ impl<'src> Lexer<'src> {
             message: "unterminated block comment; expected '*/'".into(),
             span,
         })
+    }
+
+    fn operator_or_punctuation(&mut self) -> Option<TokenKind> {
+        let first = self.peek()?;
+        let second = self.peek_next();
+        let combined = match (first, second) {
+            ('=', Some('=')) => Some(TokenKind::EqualEqual),
+            ('=', Some('>')) => Some(TokenKind::FatArrow),
+            ('!', Some('=')) => Some(TokenKind::NotEqual),
+            ('<', Some('=')) => Some(TokenKind::LessEqual),
+            ('>', Some('=')) => Some(TokenKind::GreaterEqual),
+            ('-', Some('>')) => Some(TokenKind::Arrow),
+            ('|', Some('|')) => Some(TokenKind::LogicalOr),
+            ('&', Some('&')) => Some(TokenKind::LogicalAnd),
+            ('.', Some('.')) => Some(TokenKind::Range),
+            (':', Some(':')) => Some(TokenKind::DoubleColon),
+            _ => None,
+        };
+        if let Some(kind) = combined {
+            self.advance();
+            self.advance();
+            return Some(kind);
+        }
+        self.advance();
+        symbol(first)
     }
 }
 
