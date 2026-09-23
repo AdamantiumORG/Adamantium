@@ -96,6 +96,37 @@ fn operators_use_maximal_munch() {
 }
 
 #[test]
+fn skips_comments_by_default_and_preserves_them_on_request() {
+    let source = "var x=10; // explanation\n/* block */ x=x+1;";
+    let ordinary = lex(source).unwrap();
+    assert!(
+        ordinary
+            .iter()
+            .all(|token| !matches!(token.kind, TokenKind::LineComment | TokenKind::BlockComment))
+    );
+
+    let mut lexer = Lexer::with_comments(source);
+    let mut preserved = Vec::new();
+    loop {
+        let token = lexer.next_token().unwrap();
+        let finished = token.kind == TokenKind::Eof;
+        preserved.push(token);
+        if finished {
+            break;
+        }
+    }
+    let comments = preserved
+        .iter()
+        .filter(|token| matches!(token.kind, TokenKind::LineComment | TokenKind::BlockComment))
+        .collect::<Vec<_>>();
+    assert_eq!(comments.len(), 2);
+    assert_eq!(comments[0].text(source), "// explanation");
+    assert_eq!(comments[1].text(source), "/* block */");
+    assert_eq!((comments[0].span.line, comments[0].span.column), (1, 11));
+    assert_eq!((comments[1].span.line, comments[1].span.column), (2, 1));
+}
+
+#[test]
 fn lexes_literals_comments_and_reports_errors() {
     let tokens = lex("/* x */ 12.5e-2 \"line\\ntext\"").unwrap();
     assert_eq!(tokens[0].kind, TokenKind::Number("12.5e-2".into()));

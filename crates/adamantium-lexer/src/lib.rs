@@ -39,6 +39,8 @@ pub enum TokenKind {
     Dollar,
     Range,
     DoubleColon,
+    LineComment,
+    BlockComment,
     Eof,
 }
 
@@ -132,6 +134,7 @@ pub struct Lexer<'src> {
     position: usize,
     line: usize,
     column: usize,
+    preserve_comments: bool,
 }
 
 impl<'src> Lexer<'src> {
@@ -141,6 +144,14 @@ impl<'src> Lexer<'src> {
             position: 0,
             line: 1,
             column: 1,
+            preserve_comments: false,
+        }
+    }
+
+    pub fn with_comments(source: &'src str) -> Self {
+        Self {
+            preserve_comments: true,
+            ..Self::new(source)
         }
     }
 
@@ -161,12 +172,26 @@ impl<'src> Lexer<'src> {
                 while self.peek().is_some_and(|value| value != '\n') {
                     self.advance();
                 }
+                if self.preserve_comments {
+                    span.end = self.position;
+                    return Ok(Token {
+                        kind: TokenKind::LineComment,
+                        span,
+                    });
+                }
                 continue;
             }
             if character == '/' && self.peek_next() == Some('*') {
                 self.advance();
                 self.advance();
                 self.block_comment(span)?;
+                if self.preserve_comments {
+                    span.end = self.position;
+                    return Ok(Token {
+                        kind: TokenKind::BlockComment,
+                        span,
+                    });
+                }
                 continue;
             }
             let kind = if character.is_ascii_alphabetic() || character == '_' {
