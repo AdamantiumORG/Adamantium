@@ -277,6 +277,18 @@ impl<'src> Lexer<'src> {
                 self.advance();
             }
         }
+        if self.peek() == Some('.') && self.peek_next().is_some_and(|next| next.is_ascii_digit()) {
+            self.advance();
+            while self
+                .peek()
+                .is_some_and(|value| value.is_ascii_alphanumeric() || matches!(value, '_' | '.'))
+            {
+                self.advance();
+            }
+            return Err(
+                self.number_error(span, "a numeric literal can contain only one decimal point")
+            );
+        }
         if self.peek().is_some_and(|next| matches!(next, 'e' | 'E')) {
             float = true;
             self.advance();
@@ -284,20 +296,55 @@ impl<'src> Lexer<'src> {
                 self.advance();
             }
             if !self.peek().is_some_and(|next| next.is_ascii_digit()) {
-                return Err(LexError {
-                    message: "expected exponent digits".into(),
-                    span,
-                });
+                return Err(self.number_error(span, "expected exponent digits"));
             }
             while self.peek().is_some_and(|value| value.is_ascii_digit()) {
                 self.advance();
             }
+        }
+        if self.peek() == Some(':') {
+            self.advance();
+            let suffix_start = self.position;
+            while self
+                .peek()
+                .is_some_and(|value| value.is_ascii_alphanumeric() || value == '_')
+            {
+                self.advance();
+            }
+            let suffix = &self.source[suffix_start..self.position];
+            if suffix.is_empty() {
+                return Err(self.number_error(span, "expected a type after numeric suffix ':'"));
+            }
+            if !is_numeric_suffix(suffix) {
+                return Err(self.number_error(span, &format!("unknown numeric suffix '{suffix}'")));
+            }
+        } else if self
+            .peek()
+            .is_some_and(|value| value.is_ascii_alphabetic() || value == '_')
+        {
+            while self
+                .peek()
+                .is_some_and(|value| value.is_ascii_alphanumeric() || value == '_')
+            {
+                self.advance();
+            }
+            return Err(
+                self.number_error(span, "numeric literals and identifiers must be separated")
+            );
         }
         Ok(if float {
             TokenKind::FloatLiteral
         } else {
             TokenKind::IntLiteral
         })
+    }
+
+    fn number_error(&self, mut span: Span, message: &str) -> LexError {
+        span.end = self.position;
+        LexError {
+            message: message.into(),
+            span,
+        }
     }
 
     fn string(&mut self, span: Span) -> Result<String, LexError> {
@@ -456,4 +503,24 @@ pub fn keyword_kind(text: &str) -> Option<TokenKind> {
         "while" => TokenKind::Keyword(Keyword::While),
         _ => return None,
     })
+}
+
+fn is_numeric_suffix(text: &str) -> bool {
+    matches!(
+        text,
+        "i8" | "i16"
+            | "i32"
+            | "i64"
+            | "int"
+            | "u4"
+            | "u8"
+            | "u16"
+            | "u32"
+            | "u64"
+            | "u"
+            | "f32"
+            | "f64"
+            | "f128"
+            | "float"
+    )
 }

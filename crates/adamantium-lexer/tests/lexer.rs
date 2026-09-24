@@ -168,6 +168,48 @@ fn literal_kinds_are_complete_and_unambiguous() {
 }
 
 #[test]
+fn recognizes_numeric_suffixes_without_allocating_literal_values() {
+    let source = "123 123.0 123.45 123:i32 123:u64 1.5:f64 1e3:f128";
+    let tokens = lex(source).unwrap();
+    assert_eq!(
+        tokens.iter().map(|token| &token.kind).collect::<Vec<_>>(),
+        [
+            &TokenKind::IntLiteral,
+            &TokenKind::FloatLiteral,
+            &TokenKind::FloatLiteral,
+            &TokenKind::IntLiteral,
+            &TokenKind::IntLiteral,
+            &TokenKind::FloatLiteral,
+            &TokenKind::FloatLiteral,
+            &TokenKind::Eof,
+        ]
+    );
+    assert_eq!(tokens[3].text(source), "123:i32");
+    assert_eq!(tokens[5].text(source), "1.5:f64");
+    assert_eq!(tokens[6].text(source), "1e3:f128");
+}
+
+#[test]
+fn rejects_malformed_numeric_literals_with_their_complete_span() {
+    for (source, expected_message) in [
+        ("123abc", "must be separated"),
+        ("1.2.3", "only one decimal point"),
+        ("123:", "expected a type"),
+        ("123:wat", "unknown numeric suffix 'wat'"),
+        ("1e", "expected exponent digits"),
+        ("1e+", "expected exponent digits"),
+    ] {
+        let error = lex(source).unwrap_err();
+        assert!(
+            error.message.contains(expected_message),
+            "unexpected error for {source:?}: {error}"
+        );
+        assert_eq!(error.span.start, 0);
+        assert_eq!(error.span.end, source.len());
+    }
+}
+
+#[test]
 fn skips_comments_by_default_and_preserves_them_on_request() {
     let source = "var x=10; // explanation\n/* block */ x=x+1;";
     let ordinary = lex(source).unwrap();
