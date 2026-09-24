@@ -261,11 +261,8 @@ impl<'src> Lexer<'src> {
         {
             self.advance();
         }
-        match &self.source[start..self.position] {
-            "true" => TokenKind::BoolLiteral(true),
-            "false" => TokenKind::BoolLiteral(false),
-            value => keyword(value).map_or(TokenKind::Identifier, TokenKind::Keyword),
-        }
+        let text = &self.source[start..self.position];
+        keyword_kind(text).unwrap_or(TokenKind::Identifier)
     }
 
     fn number(&mut self, span: Span) -> Result<TokenKind, LexError> {
@@ -417,44 +414,46 @@ fn symbol(character: char) -> Option<TokenKind> {
     })
 }
 
-fn keyword(value: &str) -> Option<Keyword> {
-    Some(match value {
-        "and" => Keyword::And,
-        "assert" => Keyword::Assert,
-        "break" => Keyword::Break,
-        "ch" | "changeable" => Keyword::Changeable,
-        "class" => Keyword::Class,
-        "continue" => Keyword::Continue,
-        "define" => Keyword::Define,
-        "else" => Keyword::Else,
-        "enum" => Keyword::Enum,
-        "exit" => Keyword::Exit,
-        "for" => Keyword::For,
-        "fun" => Keyword::Fun,
-        "if" => Keyword::If,
-        "implements" => Keyword::Implements,
-        "in" => Keyword::In,
-        "List" => Keyword::List,
-        "loop" => Keyword::Loop,
-        "match" => Keyword::Match,
-        "None" => Keyword::None,
-        "not" => Keyword::Not,
-        "offset" | "oofset" => Keyword::Offset,
-        "or" => Keyword::Or,
-        "pack" => Keyword::Pack,
-        "panic" => Keyword::Panic,
-        "print" => Keyword::Print,
-        "priv" => Keyword::Private,
-        "pub" => Keyword::Public,
-        "return" => Keyword::Return,
-        "static" | "stc" => Keyword::Static,
-        "then" => Keyword::Then,
-        "trait" => Keyword::Trait,
-        "until" => Keyword::Until,
-        "use" => Keyword::Use,
-        "var" | "variable" => Keyword::Variable,
-        "warn" => Keyword::Warn,
-        "while" => Keyword::While,
+pub fn keyword_kind(text: &str) -> Option<TokenKind> {
+    Some(match text {
+        "true" => TokenKind::BoolLiteral(true),
+        "false" => TokenKind::BoolLiteral(false),
+        "and" => TokenKind::Keyword(Keyword::And),
+        "assert" => TokenKind::Keyword(Keyword::Assert),
+        "break" => TokenKind::Keyword(Keyword::Break),
+        "ch" | "changeable" => TokenKind::Keyword(Keyword::Changeable),
+        "class" => TokenKind::Keyword(Keyword::Class),
+        "continue" => TokenKind::Keyword(Keyword::Continue),
+        "define" => TokenKind::Keyword(Keyword::Define),
+        "else" => TokenKind::Keyword(Keyword::Else),
+        "enum" => TokenKind::Keyword(Keyword::Enum),
+        "exit" => TokenKind::Keyword(Keyword::Exit),
+        "for" => TokenKind::Keyword(Keyword::For),
+        "fun" => TokenKind::Keyword(Keyword::Fun),
+        "if" => TokenKind::Keyword(Keyword::If),
+        "implements" => TokenKind::Keyword(Keyword::Implements),
+        "in" => TokenKind::Keyword(Keyword::In),
+        "List" => TokenKind::Keyword(Keyword::List),
+        "loop" => TokenKind::Keyword(Keyword::Loop),
+        "match" => TokenKind::Keyword(Keyword::Match),
+        "None" => TokenKind::Keyword(Keyword::None),
+        "not" => TokenKind::Keyword(Keyword::Not),
+        "offset" | "oofset" => TokenKind::Keyword(Keyword::Offset),
+        "or" => TokenKind::Keyword(Keyword::Or),
+        "pack" => TokenKind::Keyword(Keyword::Pack),
+        "panic" => TokenKind::Keyword(Keyword::Panic),
+        "print" => TokenKind::Keyword(Keyword::Print),
+        "priv" => TokenKind::Keyword(Keyword::Private),
+        "pub" => TokenKind::Keyword(Keyword::Public),
+        "return" => TokenKind::Keyword(Keyword::Return),
+        "static" | "stc" => TokenKind::Keyword(Keyword::Static),
+        "then" => TokenKind::Keyword(Keyword::Then),
+        "trait" => TokenKind::Keyword(Keyword::Trait),
+        "until" => TokenKind::Keyword(Keyword::Until),
+        "use" => TokenKind::Keyword(Keyword::Use),
+        "var" | "variable" => TokenKind::Keyword(Keyword::Variable),
+        "warn" => TokenKind::Keyword(Keyword::Warn),
+        "while" => TokenKind::Keyword(Keyword::While),
         _ => return None,
     })
 }

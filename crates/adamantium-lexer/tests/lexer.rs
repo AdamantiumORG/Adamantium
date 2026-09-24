@@ -1,4 +1,57 @@
-use adamantium_lexer::{Keyword, Lexer, TokenKind, lex};
+use adamantium_lexer::{Keyword, Lexer, TokenKind, keyword_kind, lex};
+
+#[test]
+fn classifies_all_keywords_in_one_contract() {
+    let cases = [
+        ("true", TokenKind::BoolLiteral(true)),
+        ("false", TokenKind::BoolLiteral(false)),
+        ("and", TokenKind::Keyword(Keyword::And)),
+        ("assert", TokenKind::Keyword(Keyword::Assert)),
+        ("break", TokenKind::Keyword(Keyword::Break)),
+        ("ch", TokenKind::Keyword(Keyword::Changeable)),
+        ("changeable", TokenKind::Keyword(Keyword::Changeable)),
+        ("class", TokenKind::Keyword(Keyword::Class)),
+        ("continue", TokenKind::Keyword(Keyword::Continue)),
+        ("define", TokenKind::Keyword(Keyword::Define)),
+        ("else", TokenKind::Keyword(Keyword::Else)),
+        ("enum", TokenKind::Keyword(Keyword::Enum)),
+        ("exit", TokenKind::Keyword(Keyword::Exit)),
+        ("for", TokenKind::Keyword(Keyword::For)),
+        ("fun", TokenKind::Keyword(Keyword::Fun)),
+        ("if", TokenKind::Keyword(Keyword::If)),
+        ("implements", TokenKind::Keyword(Keyword::Implements)),
+        ("in", TokenKind::Keyword(Keyword::In)),
+        ("List", TokenKind::Keyword(Keyword::List)),
+        ("loop", TokenKind::Keyword(Keyword::Loop)),
+        ("match", TokenKind::Keyword(Keyword::Match)),
+        ("None", TokenKind::Keyword(Keyword::None)),
+        ("not", TokenKind::Keyword(Keyword::Not)),
+        ("offset", TokenKind::Keyword(Keyword::Offset)),
+        ("oofset", TokenKind::Keyword(Keyword::Offset)),
+        ("or", TokenKind::Keyword(Keyword::Or)),
+        ("pack", TokenKind::Keyword(Keyword::Pack)),
+        ("panic", TokenKind::Keyword(Keyword::Panic)),
+        ("print", TokenKind::Keyword(Keyword::Print)),
+        ("priv", TokenKind::Keyword(Keyword::Private)),
+        ("pub", TokenKind::Keyword(Keyword::Public)),
+        ("return", TokenKind::Keyword(Keyword::Return)),
+        ("static", TokenKind::Keyword(Keyword::Static)),
+        ("stc", TokenKind::Keyword(Keyword::Static)),
+        ("then", TokenKind::Keyword(Keyword::Then)),
+        ("trait", TokenKind::Keyword(Keyword::Trait)),
+        ("until", TokenKind::Keyword(Keyword::Until)),
+        ("use", TokenKind::Keyword(Keyword::Use)),
+        ("var", TokenKind::Keyword(Keyword::Variable)),
+        ("variable", TokenKind::Keyword(Keyword::Variable)),
+        ("warn", TokenKind::Keyword(Keyword::Warn)),
+        ("while", TokenKind::Keyword(Keyword::While)),
+    ];
+
+    for (text, expected) in cases {
+        assert_eq!(keyword_kind(text), Some(expected), "keyword {text:?}");
+    }
+    assert_eq!(keyword_kind("custom_name"), None);
+}
 
 #[test]
 fn separates_tokens_without_whitespace() {
