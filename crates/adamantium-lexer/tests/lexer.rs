@@ -241,6 +241,62 @@ fn skips_comments_by_default_and_preserves_them_on_request() {
 }
 
 #[test]
+fn comments_never_reach_the_default_parser_token_stream() {
+    let source = "var x = 10; // hello\n/* first\n   second */\nprint.newline(x);";
+    let tokens = lex(source).unwrap();
+    assert_eq!(
+        tokens.iter().map(|token| &token.kind).collect::<Vec<_>>(),
+        [
+            &TokenKind::Keyword(Keyword::Variable),
+            &TokenKind::Identifier,
+            &TokenKind::Equals,
+            &TokenKind::IntLiteral,
+            &TokenKind::Semicolon,
+            &TokenKind::Keyword(Keyword::Print),
+            &TokenKind::Dot,
+            &TokenKind::Identifier,
+            &TokenKind::LeftParen,
+            &TokenKind::Identifier,
+            &TokenKind::RightParen,
+            &TokenKind::Semicolon,
+            &TokenKind::Eof,
+        ]
+    );
+    assert_eq!(tokens[5].text(source), "print");
+    assert_eq!((tokens[5].span.line, tokens[5].span.column), (4, 1));
+}
+
+#[test]
+fn reports_an_unterminated_multiline_comment_with_its_full_span() {
+    let source = "/* first\nsecond";
+    assert_eq!(
+        lex(source).unwrap_err(),
+        LexError::UnterminatedBlockComment {
+            span: adamantium_lexer::Span {
+                start: 0,
+                end: source.len(),
+                line: 1,
+                column: 1,
+            }
+        }
+    );
+}
+
+#[test]
+fn comment_markers_inside_strings_remain_string_contents() {
+    let source = "\"// text\" \"/* text */\"";
+    let tokens = lex(source).unwrap();
+    assert_eq!(
+        tokens.iter().map(|token| &token.kind).collect::<Vec<_>>(),
+        [
+            &TokenKind::StringLiteral("// text".into()),
+            &TokenKind::StringLiteral("/* text */".into()),
+            &TokenKind::Eof,
+        ]
+    );
+}
+
+#[test]
 fn decodes_string_escapes_and_unicode() {
     let source = "\"hello\" \"hello\\nworld\" \"quote: \\\"\" \"unicode: żółw\"";
     let tokens = lex(source).unwrap();
