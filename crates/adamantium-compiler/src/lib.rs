@@ -8,8 +8,8 @@ pub fn architecture_smoke_test(
     let tokens = adamantium_lexer::lex(source).map_err(|error| {
         vec![adamantium_diagnostics::Diagnostic::error(
             "E100",
-            error.message,
-            error.span,
+            error.message(),
+            error.span(),
         )]
     })?;
     let _parsed = adamantium_parser::parse(source, &tokens);

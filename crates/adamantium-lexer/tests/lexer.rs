@@ -1,4 +1,4 @@
-use adamantium_lexer::{Keyword, Lexer, TokenKind, keyword_kind, lex};
+use adamantium_lexer::{Keyword, LexError, Lexer, TokenKind, keyword_kind, lex};
 
 #[test]
 fn classifies_all_keywords_in_one_contract() {
@@ -201,11 +201,11 @@ fn rejects_malformed_numeric_literals_with_their_complete_span() {
     ] {
         let error = lex(source).unwrap_err();
         assert!(
-            error.message.contains(expected_message),
+            error.message().contains(expected_message),
             "unexpected error for {source:?}: {error}"
         );
-        assert_eq!(error.span.start, 0);
-        assert_eq!(error.span.end, source.len());
+        assert_eq!(error.span().start, 0);
+        assert_eq!(error.span().end, source.len());
     }
 }
 
@@ -241,6 +241,58 @@ fn skips_comments_by_default_and_preserves_them_on_request() {
 }
 
 #[test]
+fn decodes_string_escapes_and_unicode() {
+    let source = "\"hello\" \"hello\\nworld\" \"quote: \\\"\" \"unicode: żółw\"";
+    let tokens = lex(source).unwrap();
+    assert_eq!(tokens[0].kind, TokenKind::StringLiteral("hello".into()));
+    assert_eq!(
+        tokens[1].kind,
+        TokenKind::StringLiteral("hello\nworld".into())
+    );
+    assert_eq!(tokens[2].kind, TokenKind::StringLiteral("quote: \"".into()));
+    assert_eq!(
+        tokens[3].kind,
+        TokenKind::StringLiteral("unicode: żółw".into())
+    );
+    assert_eq!(tokens[3].text(source), "\"unicode: żółw\"");
+}
+
+#[test]
+fn returns_structured_string_errors_with_precise_spans() {
+    let unterminated = lex("\"unterminated").unwrap_err();
+    assert_eq!(
+        unterminated,
+        LexError::UnterminatedString {
+            span: adamantium_lexer::Span {
+                start: 0,
+                end: 13,
+                line: 1,
+                column: 1,
+            }
+        }
+    );
+
+    let invalid_escape = lex("\"bad escape \\q\"").unwrap_err();
+    assert_eq!(
+        invalid_escape,
+        LexError::InvalidEscape {
+            span: adamantium_lexer::Span {
+                start: 12,
+                end: 14,
+                line: 1,
+                column: 13,
+            },
+            escape: 'q',
+        }
+    );
+    assert!(
+        invalid_escape
+            .to_string()
+            .contains("unsupported string escape")
+    );
+}
+
+#[test]
 fn lexes_literals_comments_and_reports_errors() {
     let tokens = lex("/* x */ 12.5e-2 \"line\\ntext\"").unwrap();
     assert_eq!(tokens[0].kind, TokenKind::FloatLiteral);
@@ -252,13 +304,13 @@ fn lexes_literals_comments_and_reports_errors() {
     assert!(
         lex("/* missing")
             .unwrap_err()
-            .message
+            .message()
             .contains("unterminated")
     );
     assert!(
         lex("\"bad\\q\"")
             .unwrap_err()
-            .message
+            .message()
             .contains("unsupported")
     );
 }

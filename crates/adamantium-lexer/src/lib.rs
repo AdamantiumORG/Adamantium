@@ -111,9 +111,46 @@ impl Token {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct LexError {
-    pub message: String,
-    pub span: Span,
+pub enum LexError {
+    UnexpectedCharacter { span: Span, character: char },
+    InvalidNumber { span: Span, message: String },
+    UnterminatedString { span: Span },
+    RawNewlineInString { span: Span },
+    UnterminatedEscape { span: Span },
+    InvalidEscape { span: Span, escape: char },
+    UnterminatedBlockComment { span: Span },
+}
+
+impl LexError {
+    pub fn span(&self) -> Span {
+        match self {
+            Self::UnexpectedCharacter { span, .. }
+            | Self::InvalidNumber { span, .. }
+            | Self::UnterminatedString { span }
+            | Self::RawNewlineInString { span }
+            | Self::UnterminatedEscape { span }
+            | Self::InvalidEscape { span, .. }
+            | Self::UnterminatedBlockComment { span } => *span,
+        }
+    }
+
+    pub fn message(&self) -> String {
+        match self {
+            Self::UnexpectedCharacter { character, .. } => {
+                format!("unexpected character {character:?}")
+            }
+            Self::InvalidNumber { message, .. } => message.clone(),
+            Self::UnterminatedString { .. } => "unterminated string".into(),
+            Self::RawNewlineInString { .. } => "raw newline in string; use \\n".into(),
+            Self::UnterminatedEscape { .. } => "unterminated string escape".into(),
+            Self::InvalidEscape { escape, .. } => {
+                format!("unsupported string escape \\{escape}")
+            }
+            Self::UnterminatedBlockComment { .. } => {
+                "unterminated block comment; expected '*/'".into()
+            }
+        }
+    }
 }
 
 impl fmt::Display for LexError {
@@ -121,7 +158,9 @@ impl fmt::Display for LexError {
         write!(
             formatter,
             "{}:{}: {}",
-            self.span.line, self.span.column, self.message
+            self.span().line,
+            self.span().column,
+            self.message()
         )
     }
 }
@@ -214,10 +253,8 @@ impl<'src> Lexer<'src> {
                 self.advance();
                 TokenKind::StringLiteral(self.string(span)?)
             } else {
-                self.operator_or_punctuation().ok_or_else(|| LexError {
-                    message: format!("unexpected character {character:?}"),
-                    span,
-                })?
+                self.operator_or_punctuation()
+                    .ok_or(LexError::UnexpectedCharacter { span, character })?
             };
             span.end = self.position;
             return Ok(Token { kind, span });
@@ -341,27 +378,26 @@ impl<'src> Lexer<'src> {
 
     fn number_error(&self, mut span: Span, message: &str) -> LexError {
         span.end = self.position;
-        LexError {
-            message: message.into(),
+        LexError::InvalidNumber {
             span,
+            message: message.into(),
         }
     }
 
     fn string(&mut self, span: Span) -> Result<String, LexError> {
         let mut value = String::new();
         loop {
+            let character_span = self.span();
             match self.advance() {
                 Some('"') => return Ok(value),
                 Some('\n' | '\r') => {
-                    return Err(LexError {
-                        message: "raw newline in string; use \\n".trim_end().into(),
-                        span,
+                    return Err(LexError::RawNewlineInString {
+                        span: self.finished_span(span),
                     });
                 }
                 Some('\\') => {
-                    let escaped = self.advance().ok_or_else(|| LexError {
-                        message: "unterminated escape".into(),
-                        span,
+                    let escaped = self.advance().ok_or_else(|| LexError::UnterminatedEscape {
+                        span: self.finished_span(character_span),
                     })?;
                     value.push(match escaped {
                         'n' => '\n',
@@ -371,22 +407,26 @@ impl<'src> Lexer<'src> {
                         '\\' => '\\',
                         '"' => '"',
                         _ => {
-                            return Err(LexError {
-                                message: format!("unsupported string escape \\{escaped}"),
-                                span,
+                            return Err(LexError::InvalidEscape {
+                                span: self.finished_span(character_span),
+                                escape: escaped,
                             });
                         }
                     });
                 }
                 Some(character) => value.push(character),
                 None => {
-                    return Err(LexError {
-                        message: "unterminated string".into(),
-                        span,
+                    return Err(LexError::UnterminatedString {
+                        span: self.finished_span(span),
                     });
                 }
             }
         }
+    }
+
+    fn finished_span(&self, mut span: Span) -> Span {
+        span.end = self.position;
+        span
     }
 
     fn block_comment(&mut self, span: Span) -> Result<(), LexError> {
@@ -396,9 +436,8 @@ impl<'src> Lexer<'src> {
                 return Ok(());
             }
         }
-        Err(LexError {
-            message: "unterminated block comment; expected '*/'".into(),
-            span,
+        Err(LexError::UnterminatedBlockComment {
+            span: self.finished_span(span),
         })
     }
 
