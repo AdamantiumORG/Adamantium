@@ -84,7 +84,7 @@ impl Parser<'_, '_> {
                 token.text(self.source),
                 token.span,
             ))),
-            TokenKind::Number => Ok(Expression::Number {
+            TokenKind::IntLiteral | TokenKind::FloatLiteral => Ok(Expression::Number {
                 literal: token.text(self.source).to_owned(),
                 span: token.span,
             }),

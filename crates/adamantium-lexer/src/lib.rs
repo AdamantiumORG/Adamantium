@@ -12,8 +12,10 @@ pub struct Span {
 pub enum TokenKind {
     Keyword(Keyword),
     Identifier,
-    Number,
-    String(String),
+    IntLiteral,
+    FloatLiteral,
+    StringLiteral(String),
+    BoolLiteral(bool),
     LeftParen,
     RightParen,
     LeftBrace,
@@ -28,11 +30,16 @@ pub enum TokenKind {
     EqualEqual,
     FatArrow,
     Plus,
+    PlusEqual,
     Minus,
+    MinusEqual,
     Arrow,
     Star,
+    StarEqual,
     Slash,
+    SlashEqual,
     Percent,
+    PercentEqual,
     Bang,
     NotEqual,
     Less,
@@ -63,7 +70,6 @@ pub enum Keyword {
     Else,
     Enum,
     Exit,
-    False,
     For,
     Fun,
     If,
@@ -85,7 +91,6 @@ pub enum Keyword {
     Static,
     Then,
     Trait,
-    True,
     Until,
     Use,
     Variable,
@@ -207,7 +212,7 @@ impl<'src> Lexer<'src> {
                 self.number(span)?
             } else if character == '"' {
                 self.advance();
-                TokenKind::String(self.string(span)?)
+                TokenKind::StringLiteral(self.string(span)?)
             } else {
                 self.operator_or_punctuation().ok_or_else(|| LexError {
                     message: format!("unexpected character {character:?}"),
@@ -256,21 +261,27 @@ impl<'src> Lexer<'src> {
         {
             self.advance();
         }
-        keyword(&self.source[start..self.position])
-            .map_or(TokenKind::Identifier, TokenKind::Keyword)
+        match &self.source[start..self.position] {
+            "true" => TokenKind::BoolLiteral(true),
+            "false" => TokenKind::BoolLiteral(false),
+            value => keyword(value).map_or(TokenKind::Identifier, TokenKind::Keyword),
+        }
     }
 
     fn number(&mut self, span: Span) -> Result<TokenKind, LexError> {
+        let mut float = false;
         while self.peek().is_some_and(|value| value.is_ascii_digit()) {
             self.advance();
         }
         if self.peek() == Some('.') && self.peek_next().is_some_and(|next| next.is_ascii_digit()) {
+            float = true;
             self.advance();
             while self.peek().is_some_and(|value| value.is_ascii_digit()) {
                 self.advance();
             }
         }
         if self.peek().is_some_and(|next| matches!(next, 'e' | 'E')) {
+            float = true;
             self.advance();
             if self.peek().is_some_and(|next| matches!(next, '+' | '-')) {
                 self.advance();
@@ -285,7 +296,11 @@ impl<'src> Lexer<'src> {
                 self.advance();
             }
         }
-        Ok(TokenKind::Number)
+        Ok(if float {
+            TokenKind::FloatLiteral
+        } else {
+            TokenKind::IntLiteral
+        })
     }
 
     fn string(&mut self, span: Span) -> Result<String, LexError> {
@@ -353,6 +368,11 @@ impl<'src> Lexer<'src> {
             ('<', Some('=')) => Some(TokenKind::LessEqual),
             ('>', Some('=')) => Some(TokenKind::GreaterEqual),
             ('-', Some('>')) => Some(TokenKind::Arrow),
+            ('+', Some('=')) => Some(TokenKind::PlusEqual),
+            ('-', Some('=')) => Some(TokenKind::MinusEqual),
+            ('*', Some('=')) => Some(TokenKind::StarEqual),
+            ('/', Some('=')) => Some(TokenKind::SlashEqual),
+            ('%', Some('=')) => Some(TokenKind::PercentEqual),
             ('|', Some('|')) => Some(TokenKind::LogicalOr),
             ('&', Some('&')) => Some(TokenKind::LogicalAnd),
             ('.', Some('.')) => Some(TokenKind::Range),
@@ -409,7 +429,6 @@ fn keyword(value: &str) -> Option<Keyword> {
         "else" => Keyword::Else,
         "enum" => Keyword::Enum,
         "exit" => Keyword::Exit,
-        "false" => Keyword::False,
         "for" => Keyword::For,
         "fun" => Keyword::Fun,
         "if" => Keyword::If,
@@ -431,7 +450,6 @@ fn keyword(value: &str) -> Option<Keyword> {
         "static" | "stc" => Keyword::Static,
         "then" => Keyword::Then,
         "trait" => Keyword::Trait,
-        "true" => Keyword::True,
         "until" => Keyword::Until,
         "use" => Keyword::Use,
         "var" | "variable" => Keyword::Variable,

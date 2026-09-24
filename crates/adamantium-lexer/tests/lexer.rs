@@ -45,7 +45,7 @@ fn exposes_a_streaming_scanner() {
     let mut lexer = Lexer::new("foo+1");
     assert_eq!(lexer.next_token().unwrap().kind, TokenKind::Identifier);
     assert_eq!(lexer.next_token().unwrap().kind, TokenKind::Plus);
-    assert_eq!(lexer.next_token().unwrap().kind, TokenKind::Number);
+    assert_eq!(lexer.next_token().unwrap().kind, TokenKind::IntLiteral);
     assert_eq!(lexer.next_token().unwrap().kind, TokenKind::Eof);
 }
 
@@ -63,7 +63,7 @@ fn spans_slice_the_exact_utf8_source_text() {
 
 #[test]
 fn operators_use_maximal_munch() {
-    let source = "= == != < <= > >= -> => || && .. ::";
+    let source = "= == != < <= > >= -> => || && += -= *= /= %= .. ::";
     let tokens = lex(source).unwrap();
     assert_eq!(
         tokens.iter().map(|token| &token.kind).collect::<Vec<_>>(),
@@ -79,6 +79,11 @@ fn operators_use_maximal_munch() {
             &TokenKind::FatArrow,
             &TokenKind::LogicalOr,
             &TokenKind::LogicalAnd,
+            &TokenKind::PlusEqual,
+            &TokenKind::MinusEqual,
+            &TokenKind::StarEqual,
+            &TokenKind::SlashEqual,
+            &TokenKind::PercentEqual,
             &TokenKind::Range,
             &TokenKind::DoubleColon,
             &TokenKind::Eof,
@@ -87,6 +92,26 @@ fn operators_use_maximal_munch() {
     for token in &tokens[..tokens.len() - 1] {
         assert_eq!(token.text(source).len(), token.span.end - token.span.start);
     }
+}
+
+#[test]
+fn literal_kinds_are_complete_and_unambiguous() {
+    let source = "10 1.5 1e3 true false \"text\"";
+    let tokens = lex(source).unwrap();
+    assert_eq!(
+        tokens.iter().map(|token| &token.kind).collect::<Vec<_>>(),
+        [
+            &TokenKind::IntLiteral,
+            &TokenKind::FloatLiteral,
+            &TokenKind::FloatLiteral,
+            &TokenKind::BoolLiteral(true),
+            &TokenKind::BoolLiteral(false),
+            &TokenKind::StringLiteral("text".into()),
+            &TokenKind::Eof,
+        ]
+    );
+    assert_eq!(tokens[0].text(source), "10");
+    assert_eq!(tokens[2].text(source), "1e3");
 }
 
 #[test]
@@ -123,9 +148,12 @@ fn skips_comments_by_default_and_preserves_them_on_request() {
 #[test]
 fn lexes_literals_comments_and_reports_errors() {
     let tokens = lex("/* x */ 12.5e-2 \"line\\ntext\"").unwrap();
-    assert_eq!(tokens[0].kind, TokenKind::Number);
+    assert_eq!(tokens[0].kind, TokenKind::FloatLiteral);
     assert_eq!(tokens[0].text("/* x */ 12.5e-2 \"line\\ntext\""), "12.5e-2");
-    assert_eq!(tokens[1].kind, TokenKind::String("line\ntext".into()));
+    assert_eq!(
+        tokens[1].kind,
+        TokenKind::StringLiteral("line\ntext".into())
+    );
     assert!(
         lex("/* missing")
             .unwrap_err()
