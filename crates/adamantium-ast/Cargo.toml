@@ -3,3 +3,6 @@ name = "adamantium-ast"
 version.workspace = true
 edition.workspace = true
 license-file = "../../LICENCE.md"
+
+[dependencies]
+adamantium-lexer = { path = "../adamantium-lexer" }

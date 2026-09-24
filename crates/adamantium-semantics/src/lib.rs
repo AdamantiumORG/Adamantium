@@ -1,5 +1,8 @@
-pub fn analyze(tokens: &[adamantium_lexer::Token]) -> Vec<adamantium_diagnostics::Diagnostic> {
-    let parsed = adamantium_parser::parse(tokens);
+pub fn analyze(
+    source: &str,
+    tokens: &[adamantium_lexer::Token],
+) -> Vec<adamantium_diagnostics::Diagnostic> {
+    let parsed = adamantium_parser::parse(source, tokens);
     let _default_type = adamantium_types::infer_literal("0", Default::default());
     let mut seen = std::collections::HashSet::new();
     parsed

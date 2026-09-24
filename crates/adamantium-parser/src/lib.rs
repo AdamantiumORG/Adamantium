@@ -6,12 +6,12 @@ pub struct ParsedFile {
     pub identifiers: Vec<Identifier>,
 }
 
-pub fn parse(tokens: &[Token]) -> ParsedFile {
+pub fn parse(source: &str, tokens: &[Token]) -> ParsedFile {
     ParsedFile {
         identifiers: tokens
             .iter()
             .filter_map(|token| match &token.kind {
-                TokenKind::Identifier(name) => Some(Identifier::new(name, token.span)),
+                TokenKind::Identifier => Some(Identifier::new(token.text(source), token.span)),
                 _ => None,
             })
             .collect(),
@@ -24,8 +24,12 @@ pub struct ParseError {
     pub span: Span,
 }
 
-pub fn parse_expression(tokens: &[Token]) -> Result<Expression, ParseError> {
-    let mut parser = Parser { tokens, cursor: 0 };
+pub fn parse_expression(source: &str, tokens: &[Token]) -> Result<Expression, ParseError> {
+    let mut parser = Parser {
+        source,
+        tokens,
+        cursor: 0,
+    };
     let expression = parser.expression(0)?;
     if parser.take(&TokenKind::Semicolon) {
         // A statement terminator belongs to the surrounding grammar.
@@ -36,12 +40,13 @@ pub fn parse_expression(tokens: &[Token]) -> Result<Expression, ParseError> {
     }
 }
 
-struct Parser<'tokens> {
+struct Parser<'src, 'tokens> {
+    source: &'src str,
     tokens: &'tokens [Token],
     cursor: usize,
 }
 
-impl Parser<'_> {
+impl Parser<'_, '_> {
     fn expression(&mut self, minimum_precedence: u8) -> Result<Expression, ParseError> {
         let mut left = self.primary()?;
         while let Some((operator, precedence)) = self.binary_operator() {
@@ -75,11 +80,12 @@ impl Parser<'_> {
             .ok_or_else(|| self.error("expected expression"))?;
         self.cursor += 1;
         match token.kind {
-            TokenKind::Identifier(name) => {
-                Ok(Expression::Identifier(Identifier::new(name, token.span)))
-            }
-            TokenKind::Number(literal) => Ok(Expression::Number {
-                literal,
+            TokenKind::Identifier => Ok(Expression::Identifier(Identifier::new(
+                token.text(self.source),
+                token.span,
+            ))),
+            TokenKind::Number => Ok(Expression::Number {
+                literal: token.text(self.source).to_owned(),
                 span: token.span,
             }),
             TokenKind::LeftParen => {

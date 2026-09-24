@@ -1,7 +1,7 @@
 #[test]
 fn parses_identifier_stream() {
     let tokens = adamantium_lexer::lex("fun main() {}").unwrap();
-    let parsed = adamantium_parser::parse(&tokens);
+    let parsed = adamantium_parser::parse("fun main() {}", &tokens);
     assert_eq!(parsed.identifiers[0].name, "main");
 }
 
@@ -10,7 +10,7 @@ fn parses_expression_from_token_kinds_with_precedence() {
     use adamantium_ast::{BinaryOperator, Expression};
 
     let tokens = adamantium_lexer::lex("a+b*2;").unwrap();
-    let expression = adamantium_parser::parse_expression(&tokens).unwrap();
+    let expression = adamantium_parser::parse_expression("a+b*2;", &tokens).unwrap();
     let Expression::Binary {
         operator,
         left,
@@ -35,10 +35,10 @@ fn parses_expression_from_token_kinds_with_precedence() {
 #[test]
 fn parser_reports_tokens_instead_of_retokenizing_text() {
     let tokens = adamantium_lexer::lex("a+b;").unwrap();
-    assert!(adamantium_parser::parse_expression(&tokens).is_ok());
+    assert!(adamantium_parser::parse_expression("a+b;", &tokens).is_ok());
 
     let missing_operand = adamantium_lexer::lex("a+;").unwrap();
-    let error = adamantium_parser::parse_expression(&missing_operand).unwrap_err();
+    let error = adamantium_parser::parse_expression("a+;", &missing_operand).unwrap_err();
     assert_eq!(error.span.start, 2);
     assert!(error.message.contains("expected"));
 }

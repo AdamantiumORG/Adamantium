@@ -12,8 +12,8 @@ pub fn architecture_smoke_test(
             error.span,
         )]
     })?;
-    let _parsed = adamantium_parser::parse(&tokens);
-    let diagnostics = adamantium_semantics::analyze(&tokens);
+    let _parsed = adamantium_parser::parse(source, &tokens);
+    let diagnostics = adamantium_semantics::analyze(source, &tokens);
     if !diagnostics.is_empty() {
         return Err(diagnostics);
     }

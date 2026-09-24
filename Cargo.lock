@@ -5,6 +5,9 @@ version = 4
 [[package]]
 name = "adamantium-ast"
 version = "0.1.0"
+dependencies = [
+ "adamantium-lexer",
+]
 
 [[package]]
 name = "adamantium-cli"
@@ -65,9 +68,6 @@ dependencies = [
 [[package]]
 name = "adamantium-lexer"
 version = "0.1.0"
-dependencies = [
- "adamantium-ast",
-]
 
 [[package]]
 name = "adamantium-linker"

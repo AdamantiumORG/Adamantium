@@ -1,11 +1,18 @@
-use adamantium_ast::Span;
 use std::fmt;
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct Span {
+    pub start: usize,
+    pub end: usize,
+    pub line: usize,
+    pub column: usize,
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TokenKind {
     Keyword(Keyword),
-    Identifier(String),
-    Number(String),
+    Identifier,
+    Number,
     String(String),
     LeftParen,
     RightParen,
@@ -241,30 +248,32 @@ impl<'src> Lexer<'src> {
         }
     }
 
-    fn take_while(&mut self, predicate: impl Fn(char) -> bool) -> String {
-        let mut value = String::new();
-        while let Some(character) = self.peek().filter(|value| predicate(*value)) {
-            value.push(character);
+    fn word(&mut self) -> TokenKind {
+        let start = self.position;
+        while self
+            .peek()
+            .is_some_and(|value| value.is_ascii_alphanumeric() || value == '_')
+        {
             self.advance();
         }
-        value
-    }
-
-    fn word(&mut self) -> TokenKind {
-        let value = self.take_while(|value| value.is_ascii_alphanumeric() || value == '_');
-        keyword(&value).map_or(TokenKind::Identifier(value), TokenKind::Keyword)
+        keyword(&self.source[start..self.position])
+            .map_or(TokenKind::Identifier, TokenKind::Keyword)
     }
 
     fn number(&mut self, span: Span) -> Result<TokenKind, LexError> {
-        let mut value = self.take_while(|value| value.is_ascii_digit());
+        while self.peek().is_some_and(|value| value.is_ascii_digit()) {
+            self.advance();
+        }
         if self.peek() == Some('.') && self.peek_next().is_some_and(|next| next.is_ascii_digit()) {
-            value.push(self.advance().unwrap_or('.'));
-            value.push_str(&self.take_while(|next| next.is_ascii_digit()));
+            self.advance();
+            while self.peek().is_some_and(|value| value.is_ascii_digit()) {
+                self.advance();
+            }
         }
         if self.peek().is_some_and(|next| matches!(next, 'e' | 'E')) {
-            value.push(self.advance().unwrap_or('e'));
+            self.advance();
             if self.peek().is_some_and(|next| matches!(next, '+' | '-')) {
-                value.push(self.advance().unwrap_or('+'));
+                self.advance();
             }
             if !self.peek().is_some_and(|next| next.is_ascii_digit()) {
                 return Err(LexError {
@@ -272,9 +281,11 @@ impl<'src> Lexer<'src> {
                     span,
                 });
             }
-            value.push_str(&self.take_while(|next| next.is_ascii_digit()));
+            while self.peek().is_some_and(|value| value.is_ascii_digit()) {
+                self.advance();
+            }
         }
-        Ok(TokenKind::Number(value))
+        Ok(TokenKind::Number)
     }
 
     fn string(&mut self, span: Span) -> Result<String, LexError> {

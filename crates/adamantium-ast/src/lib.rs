@@ -1,10 +1,4 @@
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub struct Span {
-    pub start: usize,
-    pub end: usize,
-    pub line: usize,
-    pub column: usize,
-}
+pub use adamantium_lexer::Span;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Identifier {
