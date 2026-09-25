@@ -15,6 +15,7 @@
 - [Memory](language/memory.md)
 - [Errors](language/errors.md)
 - [Professional Mode](language/professional.md)
+- [Decorators](language/decorators.md)
 
 ## Compiler
 

@@ -474,7 +474,7 @@ fn reports_an_unterminated_multiline_comment_with_its_full_span() {
 
 #[test]
 fn recovering_lexer_reports_multiple_errors_and_keeps_valid_tokens() {
-    let source = "@ var first=1; # \"bad\\q\" var second=2; 123abc";
+    let source = "@ var first=1; ~ \"bad\\q\" var second=2; 123abc";
     let output = lex_recovering(source);
 
     assert_eq!(output.errors.len(), 4);
@@ -484,7 +484,7 @@ fn recovering_lexer_reports_multiple_errors_and_keeps_valid_tokens() {
     ));
     assert!(matches!(
         output.errors[1],
-        LexError::UnexpectedCharacter { character: '#', .. }
+        LexError::UnexpectedCharacter { character: '~', .. }
     ));
     assert!(matches!(
         output.errors[2],
@@ -613,4 +613,15 @@ fn lexes_literals_comments_and_reports_errors() {
             .message()
             .contains("unsupported")
     );
+}
+
+#[test]
+fn lexes_decorator_markers_as_punctuation() {
+    let tokens = lex("#[log] #[!trace]").unwrap();
+    assert_eq!(tokens[0].kind, TokenKind::Hash);
+    assert_eq!(tokens[1].kind, TokenKind::LeftBracket);
+    assert_eq!(tokens[2].kind, TokenKind::Identifier);
+    assert_eq!(tokens[3].kind, TokenKind::RightBracket);
+    assert_eq!(tokens[4].kind, TokenKind::Hash);
+    assert_eq!(tokens[6].kind, TokenKind::Bang);
 }

@@ -751,14 +751,14 @@ fun test_add() {
 }
 ```
 
-* [ ] Implement decorator syntax
-* [ ] Implement function decorators
-* [ ] Implement multiple decorators
-* [ ] Implement decorator execution
-* [ ] Implement decorators accepting functions
-* [ ] Implement class decorators
-* [ ] Apply class decorators to methods
-* [ ] Implement decorator exclusion
+* [x] Implement decorator syntax
+* [x] Implement function decorators
+* [x] Implement multiple decorators
+* [x] Implement decorator execution
+* [x] Implement decorators accepting functions
+* [x] Implement class decorators
+* [x] Apply class decorators to methods
+* [x] Implement decorator exclusion
 
 Example:
 

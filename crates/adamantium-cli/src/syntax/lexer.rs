@@ -114,7 +114,7 @@ pub(super) fn lex(source: &str) -> Result<Vec<(Token, Position)>, String> {
                 }
             }
             Token::String(value)
-        } else if "(){}.;=,:+-*/%[]!<>|&$".contains(c) {
+        } else if "(){}.;=,:+-*/%[]!<>|&$#".contains(c) {
             Token::Symbol(c)
         } else {
             return Err(position.error(format!("unexpected character {c:?}")));

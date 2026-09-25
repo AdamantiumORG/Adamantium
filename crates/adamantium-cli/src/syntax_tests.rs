@@ -1103,3 +1103,79 @@ fn lexical_shadowing_respects_other_symbol_namespaces() {
         parse("fun work() result:None {} fun main() { var work=1; work(); }").unwrap_err();
     assert!(function_shadow.contains("variable 'work' is not callable"));
 }
+
+#[test]
+fn decorators_execute_in_order_and_apply_to_class_methods() {
+    let program = parse(
+        r#"
+        fun log() result:None {}
+        fun value() result:int { result=7; }
+        fun capture(value:int) result:None {}
+        #[log]
+        #[capture(value)]
+        fun decorated() result:None {}
+        #[log]
+        class Worker() {
+            fun __new__() {}
+            pub fun work() result:None {}
+            #[!log]
+            pub fun quiet() result:None {}
+        }
+        fun main() {}
+        "#,
+    )
+    .unwrap();
+
+    let decorated = program
+        .functions
+        .iter()
+        .find(|function| function.name == "decorated")
+        .unwrap();
+    assert!(matches!(
+        &decorated.statements[0],
+        Statement::Call(Call { name, arguments, .. }) if name == "log" && arguments.is_empty()
+    ));
+    assert!(matches!(
+        &decorated.statements[1],
+        Statement::Call(Call { name, arguments, .. })
+            if name == "capture"
+                && matches!(&arguments[..], [Expr::Call(Call { name, arguments, .. })] if name == "value" && arguments.is_empty())
+    ));
+
+    let constructor = program
+        .functions
+        .iter()
+        .find(|function| function.name == "Worker____new__")
+        .unwrap();
+    assert!(matches!(
+        &constructor.statements[0],
+        Statement::Call(Call { name, .. }) if name == "log"
+    ));
+    let quiet = program
+        .functions
+        .iter()
+        .find(|function| function.name == "Worker__quiet")
+        .unwrap();
+    assert!(
+        !quiet.statements.iter().any(
+            |statement| matches!(statement, Statement::Call(Call { name, .. }) if name == "log")
+        )
+    );
+}
+
+#[test]
+fn decorators_report_invalid_targets_exclusions_and_signatures() {
+    for source in [
+        "#[missing] fun main() {}",
+        "#[!log] fun main() {} fun log() result:None {}",
+        "#[log] enum State { ready } fun log() result:None {} fun main() {}",
+        "fun log(value:int) result:None {} #[log] fun main() {}",
+        "fun log() result:None {} #[log] #[log] fun main() {}",
+        "fun log() result:None {} #[log] class Item() { #[log] fun __new__() {} } fun main() {}",
+    ] {
+        assert!(
+            parse(source).is_err(),
+            "accepted invalid decorators: {source}"
+        );
+    }
+}

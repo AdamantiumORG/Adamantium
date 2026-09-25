@@ -115,6 +115,10 @@ may improve without a language-version change.
 filtering, result status, and the `adamantium test` command family. Tests execute
 with the same language and runtime semantics as ordinary project functions.
 
+[Decorators](decorators.md) define function entry hooks, their top-to-bottom
+execution order, callback arguments, class inheritance, and method exclusions.
+Decorator calls use the same name, arity, and type checks as ordinary calls.
+
 ## Change process
 
 Every proposed language change must include parser, semantic, code-generation,

@@ -131,6 +131,7 @@ pub enum TokenKind {
     Ampersand,
     LogicalAnd,
     Dollar,
+    Hash,
     DotDot,
     DoubleColon,
     LineComment,
@@ -622,6 +623,7 @@ fn symbol(character: char) -> Option<TokenKind> {
         '|' => TokenKind::Pipe,
         '&' => TokenKind::Ampersand,
         '$' => TokenKind::Dollar,
+        '#' => TokenKind::Hash,
         _ => return None,
     })
 }

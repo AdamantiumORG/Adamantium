@@ -52,6 +52,13 @@ struct TraitMethod {
 struct TraitDefinition {
     methods: Vec<TraitMethod>,
 }
+#[derive(Clone, Debug)]
+struct Decorator {
+    name: String,
+    arguments: Vec<String>,
+    excluded: bool,
+    position: Position,
+}
 struct Parser {
     professional: bool,
     tokens: Vec<(Token, Position)>,
@@ -1632,10 +1639,51 @@ impl Parser {
             _ => return Err(position.error("expected a control-flow statement")),
         })
     }
-    fn function(&mut self) -> Result<Function, String> {
-        self.function_owned(None)
+    fn decorators(&mut self) -> Result<Vec<Decorator>, String> {
+        let mut decorators = Vec::new();
+        while self.peek() == &Token::Symbol('#') {
+            let position = self.position();
+            self.symbol('#')?;
+            self.symbol('[')?;
+            let excluded = self.take(Token::Symbol('!'));
+            let name = self.name()?;
+            let mut arguments = Vec::new();
+            if self.take(Token::Symbol('(')) && !self.take(Token::Symbol(')')) {
+                loop {
+                    arguments.push(self.name()?);
+                    if self.take(Token::Symbol(')')) {
+                        break;
+                    }
+                    self.symbol(',')?;
+                }
+            }
+            self.symbol(']')?;
+            if excluded && !arguments.is_empty() {
+                return Err(position.error("decorator exclusion cannot have arguments"));
+            }
+            if decorators
+                .iter()
+                .any(|decorator: &Decorator| decorator.name == name)
+            {
+                return Err(position.error(format!("decorator '{name}' is specified twice")));
+            }
+            decorators.push(Decorator {
+                name,
+                arguments,
+                excluded,
+                position,
+            });
+        }
+        Ok(decorators)
     }
-    fn function_owned(&mut self, owner: Option<(String, u32)>) -> Result<Function, String> {
+    fn function(&mut self, decorators: &[Decorator]) -> Result<Function, String> {
+        self.function_owned(None, decorators)
+    }
+    fn function_owned(
+        &mut self,
+        owner: Option<(String, u32)>,
+        decorators: &[Decorator],
+    ) -> Result<Function, String> {
         self.bindings.clear();
         self.removed_variables.clear();
         self.out_of_scope_variables.clear();
@@ -1747,6 +1795,25 @@ impl Parser {
         self.symbol('{')?;
         let mut statements = Vec::new();
         let mut positions = Vec::new();
+        for decorator in decorators {
+            let arguments = decorator
+                .arguments
+                .iter()
+                .map(|name| {
+                    Expr::Call(Call {
+                        name: name.clone(),
+                        arguments: Vec::new(),
+                        position: decorator.position,
+                    })
+                })
+                .collect();
+            statements.push(Statement::Call(Call {
+                name: decorator.name.clone(),
+                arguments,
+                position: decorator.position,
+            }));
+            positions.push(decorator.position);
+        }
         if let Some(slot) = result
             && self.types[slot] == Some(Type::None)
         {
@@ -1893,7 +1960,7 @@ impl Parser {
             .insert(name.clone(), TraitDefinition { methods });
         Ok(name)
     }
-    fn class_declaration(&mut self) -> Result<Vec<Function>, String> {
+    fn class_declaration(&mut self, decorators: &[Decorator]) -> Result<Vec<Function>, String> {
         self.word("class")?;
         let position = self.position();
         let name = self.name()?;
@@ -1993,6 +2060,32 @@ impl Parser {
         let mut methods = Vec::new();
         let mut has_constructor = false;
         while self.peek() != &Token::Symbol('}') {
+            let method_decorators = self.decorators()?;
+            let excluded = method_decorators
+                .iter()
+                .filter(|decorator| decorator.excluded)
+                .map(|decorator| decorator.name.as_str())
+                .collect::<HashSet<_>>();
+            let mut effective_decorators = decorators
+                .iter()
+                .filter(|decorator| !excluded.contains(decorator.name.as_str()))
+                .cloned()
+                .collect::<Vec<_>>();
+            for decorator in method_decorators
+                .into_iter()
+                .filter(|decorator| !decorator.excluded)
+            {
+                if effective_decorators
+                    .iter()
+                    .any(|current| current.name == decorator.name)
+                {
+                    return Err(decorator.position.error(format!(
+                        "decorator '{}' is already inherited from the class",
+                        decorator.name
+                    )));
+                }
+                effective_decorators.push(decorator);
+            }
             let public = self.take(Token::Word("pub".into()));
             if !public {
                 self.take(Token::Word("priv".into()));
@@ -2024,7 +2117,7 @@ impl Parser {
             if method_name == "__new__" {
                 has_constructor = true;
             }
-            let function = self.function_owned(Some((name.clone(), id)))?;
+            let function = self.function_owned(Some((name.clone(), id)), &effective_decorators)?;
             methods.push(ClassMethod {
                 name: method_name,
                 function: function.name.clone(),
@@ -2487,7 +2580,16 @@ fn parse_tokens(tokens: Vec<(Token, Position)>, professional: bool) -> Result<Pr
     while parser.peek() != &Token::End {
         parser.reject_import()?;
         let position = parser.position();
+        let decorators = parser.decorators()?;
+        if decorators.iter().any(|decorator| decorator.excluded) {
+            return Err(
+                position.error("decorator exclusion is valid only on methods of a decorated class")
+            );
+        }
         if parser.peek() == &Token::Word("trait".into()) {
+            if !decorators.is_empty() {
+                return Err(position.error("traits cannot be decorated"));
+            }
             let name = parser.trait_declaration()?;
             if signatures.contains_key(&name) {
                 return Err(position.error(format!("'{name}' is already declared as a function")));
@@ -2504,6 +2606,9 @@ fn parse_tokens(tokens: Vec<(Token, Position)>, professional: bool) -> Result<Pr
             }
         }
         if parser.peek() == &Token::Word("define".into()) {
+            if !decorators.is_empty() {
+                return Err(position.error("type aliases cannot be decorated"));
+            }
             let name = parser.type_alias_declaration()?;
             if signatures.contains_key(&name) {
                 return Err(position.error(format!("'{name}' is already declared as a function")));
@@ -2511,6 +2616,9 @@ fn parse_tokens(tokens: Vec<(Token, Position)>, professional: bool) -> Result<Pr
             continue;
         }
         if parser.peek() == &Token::Word("enum".into()) {
+            if !decorators.is_empty() {
+                return Err(position.error("enums cannot be decorated"));
+            }
             let name = parser.enum_declaration()?;
             if signatures.contains_key(&name) {
                 return Err(position.error(format!("'{name}' is already declared as a function")));
@@ -2528,7 +2636,7 @@ fn parse_tokens(tokens: Vec<(Token, Position)>, professional: bool) -> Result<Pr
                     position.error(format!("'{class_name}' is already declared as a function"))
                 );
             }
-            let methods = parser.class_declaration()?;
+            let methods = parser.class_declaration(&decorators)?;
             for method in methods {
                 if signatures
                     .insert(
@@ -2550,7 +2658,7 @@ fn parse_tokens(tokens: Vec<(Token, Position)>, professional: bool) -> Result<Pr
             }
             continue;
         }
-        let function = parser.function()?;
+        let function = parser.function(&decorators)?;
         if parser.traits.contains_key(&function.name) {
             return Err(position.error(format!(
                 "'{}' is already declared as a trait",

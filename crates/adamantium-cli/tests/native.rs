@@ -1278,3 +1278,40 @@ fn native_empty_function_and_large_stack_frame() {
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(output.stdout, b"699\r\n");
 }
+
+#[test]
+#[ignore = "requires NASM and an LLVM Windows linker"]
+fn native_decorators_execute_and_class_exclusions_apply() {
+    let source = r#"
+        fun log() result:None { print.sameline("L"); }
+        fun value() result:int { result=7; }
+        fun capture(value:int) result:None { print.sameline(value); }
+
+        #[log]
+        #[capture(value)]
+        fun decorated() result:None { print.sameline("T"); }
+
+        #[log]
+        class Worker() {
+            fun __new__() {}
+            pub fun work() result:None { print.sameline("W"); }
+            #[!log]
+            pub fun quiet() result:None { print.sameline("Q"); }
+        }
+
+        fun main() {
+            decorated();
+            var worker=Worker();
+            worker.work();
+            worker.quiet();
+        }
+    "#;
+    let output = Project::new(source).run();
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(output.stdout, b"L7TLLWQ");
+}
