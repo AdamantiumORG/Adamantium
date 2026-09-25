@@ -147,8 +147,22 @@ where
 {
     fn expression(&mut self, minimum_precedence: u8) -> Result<Expression, ParseError> {
         let mut left = self.prefix()?;
-        while let Some((operator, left_binding_power, right_binding_power)) = self.infix_operator()
-        {
+        loop {
+            if POSTFIX_BINDING_POWER >= minimum_precedence
+                && let Some(parselet) =
+                    postfix_parselet(self.tokens.peek().map(|token| &token.kind))
+            {
+                left = self.postfix(left, parselet)?;
+                continue;
+            }
+            let Some(parselet) = infix_parselet(self.tokens.peek().map(|token| &token.kind)) else {
+                break;
+            };
+            let InfixParselet {
+                operator,
+                left_binding_power,
+                right_binding_power,
+            } = parselet;
             if left_binding_power < minimum_precedence {
                 break;
             }
@@ -170,13 +184,7 @@ where
     }
 
     fn prefix(&mut self) -> Result<Expression, ParseError> {
-        let unary_operator = match self.tokens.peek().map(|token| &token.kind) {
-            Some(TokenKind::Minus) => Some(UnaryOperator::Negate),
-            Some(TokenKind::Bang | TokenKind::Keyword(adamantium_lexer::Keyword::Not)) => {
-                Some(UnaryOperator::Not)
-            }
-            _ => None,
-        };
+        let unary_operator = prefix_parselet(self.tokens.peek().map(|token| &token.kind));
         if let Some(unary_operator) = unary_operator {
             let operator = self.tokens.advance().ok_or_else(|| ParseError {
                 message: "expected prefix operator".into(),
@@ -194,6 +202,79 @@ where
             });
         }
         self.primary()
+    }
+
+    fn postfix(
+        &mut self,
+        left: Expression,
+        parselet: PostfixParselet,
+    ) -> Result<Expression, ParseError> {
+        let start = left.span().start;
+        match parselet {
+            PostfixParselet::Call => {
+                self.tokens.advance();
+                let mut arguments = Vec::new();
+                if let Some(closing) = self.tokens.take(&TokenKind::RightParen) {
+                    return Ok(Expression::Call {
+                        callee: Box::new(left),
+                        arguments,
+                        span: Span {
+                            start,
+                            end: closing.span.end,
+                        },
+                    });
+                }
+                loop {
+                    arguments.push(self.expression(0)?);
+                    if self.tokens.take(&TokenKind::Comma).is_none() {
+                        break;
+                    }
+                }
+                let closing = self
+                    .tokens
+                    .expect(&TokenKind::RightParen, "expected ')' after arguments")?;
+                Ok(Expression::Call {
+                    callee: Box::new(left),
+                    arguments,
+                    span: Span {
+                        start,
+                        end: closing.span.end,
+                    },
+                })
+            }
+            PostfixParselet::Index => {
+                self.tokens.advance();
+                let index = self.expression(0)?;
+                let closing = self
+                    .tokens
+                    .expect(&TokenKind::RightBracket, "expected ']' after index")?;
+                Ok(Expression::Index {
+                    target: Box::new(left),
+                    index: Box::new(index),
+                    span: Span {
+                        start,
+                        end: closing.span.end,
+                    },
+                })
+            }
+            PostfixParselet::Member => {
+                self.tokens.advance();
+                let member = self
+                    .tokens
+                    .expect(&TokenKind::Identifier, "expected member name after '.'")?;
+                Ok(Expression::Member {
+                    target: Box::new(left),
+                    member: Identifier::new(
+                        self.source.text(member.span).unwrap_or_default(),
+                        member.span,
+                    ),
+                    span: Span {
+                        start,
+                        end: member.span.end,
+                    },
+                })
+            }
+        }
     }
 
     fn primary(&mut self) -> Result<Expression, ParseError> {
@@ -223,35 +304,6 @@ where
         }
     }
 
-    fn infix_operator(&mut self) -> Option<(BinaryOperator, u8, u8)> {
-        Some(match &self.tokens.peek()?.kind {
-            TokenKind::Equals => (BinaryOperator::Assign, 1, 1),
-            TokenKind::PlusEqual => (BinaryOperator::AddAssign, 1, 1),
-            TokenKind::MinusEqual => (BinaryOperator::SubtractAssign, 1, 1),
-            TokenKind::StarEqual => (BinaryOperator::MultiplyAssign, 1, 1),
-            TokenKind::SlashEqual => (BinaryOperator::DivideAssign, 1, 1),
-            TokenKind::PercentEqual => (BinaryOperator::RemainderAssign, 1, 1),
-            TokenKind::LogicalOr | TokenKind::Keyword(adamantium_lexer::Keyword::Or) => {
-                (BinaryOperator::LogicalOr, 2, 3)
-            }
-            TokenKind::LogicalAnd | TokenKind::Keyword(adamantium_lexer::Keyword::And) => {
-                (BinaryOperator::LogicalAnd, 3, 4)
-            }
-            TokenKind::EqualEqual => (BinaryOperator::Equal, 4, 5),
-            TokenKind::NotEqual => (BinaryOperator::NotEqual, 4, 5),
-            TokenKind::Less => (BinaryOperator::Less, 5, 6),
-            TokenKind::LessEqual => (BinaryOperator::LessEqual, 5, 6),
-            TokenKind::Greater => (BinaryOperator::Greater, 5, 6),
-            TokenKind::GreaterEqual => (BinaryOperator::GreaterEqual, 5, 6),
-            TokenKind::Plus => (BinaryOperator::Add, 6, 7),
-            TokenKind::Minus => (BinaryOperator::Subtract, 6, 7),
-            TokenKind::Star => (BinaryOperator::Multiply, 7, 8),
-            TokenKind::Slash => (BinaryOperator::Divide, 7, 8),
-            TokenKind::Percent => (BinaryOperator::Remainder, 7, 8),
-            _ => return None,
-        })
-    }
-
     fn error(&mut self, message: impl Into<String>) -> ParseError {
         ParseError {
             message: message.into(),
@@ -261,4 +313,73 @@ where
                 .map_or_else(Span::default, |token| token.span),
         }
     }
+}
+
+const POSTFIX_BINDING_POWER: u8 = 9;
+
+#[derive(Clone, Copy)]
+enum PostfixParselet {
+    Call,
+    Index,
+    Member,
+}
+
+#[derive(Clone, Copy)]
+struct InfixParselet {
+    operator: BinaryOperator,
+    left_binding_power: u8,
+    right_binding_power: u8,
+}
+
+fn prefix_parselet(kind: Option<&TokenKind>) -> Option<UnaryOperator> {
+    match kind? {
+        TokenKind::Minus => Some(UnaryOperator::Negate),
+        TokenKind::Bang | TokenKind::Keyword(adamantium_lexer::Keyword::Not) => {
+            Some(UnaryOperator::Not)
+        }
+        _ => None,
+    }
+}
+
+fn postfix_parselet(kind: Option<&TokenKind>) -> Option<PostfixParselet> {
+    match kind? {
+        TokenKind::LeftParen => Some(PostfixParselet::Call),
+        TokenKind::LeftBracket => Some(PostfixParselet::Index),
+        TokenKind::Dot => Some(PostfixParselet::Member),
+        _ => None,
+    }
+}
+
+fn infix_parselet(kind: Option<&TokenKind>) -> Option<InfixParselet> {
+    let (operator, left_binding_power, right_binding_power) = match kind? {
+        TokenKind::Equals => (BinaryOperator::Assign, 1, 1),
+        TokenKind::PlusEqual => (BinaryOperator::AddAssign, 1, 1),
+        TokenKind::MinusEqual => (BinaryOperator::SubtractAssign, 1, 1),
+        TokenKind::StarEqual => (BinaryOperator::MultiplyAssign, 1, 1),
+        TokenKind::SlashEqual => (BinaryOperator::DivideAssign, 1, 1),
+        TokenKind::PercentEqual => (BinaryOperator::RemainderAssign, 1, 1),
+        TokenKind::LogicalOr | TokenKind::Keyword(adamantium_lexer::Keyword::Or) => {
+            (BinaryOperator::LogicalOr, 2, 3)
+        }
+        TokenKind::LogicalAnd | TokenKind::Keyword(adamantium_lexer::Keyword::And) => {
+            (BinaryOperator::LogicalAnd, 3, 4)
+        }
+        TokenKind::EqualEqual => (BinaryOperator::Equal, 4, 5),
+        TokenKind::NotEqual => (BinaryOperator::NotEqual, 4, 5),
+        TokenKind::Less => (BinaryOperator::Less, 5, 6),
+        TokenKind::LessEqual => (BinaryOperator::LessEqual, 5, 6),
+        TokenKind::Greater => (BinaryOperator::Greater, 5, 6),
+        TokenKind::GreaterEqual => (BinaryOperator::GreaterEqual, 5, 6),
+        TokenKind::Plus => (BinaryOperator::Add, 6, 7),
+        TokenKind::Minus => (BinaryOperator::Subtract, 6, 7),
+        TokenKind::Star => (BinaryOperator::Multiply, 7, 8),
+        TokenKind::Slash => (BinaryOperator::Divide, 7, 8),
+        TokenKind::Percent => (BinaryOperator::Remainder, 7, 8),
+        _ => return None,
+    };
+    Some(InfixParselet {
+        operator,
+        left_binding_power,
+        right_binding_power,
+    })
 }

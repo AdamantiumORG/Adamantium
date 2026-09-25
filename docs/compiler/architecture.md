@@ -18,6 +18,13 @@ NASM and platform linker
 native executable
 ```
 
+Parsing uses recursive descent for declarations, functions, classes, traits,
+enums, and statements. Every expression is delegated to one Pratt parser with
+central prefix, infix, and postfix parselet definitions. Calls, indexing, and
+member access are postfix parselets; arithmetic, comparisons, logic, and
+assignment are infix parselets. This keeps precedence and associativity in one
+place as the operator set grows.
+
 `adamantium-cli` currently owns the mature parser, semantic checker, and NASM generator while their public crate APIs are stabilized. The checker lowers parsed syntax into `adamantium_ir::typed::Program<Type, Value>`. `adamantium-ir` owns the target-independent control-flow, expression, class, package-call, and operator representation. It has no dependency on the parser or a native backend.
 
 The existing NASM generator consumes this shared typed IR. A future LLVM ARM64 generator can consume the same IR without translating parser syntax or depending on x86-64 register conventions.

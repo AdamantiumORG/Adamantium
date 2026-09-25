@@ -56,6 +56,21 @@ pub enum Expression {
         operand: Box<Expression>,
         span: Span,
     },
+    Call {
+        callee: Box<Expression>,
+        arguments: Vec<Expression>,
+        span: Span,
+    },
+    Index {
+        target: Box<Expression>,
+        index: Box<Expression>,
+        span: Span,
+    },
+    Member {
+        target: Box<Expression>,
+        member: Identifier,
+        span: Span,
+    },
     Binary {
         operator: BinaryOperator,
         left: Box<Expression>,
@@ -68,9 +83,12 @@ impl Expression {
     pub fn span(&self) -> Span {
         match self {
             Self::Identifier(identifier) => identifier.span,
-            Self::Number { span, .. } | Self::Unary { span, .. } | Self::Binary { span, .. } => {
-                *span
-            }
+            Self::Number { span, .. }
+            | Self::Unary { span, .. }
+            | Self::Call { span, .. }
+            | Self::Index { span, .. }
+            | Self::Member { span, .. }
+            | Self::Binary { span, .. } => *span,
         }
     }
 }

@@ -218,3 +218,59 @@ fn pratt_parser_supports_symbolic_and_word_prefix_and_logical_operators() {
         ));
     }
 }
+
+#[test]
+fn pratt_parser_chains_postfix_calls_indexes_and_members() {
+    use adamantium_ast::Expression;
+
+    let source = "factory(1,2).items[0].name";
+    let tokens = adamantium_lexer::lex(source).unwrap();
+    let expression = adamantium_parser::parse_expression(source, &tokens).unwrap();
+    let Expression::Member {
+        target,
+        member,
+        span,
+    } = expression
+    else {
+        panic!("expected final member access");
+    };
+    assert_eq!(member.name, "name");
+    assert_eq!((span.start, span.end), (0, source.len() as u32));
+    let Expression::Index { target, index, .. } = *target else {
+        panic!("expected index before final member");
+    };
+    assert!(matches!(*index, Expression::Number { .. }));
+    let Expression::Member { target, member, .. } = *target else {
+        panic!("expected items member before index");
+    };
+    assert_eq!(member.name, "items");
+    assert!(matches!(
+        *target,
+        Expression::Call { arguments, .. } if arguments.len() == 2
+    ));
+}
+
+#[test]
+fn postfix_parselets_bind_more_tightly_than_infix_operators() {
+    use adamantium_ast::{BinaryOperator, Expression};
+
+    let source = "a+b(1)[0].value*c";
+    let tokens = adamantium_lexer::lex(source).unwrap();
+    let expression = adamantium_parser::parse_expression(source, &tokens).unwrap();
+    let Expression::Binary {
+        operator: BinaryOperator::Add,
+        right,
+        ..
+    } = expression
+    else {
+        panic!("expected addition at the root");
+    };
+    assert!(matches!(
+        *right,
+        Expression::Binary {
+            operator: BinaryOperator::Multiply,
+            left,
+            ..
+        } if matches!(*left, Expression::Member { .. })
+    ));
+}
