@@ -14,6 +14,7 @@ name = "adamantium-cli"
 version = "0.1.0"
 dependencies = [
  "adamantium-compiler",
+ "adamantium-diagnostics",
  "adamantium-ir",
  "adamantium-packages",
  "adamantium-project",

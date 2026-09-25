@@ -1295,8 +1295,13 @@ fn analyze_sources(
     let source_path = root.join("code/main.ad");
     let parsed = syntax::parse_modules_with_mode(sources, professional)
         .map_err(|e| format!("{}:{e}", source_path.display()))?;
-    let mut statements =
-        typed::check(&parsed).map_err(|e| format!("{}:{e}", source_path.display()))?;
+    let main_source = sources
+        .iter()
+        .find(|(name, _)| name.is_empty())
+        .map_or("", |(_, source)| source.as_str());
+    let mut statements = typed::check_diagnostic(&parsed, main_source).map_err(|diagnostic| {
+        diagnostics::render_diagnostic(&diagnostic, &source_path, main_source)
+    })?;
     statements.package_functions = bindings
         .into_iter()
         .map(|binding| (binding.canonical, binding.function))

@@ -135,6 +135,25 @@ fn checked(source: &str) -> Result<Program, String> {
 }
 
 #[test]
+fn exposes_every_type_error_through_the_common_diagnostic_model() {
+    let source = "fun main() { var value = 1; value = \"text\"; }";
+    let program = syntax::parse(source).unwrap();
+    let diagnostic = match super::check_diagnostic(&program, source) {
+        Ok(_) => panic!("invalid assignment passed type checking"),
+        Err(diagnostic) => diagnostic,
+    };
+
+    assert_eq!(
+        diagnostic.stage,
+        adamantium_diagnostics::Stage::TypeChecking
+    );
+    assert_eq!(diagnostic.severity, adamantium_diagnostics::Severity::Error);
+    assert_eq!(diagnostic.code, "E300");
+    assert!(diagnostic.message.contains("cannot assign or convert"));
+    assert!(diagnostic.help.is_some());
+}
+
+#[test]
 fn complete_example_project_stays_valid() {
     let syntax = syntax::parse_modules(&[
         (

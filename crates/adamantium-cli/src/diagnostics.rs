@@ -1,5 +1,6 @@
 use crate::syntax::{Call, Expr, Program, Statement};
 use std::collections::{HashMap, HashSet};
+use std::path::Path;
 
 const ERROR_SEPARATOR: &str = "\n\u{1e}\n";
 
@@ -16,6 +17,9 @@ pub fn render_errors(errors: &str) -> String {
 }
 
 fn render_error(error: &str) -> String {
+    if error.starts_with("error[") || error.starts_with("warning[") {
+        return error.to_owned();
+    }
     let (code, context) = classify(error);
     let mut rendered = format!("error[{code}]: {error}");
     if let Some((path, line, column, message)) = source_location(error) {
@@ -34,6 +38,85 @@ fn render_error(error: &str) -> String {
         rendered.push_str(&format!("\n   = help: {help}"));
     }
     rendered
+}
+
+pub fn render_diagnostic(
+    diagnostic: &adamantium_diagnostics::Diagnostic,
+    path: &Path,
+    source: &str,
+) -> String {
+    let level = match diagnostic.severity {
+        adamantium_diagnostics::Severity::Error => "error",
+        adamantium_diagnostics::Severity::Warning => "warning",
+    };
+    let mut rendered = format!("{level}[{}]: {}", diagnostic.code, diagnostic.message);
+    render_label(&mut rendered, path, source, &diagnostic.primary, true);
+    for label in &diagnostic.secondary {
+        render_label(&mut rendered, path, source, label, false);
+    }
+    rendered.push_str(&format!(
+        "\n   = context: {}",
+        diagnostic_stage_name(diagnostic.stage)
+    ));
+    for note in &diagnostic.notes {
+        rendered.push_str(&format!("\n   = note: {note}"));
+    }
+    if let Some(help) = &diagnostic.help {
+        rendered.push_str(&format!("\n   = help: {help}"));
+    }
+    rendered
+}
+
+fn diagnostic_stage_name(stage: adamantium_diagnostics::Stage) -> &'static str {
+    match stage {
+        adamantium_diagnostics::Stage::Lexing => "lexical analysis",
+        adamantium_diagnostics::Stage::Parsing => "syntax analysis",
+        adamantium_diagnostics::Stage::NameResolution => "name and access resolution",
+        adamantium_diagnostics::Stage::TypeChecking => "type checking",
+        adamantium_diagnostics::Stage::SemanticAnalysis => "semantic analysis",
+        adamantium_diagnostics::Stage::Project => "project configuration",
+        adamantium_diagnostics::Stage::Package => "package management",
+    }
+}
+
+fn render_label(
+    rendered: &mut String,
+    path: &Path,
+    source: &str,
+    label: &adamantium_diagnostics::Label,
+    primary: bool,
+) {
+    let Some((line, column, text, width)) = span_line(source, label.span) else {
+        return;
+    };
+    let marker = if primary { '^' } else { '-' };
+    rendered.push_str(&format!(
+        "\n  --> {}:{line}:{column}\n   |\n{line:>3} | {text}\n   | {}{}",
+        path.display(),
+        " ".repeat(column.saturating_sub(1)),
+        marker.to_string().repeat(width.max(1))
+    ));
+    if let Some(message) = &label.message {
+        rendered.push(' ');
+        rendered.push_str(message);
+    }
+}
+
+fn span_line(source: &str, span: adamantium_ir::Span) -> Option<(usize, usize, &str, usize)> {
+    let start = usize::try_from(span.start).ok()?.min(source.len());
+    let end = usize::try_from(span.end).ok()?.min(source.len());
+    if !source.is_char_boundary(start) || !source.is_char_boundary(end) {
+        return None;
+    }
+    let before = source.get(..start)?;
+    let line = before.bytes().filter(|byte| *byte == b'\n').count() + 1;
+    let line_start = before.rfind('\n').map_or(0, |offset| offset + 1);
+    let line_end = source[start..]
+        .find('\n')
+        .map_or(source.len(), |offset| start + offset);
+    let column = source.get(line_start..start)?.chars().count() + 1;
+    let width = source.get(start..end)?.chars().count();
+    Some((line, column, source.get(line_start..line_end)?, width))
 }
 
 fn classify(error: &str) -> (&'static str, &'static str) {
@@ -437,6 +520,30 @@ mod tests {
         assert!(rendered.contains("context: syntax analysis"));
         assert!(rendered.contains("help: add `;`"));
         std::fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn renders_structured_primary_secondary_note_and_help_fields() {
+        let source = "var value = \"text\";\n";
+        let diagnostic = adamantium_diagnostics::Diagnostic::at_stage(
+            adamantium_diagnostics::Stage::TypeChecking,
+            adamantium_diagnostics::Severity::Error,
+            "E300",
+            "mismatched types",
+            adamantium_ir::Span { start: 12, end: 18 },
+        )
+        .with_primary_message("expected i32, found string")
+        .with_secondary(adamantium_ir::Span { start: 4, end: 9 }, "declared here")
+        .with_note("variable types are fixed")
+        .with_help("convert the value before assigning it");
+        let rendered = render_diagnostic(&diagnostic, Path::new("main.ad"), source);
+
+        assert!(rendered.contains("error[E300]: mismatched types"));
+        assert!(rendered.contains("^^^^^^ expected i32, found string"));
+        assert!(rendered.contains("----- declared here"));
+        assert!(rendered.contains("note: variable types are fixed"));
+        assert!(rendered.contains("help: convert the value"));
+        assert_eq!(render_errors(&rendered), rendered);
     }
     fn analyze(source: &str) -> Vec<String> {
         let program = crate::syntax::parse(source).unwrap();

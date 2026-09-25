@@ -2114,9 +2114,9 @@ current item is blocked.
 * [x] Identify lexer, parser, name, type and semantic diagnostic stages
 * [x] Connect lexer and parser errors to the common diagnostic model
 * [x] Connect name-resolution and semantic errors to the common diagnostic model
-* [ ] Connect every mature type-checker error to the common diagnostic model
-* [ ] Render secondary labels, notes and help consistently in the CLI
-* [ ] Add parser recovery regression and fuzz tests
+* [x] Connect every mature type-checker error to the common diagnostic model
+* [x] Render secondary labels, notes and help consistently in the CLI
+* [x] Add parser recovery regression and fuzz tests
 
 ## Later feature backlog
 

@@ -99,6 +99,55 @@ fn recovery_synchronizes_at_closing_braces_and_reaches_later_statements() {
 }
 
 #[test]
+fn recovery_regression_never_repeats_an_error_at_one_token() {
+    for source in [
+        "=;=;=;",
+        "fun main(){var a=;var b=;}",
+        "value + } value * ;",
+        "var a = ; } } var b = ;",
+    ] {
+        let tokens = adamantium_lexer::lex(source).unwrap();
+        let output = adamantium_parser::parse_recovering(source, &tokens);
+        assert!(
+            output.errors.len() <= tokens.len(),
+            "recovery stalled for {source:?}"
+        );
+        assert!(
+            output
+                .errors
+                .windows(2)
+                .all(|errors| errors[0].span != errors[1].span)
+        );
+    }
+}
+
+#[test]
+fn randomized_utf8_never_panics_parser_recovery() {
+    let alphabet = [
+        'a', '1', '=', '+', ';', '{', '}', '(', ')', ' ', '\n', 'ż', '🦀',
+    ];
+    let mut state = 0x5eed_u64;
+    for _ in 0..2_000 {
+        let length = (next_random(&mut state) % 96) as usize;
+        let source = (0..length)
+            .map(|_| alphabet[(next_random(&mut state) as usize) % alphabet.len()])
+            .collect::<String>();
+        let lexed = adamantium_lexer::lex_recovering(&source);
+        let result = std::panic::catch_unwind(|| {
+            adamantium_parser::parse_recovering(&source, &lexed.tokens)
+        });
+        assert!(result.is_ok(), "parser recovery panicked for {source:?}");
+    }
+}
+
+fn next_random(state: &mut u64) -> u64 {
+    *state ^= *state << 13;
+    *state ^= *state >> 7;
+    *state ^= *state << 17;
+    *state
+}
+
+#[test]
 fn invalid_characters_remain_lexer_errors() {
     let error = adamantium_lexer::lex("var x = @;").unwrap_err();
     assert!(matches!(

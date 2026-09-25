@@ -16,6 +16,67 @@ pub type PackageFunction = adamantium_ir::typed::PackageFunction<Type>;
 pub type ClassInfo = adamantium_ir::typed::Class<Type>;
 pub type ClassFieldInfo = adamantium_ir::typed::ClassField<Type>;
 
+pub fn check_diagnostic(
+    program: &syntax::Program,
+    source: &str,
+) -> Result<Program, adamantium_diagnostics::Diagnostic> {
+    check(program).map_err(|error| type_diagnostic(source, &error))
+}
+
+fn type_diagnostic(source: &str, error: &str) -> adamantium_diagnostics::Diagnostic {
+    let (span, message) =
+        type_error_location(source, error).unwrap_or((adamantium_ir::Span::empty_at(0), error));
+    let mut diagnostic = adamantium_diagnostics::Diagnostic::at_stage(
+        adamantium_diagnostics::Stage::TypeChecking,
+        adamantium_diagnostics::Severity::Error,
+        "E300",
+        message,
+        span,
+    );
+    if message.contains("cannot assign or convert") {
+        diagnostic = diagnostic
+            .with_help("use a compatible value or an explicit supported `.as(Type)` conversion");
+    } else if message.contains("ambiguous List type") {
+        diagnostic = diagnostic.with_help("add an explicit element type to the empty List");
+    } else if message.contains("not supported") {
+        diagnostic = diagnostic.with_note("the operand types do not implement this operation");
+    }
+    diagnostic
+}
+
+fn type_error_location<'a>(source: &str, error: &'a str) -> Option<(adamantium_ir::Span, &'a str)> {
+    let (line, rest) = error.split_once(':')?;
+    let (column, message) = rest.split_once(':')?;
+    let line = line.parse::<usize>().ok()?;
+    let column = column.parse::<usize>().ok()?;
+    if line == 0 || column == 0 {
+        return None;
+    }
+    let line_start = source
+        .split_inclusive('\n')
+        .take(line - 1)
+        .map(str::len)
+        .sum::<usize>();
+    let line_text = source.get(line_start..)?.split('\n').next()?;
+    let column_offset = line_text
+        .char_indices()
+        .nth(column - 1)
+        .map_or(line_text.len(), |(offset, _)| offset);
+    let start = line_start.checked_add(column_offset)?;
+    let end = source
+        .get(start..)?
+        .chars()
+        .next()
+        .map_or(start, |character| start + character.len_utf8());
+    Some((
+        adamantium_ir::Span {
+            start: u32::try_from(start).ok()?,
+            end: u32::try_from(end).ok()?,
+        },
+        message.trim(),
+    ))
+}
+
 impl From<Operator> for adamantium_ir::typed::ArithmeticOperator {
     fn from(operator: Operator) -> Self {
         match operator {
