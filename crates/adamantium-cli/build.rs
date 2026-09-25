@@ -9,7 +9,13 @@ fn main() {
     println!("cargo:rerun-if-changed=../adamantium-runtime/Cargo.toml");
     let out = PathBuf::from(env::var_os("OUT_DIR").unwrap());
     let target = env::var("TARGET").unwrap();
-    if target != "x86_64-pc-windows-msvc" && target != "x86_64-unknown-linux-gnu" {
+    if !matches!(
+        target.as_str(),
+        "x86_64-pc-windows-msvc"
+            | "x86_64-unknown-linux-gnu"
+            | "aarch64-pc-windows-msvc"
+            | "aarch64-unknown-linux-gnu"
+    ) {
         fs::write(out.join("runtime.lib"), []).unwrap();
         fs::write(out.join("runtime-libraries.txt"), "").unwrap();
         fs::write(out.join("runtime-auxiliary-libraries.bin"), []).unwrap();
@@ -36,7 +42,7 @@ fn main() {
     let stderr = String::from_utf8_lossy(&result.stderr);
     assert!(result.status.success(), "runtime build failed:\n{stderr}");
     let libraries = libraries.expect("rustc did not report runtime system libraries");
-    let library = if target == "x86_64-pc-windows-msvc" {
+    let library = if target.ends_with("pc-windows-msvc") {
         "adamantium_runtime.lib"
     } else {
         "libadamantium_runtime.a"

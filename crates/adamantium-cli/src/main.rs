@@ -824,10 +824,10 @@ fn doctor(root: &Path) -> Result<ExitCode, String> {
     doctor_result(
         cfg!(all(
             any(target_os = "windows", target_os = "linux"),
-            target_arch = "x86_64"
+            any(target_arch = "x86_64", target_arch = "aarch64")
         )),
         format!("platform: {}-{}", env::consts::OS, env::consts::ARCH),
-        "use a supported Windows or Linux x86-64 build of Adamantium",
+        "use a supported Windows or Linux x86-64 or ARM64 build of Adamantium",
         &mut failures,
     );
     doctor_result(
@@ -946,10 +946,11 @@ fn linker_probe() -> (OsString, Vec<&'static str>) {
 }
 
 fn windows_linker() -> Option<PathBuf> {
-    adamantium_linker::select_windows_linker(
+    adamantium_linker::select_windows_linker_for_architecture(
         env::var_os("ADAMANTIUM_LINKER").map(PathBuf::from),
         portable_tools_directory().as_deref(),
         rust_sysroot().as_deref(),
+        env::consts::ARCH,
     )
 }
 
@@ -1527,7 +1528,11 @@ fn link(target: &Path, _name: &str, obj: &Path, runtime: &Path, exe: &Path) -> R
     }
     let mut arguments = vec![
         OsString::from("/nologo"),
-        OsString::from("/machine:x64"),
+        OsString::from(if cfg!(target_arch = "aarch64") {
+            "/machine:arm64"
+        } else {
+            "/machine:x64"
+        }),
         OsString::from("/subsystem:console"),
         OsString::from("/dynamicbase"),
         OsString::from("/nxcompat"),

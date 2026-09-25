@@ -13,6 +13,15 @@ pub fn select_windows_linker(
     tools: Option<&Path>,
     rust_sysroot: Option<&Path>,
 ) -> Option<PathBuf> {
+    select_windows_linker_for_architecture(configured, tools, rust_sysroot, "x86_64")
+}
+
+pub fn select_windows_linker_for_architecture(
+    configured: Option<PathBuf>,
+    tools: Option<&Path>,
+    rust_sysroot: Option<&Path>,
+    architecture: &str,
+) -> Option<PathBuf> {
     if let Some(configured) = configured {
         return Some(configured);
     }
@@ -20,8 +29,11 @@ pub fn select_windows_linker(
     if bundled.as_ref().is_some_and(|path| path.is_file()) {
         return bundled;
     }
-    let rust_lld =
-        rust_sysroot.map(|root| root.join("lib/rustlib/x86_64-pc-windows-msvc/bin/rust-lld.exe"));
+    let rust_lld = rust_sysroot.map(|root| {
+        root.join(format!(
+            "lib/rustlib/{architecture}-pc-windows-msvc/bin/rust-lld.exe"
+        ))
+    });
     rust_lld.filter(|path| path.is_file())
 }
 

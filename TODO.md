@@ -1314,8 +1314,8 @@ Create clear compiler diagnostics.
 * [x] Decouple typed IR operators from parser syntax
 * [x] Keep the NASM backend consuming the shared typed IR
 * [x] Implement the LLVM ARM64 backend - target triples, data layouts, LLVM IR emission and object command
-* [ ] Generate Windows ARM64 native executables
-* [ ] Generate Linux ARM64 native executables
+* [x] Generate Windows ARM64 native executables - verified on a native Windows ARM64 runner
+* [x] Generate Linux ARM64 native executables - verified on a native Linux ARM64 runner
 * [ ] Create portable Windows ARM64 ZIP packaging
 * [ ] Create portable Linux ARM64 ZIP packaging
 * [x] Cross-platform standard library behavior

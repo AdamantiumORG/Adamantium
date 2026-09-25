@@ -30,6 +30,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Test ARM64 backend crates
         run: cargo test --locked -p adamantium-codegen -p adamantium-linker -p adamantium-stdlib
+      - name: Build the native ARM64 CLI and embedded runtime
+        run: cargo build --locked --release -p adamantium-cli
       - name: Emit LLVM ARM64 module
         run: cargo run --locked -p adamantium-codegen --example arm64-smoke -- ${{ matrix.target }} arm64-smoke.ll
       - name: Build native ARM64 executable

@@ -36,6 +36,24 @@ fn windows_linker_prefers_configuration_then_bundle_then_rust_lld() {
 }
 
 #[test]
+fn windows_arm64_linker_uses_the_matching_rust_toolchain() {
+    let root = std::env::temp_dir().join(format!("adamantium-linker-arm64-{}", std::process::id()));
+    let linker = root.join("lib/rustlib/aarch64-pc-windows-msvc/bin/rust-lld.exe");
+    std::fs::create_dir_all(linker.parent().unwrap()).unwrap();
+    std::fs::write(&linker, []).unwrap();
+    assert_eq!(
+        adamantium_linker::select_windows_linker_for_architecture(
+            None,
+            None,
+            Some(&root),
+            "aarch64"
+        ),
+        Some(linker)
+    );
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn selects_the_windows_flavor_for_generic_lld_drivers() {
     use std::path::Path;
 
