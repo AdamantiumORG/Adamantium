@@ -63,6 +63,42 @@ fn lexically_valid_missing_expression_is_a_parser_error() {
 }
 
 #[test]
+fn recovery_reports_independent_errors_after_statement_boundaries() {
+    let source = "var first = ; var valid = 1; var second += ;";
+    let tokens = adamantium_lexer::lex(source).unwrap();
+    let output = adamantium_parser::parse_recovering(source, &tokens);
+
+    assert_eq!(output.errors.len(), 2);
+    assert_eq!(output.errors[0].message, "expected expression after '='");
+    assert_eq!(output.errors[1].message, "expected expression after '+='");
+    assert!(
+        output
+            .file
+            .identifiers
+            .iter()
+            .any(|identifier| identifier.name == "valid")
+    );
+}
+
+#[test]
+fn recovery_synchronizes_at_closing_braces_and_reaches_later_statements() {
+    let source = "if condition { var nested = } var later = ;";
+    let tokens = adamantium_lexer::lex(source).unwrap();
+    let output = adamantium_parser::parse_recovering(source, &tokens);
+
+    assert_eq!(output.errors.len(), 2);
+    assert_eq!(
+        output.errors[0].span,
+        tokens
+            .iter()
+            .find(|token| token.kind == adamantium_lexer::TokenKind::RightBrace)
+            .unwrap()
+            .span
+    );
+    assert!(output.errors[1].span.start > output.errors[0].span.start);
+}
+
+#[test]
 fn invalid_characters_remain_lexer_errors() {
     let error = adamantium_lexer::lex("var x = @;").unwrap_err();
     assert!(matches!(

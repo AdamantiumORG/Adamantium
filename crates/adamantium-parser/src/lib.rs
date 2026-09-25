@@ -7,6 +7,12 @@ pub struct ParsedFile {
     pub identifiers: Vec<Identifier>,
 }
 
+#[derive(Debug)]
+pub struct ParseOutput {
+    pub file: ParsedFile,
+    pub errors: Vec<ParseError>,
+}
+
 pub fn parse(source: &str, tokens: &[Token]) -> ParsedFile {
     let source_file = SourceFile::new(source);
     ParsedFile {
@@ -25,28 +31,108 @@ pub fn parse(source: &str, tokens: &[Token]) -> ParsedFile {
 }
 
 pub fn parse_checked(source: &str, tokens: &[Token]) -> Result<ParsedFile, Vec<ParseError>> {
-    let errors = tokens
-        .windows(2)
-        .filter_map(|pair| match (&pair[0].kind, &pair[1].kind) {
-            (
-                TokenKind::Equals
-                | TokenKind::PlusEqual
-                | TokenKind::MinusEqual
-                | TokenKind::StarEqual
-                | TokenKind::SlashEqual
-                | TokenKind::PercentEqual,
-                TokenKind::Semicolon | TokenKind::Eof,
-            ) => Some(ParseError {
-                message: "expected expression after '='".into(),
-                span: pair[1].span,
-            }),
-            _ => None,
-        })
-        .collect::<Vec<_>>();
-    if errors.is_empty() {
-        Ok(parse(source, tokens))
+    let output = parse_recovering(source, tokens);
+    if output.errors.is_empty() {
+        Ok(output.file)
     } else {
-        Err(errors)
+        Err(output.errors)
+    }
+}
+
+pub fn parse_recovering(source: &str, tokens: &[Token]) -> ParseOutput {
+    let mut errors = Vec::new();
+    let mut cursor = 0;
+    while cursor < tokens.len() {
+        if needs_right_operand(&tokens[cursor].kind)
+            && tokens
+                .get(cursor + 1)
+                .is_none_or(|token| is_synchronization_point(&token.kind))
+        {
+            let span = tokens
+                .get(cursor + 1)
+                .map_or_else(|| SourceFile::new(source).end_span(), |token| token.span);
+            errors.push(ParseError {
+                message: format!(
+                    "expected expression after '{}'",
+                    operator_name(&tokens[cursor].kind)
+                ),
+                span,
+            });
+            cursor = synchronize(tokens, cursor + 1);
+        } else {
+            cursor += 1;
+        }
+    }
+    ParseOutput {
+        file: parse(source, tokens),
+        errors,
+    }
+}
+
+fn synchronize(tokens: &[Token], mut cursor: usize) -> usize {
+    while let Some(token) = tokens.get(cursor) {
+        cursor += 1;
+        if is_synchronization_point(&token.kind) {
+            break;
+        }
+    }
+    cursor
+}
+
+fn is_synchronization_point(kind: &TokenKind) -> bool {
+    matches!(
+        kind,
+        TokenKind::Semicolon | TokenKind::RightBrace | TokenKind::Eof
+    )
+}
+
+fn needs_right_operand(kind: &TokenKind) -> bool {
+    matches!(
+        kind,
+        TokenKind::Equals
+            | TokenKind::PlusEqual
+            | TokenKind::MinusEqual
+            | TokenKind::StarEqual
+            | TokenKind::SlashEqual
+            | TokenKind::PercentEqual
+            | TokenKind::LogicalOr
+            | TokenKind::LogicalAnd
+            | TokenKind::EqualEqual
+            | TokenKind::NotEqual
+            | TokenKind::Less
+            | TokenKind::LessEqual
+            | TokenKind::Greater
+            | TokenKind::GreaterEqual
+            | TokenKind::Plus
+            | TokenKind::Minus
+            | TokenKind::Star
+            | TokenKind::Slash
+            | TokenKind::Percent
+    )
+}
+
+fn operator_name(kind: &TokenKind) -> &'static str {
+    match kind {
+        TokenKind::Equals => "=",
+        TokenKind::PlusEqual => "+=",
+        TokenKind::MinusEqual => "-=",
+        TokenKind::StarEqual => "*=",
+        TokenKind::SlashEqual => "/=",
+        TokenKind::PercentEqual => "%=",
+        TokenKind::LogicalOr => "||",
+        TokenKind::LogicalAnd => "&&",
+        TokenKind::EqualEqual => "==",
+        TokenKind::NotEqual => "!=",
+        TokenKind::Less => "<",
+        TokenKind::LessEqual => "<=",
+        TokenKind::Greater => ">",
+        TokenKind::GreaterEqual => ">=",
+        TokenKind::Plus => "+",
+        TokenKind::Minus => "-",
+        TokenKind::Star => "*",
+        TokenKind::Slash => "/",
+        TokenKind::Percent => "%",
+        _ => "operator",
     }
 }
 

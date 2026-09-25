@@ -2093,7 +2093,7 @@ current item is blocked.
 
 * [x] Give the parser a token stream instead of raw source parsing
 * [x] Implement lookahead, advance, take and expect
-* [ ] Implement parser error recovery and synchronization points
+* [x] Implement parser error recovery and synchronization points - collect independent errors and resume at `;`, `}` or EOF
 * [x] Implement Pratt expression parsing
 * [x] Parse statements from tokens
 * [x] Parse declarations from tokens

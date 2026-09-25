@@ -55,3 +55,17 @@ fn keeps_lexer_and_parser_diagnostics_separate() {
     assert_eq!(syntax[0].message, "expected expression after '='");
     assert_eq!(syntax[0].stage, adamantium_diagnostics::Stage::Parsing);
 }
+
+#[test]
+fn parser_recovery_reports_multiple_independent_diagnostics() {
+    let diagnostics =
+        adamantium_compiler::architecture_smoke_test("var first = ; var valid = 1; var second = ;")
+            .unwrap_err();
+    assert_eq!(diagnostics.len(), 2);
+    assert!(
+        diagnostics
+            .iter()
+            .all(|diagnostic| diagnostic.stage == adamantium_diagnostics::Stage::Parsing)
+    );
+    assert!(diagnostics[1].span().start > diagnostics[0].span().start);
+}
