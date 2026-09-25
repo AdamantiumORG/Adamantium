@@ -24,3 +24,15 @@ pub fn select_windows_linker(
         rust_sysroot.map(|root| root.join("lib/rustlib/x86_64-pc-windows-msvc/bin/rust-lld.exe"));
     rust_lld.filter(|path| path.is_file())
 }
+
+pub fn windows_linker_driver_arguments(linker: &Path) -> &'static [&'static str] {
+    let name = linker
+        .file_stem()
+        .and_then(|name| name.to_str())
+        .unwrap_or_default();
+    if name.eq_ignore_ascii_case("rust-lld") || name.eq_ignore_ascii_case("lld") {
+        &["-flavor", "link"]
+    } else {
+        &[]
+    }
+}

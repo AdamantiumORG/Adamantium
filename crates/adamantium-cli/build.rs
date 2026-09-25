@@ -42,21 +42,21 @@ fn main() {
         "libadamantium_runtime.a"
     };
     fs::copy(
-        runtime_target.join(target).join("release").join(library),
+        runtime_target.join(&target).join("release").join(library),
         out.join("runtime.lib"),
     )
     .unwrap();
     fs::write(out.join("runtime-libraries.txt"), &libraries).unwrap();
-    embed_auxiliary_libraries(&out, &libraries);
+    embed_auxiliary_libraries(&out, &libraries, &target);
 }
 
-fn embed_auxiliary_libraries(out: &Path, libraries: &str) {
+fn embed_auxiliary_libraries(out: &Path, libraries: &str, target: &str) {
     let mut bundle = Vec::new();
     for name in libraries
         .split_whitespace()
         .filter(|name| name.starts_with("windows.") && name.ends_with(".lib"))
     {
-        let path = find_cargo_registry_file(name)
+        let path = find_cargo_registry_file(name, target)
             .unwrap_or_else(|| panic!("could not find Rust runtime import library {name}"));
         let bytes = fs::read(path).unwrap();
         let name = name.as_bytes();
@@ -68,7 +68,13 @@ fn embed_auxiliary_libraries(out: &Path, libraries: &str) {
     fs::write(out.join("runtime-auxiliary-libraries.bin"), bundle).unwrap();
 }
 
-fn find_cargo_registry_file(name: &str) -> Option<PathBuf> {
+fn find_cargo_registry_file(name: &str, target: &str) -> Option<PathBuf> {
+    let package_prefix = match target {
+        "x86_64-pc-windows-msvc" => "windows_x86_64_msvc-",
+        "aarch64-pc-windows-msvc" => "windows_aarch64_msvc-",
+        "i686-pc-windows-msvc" => "windows_i686_msvc-",
+        _ => return None,
+    };
     let cargo_home = env::var_os("CARGO_HOME")
         .map(PathBuf::from)
         .or_else(|| env::var_os("USERPROFILE").map(|home| PathBuf::from(home).join(".cargo")))
@@ -76,6 +82,13 @@ fn find_cargo_registry_file(name: &str) -> Option<PathBuf> {
     let sources = cargo_home.join("registry/src");
     for registry in fs::read_dir(sources).ok()?.flatten() {
         for package in fs::read_dir(registry.path()).ok()?.flatten() {
+            if !package
+                .file_name()
+                .to_string_lossy()
+                .starts_with(package_prefix)
+            {
+                continue;
+            }
             let candidate = package.path().join("lib").join(name);
             if candidate.is_file() {
                 return Some(candidate);

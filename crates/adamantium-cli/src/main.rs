@@ -928,7 +928,9 @@ fn nasm_command() -> OsString {
 fn linker_probe() -> (OsString, Vec<&'static str>) {
     if cfg!(windows) {
         let linker = windows_linker().unwrap_or_else(|| "lld-link.exe".into());
-        (linker.into_os_string(), vec!["/?"])
+        let mut arguments = adamantium_linker::windows_linker_driver_arguments(&linker).to_vec();
+        arguments.push("/?");
+        (linker.into_os_string(), arguments)
     } else {
         if let Some(linker) = env::var_os("ADAMANTIUM_LINKER") {
             return (linker, vec!["--version"]);
@@ -1554,7 +1556,11 @@ fn link(target: &Path, _name: &str, obj: &Path, runtime: &Path, exe: &Path) -> R
     let linker = windows_linker().ok_or(
         "could not find lld-link; use the Adamantium portable distribution or set ADAMANTIUM_LINKER",
     )?;
-    execute(Command::new(linker).args(&arguments), "LLVM Windows linker")
+    let mut command = Command::new(&linker);
+    command
+        .args(adamantium_linker::windows_linker_driver_arguments(&linker))
+        .args(&arguments);
+    execute(&mut command, "LLVM Windows linker")
 }
 
 fn linux_runtime_libraries(libraries: &str) -> Vec<&str> {

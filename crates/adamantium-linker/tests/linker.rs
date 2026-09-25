@@ -34,3 +34,20 @@ fn windows_linker_prefers_configuration_then_bundle_then_rust_lld() {
     );
     std::fs::remove_dir_all(root).unwrap();
 }
+
+#[test]
+fn selects_the_windows_flavor_for_generic_lld_drivers() {
+    use std::path::Path;
+
+    assert_eq!(
+        adamantium_linker::windows_linker_driver_arguments(Path::new("rust-lld.exe")),
+        ["-flavor", "link"]
+    );
+    assert_eq!(
+        adamantium_linker::windows_linker_driver_arguments(Path::new("lld.exe")),
+        ["-flavor", "link"]
+    );
+    assert!(
+        adamantium_linker::windows_linker_driver_arguments(Path::new("lld-link.exe")).is_empty()
+    );
+}
