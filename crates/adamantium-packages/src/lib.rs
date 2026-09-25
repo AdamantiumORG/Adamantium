@@ -389,6 +389,36 @@ pub fn generate_release(
     })
 }
 
-fn sha256(bytes: &[u8]) -> String {
+pub fn sha256(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
+}
+
+pub fn verify_checksum(checksums: &str, asset: &str, bytes: &[u8]) -> Result<(), String> {
+    if asset.is_empty() || asset.contains(['/', '\\']) {
+        return Err("checksum asset must be a file name".into());
+    }
+    let mut expected = None;
+    for (index, line) in checksums.lines().enumerate() {
+        if line.trim().is_empty() {
+            continue;
+        }
+        let Some((hash, name)) = line.split_once("  ") else {
+            return Err(format!("invalid checksum line {}", index + 1));
+        };
+        if hash.len() != 64 || !hash.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+            return Err(format!("invalid SHA-256 on checksum line {}", index + 1));
+        }
+        if name == asset && expected.replace(hash.to_ascii_lowercase()).is_some() {
+            return Err(format!("duplicate checksum for '{asset}'"));
+        }
+    }
+    let expected = expected.ok_or_else(|| format!("missing checksum for '{asset}'"))?;
+    let actual = sha256(bytes);
+    if actual == expected {
+        Ok(())
+    } else {
+        Err(format!(
+            "checksum mismatch for '{asset}': expected {expected}, got {actual}"
+        ))
+    }
 }

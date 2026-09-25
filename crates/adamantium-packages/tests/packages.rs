@@ -145,3 +145,25 @@ fn generates_reproducible_release_assets_and_metadata() {
     assert_eq!(metadata.format, 1);
     fs::remove_dir_all(root).unwrap();
 }
+
+#[test]
+fn verifies_release_checksums_strictly() {
+    let bytes = b"package bytes";
+    let hash = adamantium_packages::sha256(bytes);
+    let checksums = format!("{hash}  adamantium_packet.wasm\n");
+    adamantium_packages::verify_checksum(&checksums, "adamantium_packet.wasm", bytes).unwrap();
+
+    assert!(
+        adamantium_packages::verify_checksum(&checksums, "adamantium_packet.wasm", b"tampered")
+            .unwrap_err()
+            .contains("checksum mismatch")
+    );
+    assert!(
+        adamantium_packages::verify_checksum(&checksums, "adamantium_packet.toml", bytes)
+            .unwrap_err()
+            .contains("missing checksum")
+    );
+    assert!(
+        adamantium_packages::verify_checksum("bad line", "adamantium_packet.wasm", bytes).is_err()
+    );
+}

@@ -2,6 +2,8 @@ pub const MAGIC: &[u8; 4] = b"\0asm";
 
 pub const ABI: &str = "wasi-command-v1";
 pub const WASI_MODULE: &str = "wasi_snapshot_preview1";
+pub const MAX_MODULE_BYTES: usize = 16 * 1024 * 1024;
+pub const MAX_MEMORY_PAGES: u64 = 4096;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ModuleInfo {
@@ -17,6 +19,12 @@ pub fn is_module(bytes: &[u8]) -> bool {
 pub fn validate_package(bytes: &[u8]) -> Result<ModuleInfo, String> {
     use wasmparser::{Encoding, ExternalKind, Parser, Payload, TypeRef, Validator};
 
+    if bytes.len() > MAX_MODULE_BYTES {
+        return Err(format!(
+            "package module is {} bytes; the limit is {MAX_MODULE_BYTES} bytes",
+            bytes.len()
+        ));
+    }
     Validator::new()
         .validate_all(bytes)
         .map_err(|error| format!("invalid WebAssembly module: {error}"))?;
@@ -42,6 +50,16 @@ pub fn validate_package(bytes: &[u8]) -> Result<ModuleInfo, String> {
                             "WASM exception tags are not supported by the package ABI".into()
                         );
                     }
+                    if let TypeRef::Memory(memory) = import.ty {
+                        validate_memory(memory)?;
+                    }
+                }
+            }
+            Payload::MemorySection(section) => {
+                for memory in section {
+                    validate_memory(
+                        memory.map_err(|error| format!("invalid WASM memory: {error}"))?,
+                    )?;
                 }
             }
             Payload::ExportSection(section) => {
@@ -64,4 +82,23 @@ pub fn validate_package(bytes: &[u8]) -> Result<ModuleInfo, String> {
         exported_functions: functions,
         imports_wasi,
     })
+}
+
+fn validate_memory(memory: wasmparser::MemoryType) -> Result<(), String> {
+    if memory.memory64 {
+        return Err("memory64 is not supported by the package ABI".into());
+    }
+    if memory.initial > MAX_MEMORY_PAGES {
+        return Err(format!(
+            "package memory starts at {} pages; the limit is {MAX_MEMORY_PAGES}",
+            memory.initial
+        ));
+    }
+    match memory.maximum {
+        Some(maximum) if maximum <= MAX_MEMORY_PAGES => Ok(()),
+        Some(maximum) => Err(format!(
+            "package memory can grow to {maximum} pages; the limit is {MAX_MEMORY_PAGES}"
+        )),
+        None => Ok(()),
+    }
 }

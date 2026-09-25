@@ -36,3 +36,29 @@ fn rejects_non_wasi_import_namespaces() {
             .contains("only wasi_snapshot_preview1")
     );
 }
+
+#[test]
+fn enforces_package_memory_limits() {
+    let unbounded = wat::parse_str("(module (memory 1) (func (export \"_start\")))").unwrap();
+    validate_package(&unbounded).unwrap();
+
+    let oversized = wat::parse_str("(module (memory 1 4097) (func (export \"_start\")))").unwrap();
+    assert!(
+        validate_package(&oversized)
+            .unwrap_err()
+            .contains("4097 pages")
+    );
+
+    let bounded = wat::parse_str("(module (memory 1 4096) (func (export \"_start\")))").unwrap();
+    validate_package(&bounded).unwrap();
+}
+
+#[test]
+fn rejects_oversized_package_files_before_parsing() {
+    let bytes = vec![0; adamantium_wasm::MAX_MODULE_BYTES + 1];
+    assert!(
+        validate_package(&bytes)
+            .unwrap_err()
+            .contains("the limit is")
+    );
+}

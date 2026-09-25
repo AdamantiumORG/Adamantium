@@ -4,7 +4,7 @@ use std::cell::{Cell, RefCell};
 use std::ffi::{CStr, c_char};
 use std::io::Write;
 use types::{Type, Value};
-use wasmi::{Engine, Linker, Module, Store};
+use wasmi::{Config, Engine, Linker, Module, Store, StoreLimits, StoreLimitsBuilder};
 use wasmi_wasi::{
     WasiCtx, WasiCtxBuilder, add_to_linker, ambient_authority, wasi_common::pipe::WritePipe,
 };
@@ -12,6 +12,15 @@ use wasmi_wasi::{
 thread_local! {
     static TRY_DEPTH: Cell<usize> = const { Cell::new(0) };
     static LAST_ERROR: RefCell<Option<RuntimeError>> = const { RefCell::new(None) };
+}
+
+const PACKAGE_FUEL: u64 = 10_000_000;
+const MAX_PACKAGE_OUTPUT_BYTES: usize = 1024 * 1024;
+const MAX_PACKAGE_MEMORY_BYTES: usize = 256 * 1024 * 1024;
+
+struct PackageState {
+    wasi: WasiCtx,
+    limits: StoreLimits,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -643,13 +652,33 @@ pub unsafe extern "C" fn ad_package_call(request: *mut PackageCall) -> u32 {
                 .preopened_dir(directory, ".")
                 .map_err(|error| error.to_string())?;
         }
-        let engine = Engine::default();
+        let mut config = Config::default();
+        config.consume_fuel(true);
+        let engine = Engine::new(&config);
         let bytes = std::fs::read(&wasm).map_err(|error| error.to_string())?;
         adamantium_wasm::validate_package(&bytes)?;
         let module = Module::new(&engine, &bytes).map_err(|error| error.to_string())?;
-        let mut linker: Linker<WasiCtx> = Linker::new(&engine);
-        add_to_linker(&mut linker, |context| context).map_err(|error| error.to_string())?;
-        let mut store = Store::new(&engine, builder.build());
+        let mut linker: Linker<PackageState> = Linker::new(&engine);
+        add_to_linker(&mut linker, |context| &mut context.wasi)
+            .map_err(|error| error.to_string())?;
+        let limits = StoreLimitsBuilder::new()
+            .memory_size(MAX_PACKAGE_MEMORY_BYTES)
+            .memories(1)
+            .tables(8)
+            .instances(8)
+            .trap_on_grow_failure(true)
+            .build();
+        let mut store = Store::new(
+            &engine,
+            PackageState {
+                wasi: builder.build(),
+                limits,
+            },
+        );
+        store.limiter(|state| &mut state.limits);
+        store
+            .set_fuel(PACKAGE_FUEL)
+            .map_err(|error| format!("could not set package execution limit: {error}"))?;
         let execution = linker
             .instantiate_and_start(&mut store, &module)
             .and_then(|instance| {
@@ -677,6 +706,12 @@ pub unsafe extern "C" fn ad_package_call(request: *mut PackageCall) -> u32 {
             .try_into_inner()
             .map_err(|_| "could not read package stdout".to_owned())?
             .into_inner();
+        if stdout.len() > MAX_PACKAGE_OUTPUT_BYTES {
+            return Err(format!(
+                "package output is {} bytes; the limit is {MAX_PACKAGE_OUTPUT_BYTES} bytes",
+                stdout.len()
+            ));
+        }
         let result_type =
             Type::from_id(request.result_type).ok_or("invalid package result type")?;
         package_result(&stdout, result_type)
@@ -769,6 +804,39 @@ mod package_tests {
 
         assert_eq!(unsafe { ad_package_call(&mut request) }, 0);
         assert_eq!(request.output.lo as i64, 42);
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn stops_packages_that_exhaust_the_execution_budget() {
+        let directory =
+            std::env::temp_dir().join(format!("adamantium-wasm-fuel-{}", std::process::id()));
+        std::fs::create_dir_all(&directory).unwrap();
+        let path = directory.join("loop.wasm");
+        std::fs::write(
+            &path,
+            wat::parse_str(
+                r#"(module
+                    (func (export "_start")
+                        (loop $forever (br $forever))))"#,
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        let wasm = path.to_string_lossy();
+        let mut request = PackageCall {
+            wasm: text_value(&wasm),
+            command: text_value("loop"),
+            arguments: [Value::default(); 8],
+            types: [0; 8],
+            count: 0,
+            result_type: Type::None.id(),
+            filesystem: 0,
+            reserved: 0,
+            output: Value::default(),
+        };
+
+        assert_eq!(unsafe { ad_package_call(&mut request) }, 2);
         std::fs::remove_dir_all(directory).unwrap();
     }
 

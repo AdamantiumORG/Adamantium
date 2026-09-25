@@ -6,6 +6,11 @@ The supported ABI is `wasi-command-v1`. A package is a WebAssembly 1.0 core modu
 
 The module must export a function named `_start` with no parameters and no result. Adamantium validates the complete WebAssembly binary and required export before installation, project analysis, and execution.
 
+Package modules are limited to 16 MiB. WebAssembly memories must be 32-bit and
+each invocation may allocate at most 4096 pages (256 MiB). Every invocation has
+a fresh execution budget of 10,000,000 fuel units and may return at most 1 MiB
+on stdout. Exceeding a limit produces a package runtime error.
+
 ## Initialization and function discovery
 
 Adamantium creates a fresh WASI instance for every package call. Instantiation initializes the module's memory and globals. The runtime then calls `_start` once. Packages must not rely on state surviving between calls.

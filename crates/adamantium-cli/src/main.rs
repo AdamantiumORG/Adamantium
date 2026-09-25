@@ -1152,24 +1152,61 @@ fn install_packages(root: &Path) -> Result<(), String> {
         let cache = package_cache_directory(&root, &package)?;
         fs::create_dir_all(&cache)
             .map_err(|error| format!("could not create {}: {error}", cache.display()))?;
+        let tag = package_release_tag(&package.version);
+        let checksums_temporary = cache.join("SHA256SUMS.download");
+        let checksums_url = format!("{}/releases/download/{tag}/SHA256SUMS", package.source);
+        download_package_file(&downloader, &checksums_url, &checksums_temporary, &package)?;
+        let checksums = fs::read_to_string(&checksums_temporary)
+            .map_err(|error| format!("could not read package checksums: {error}"))?;
+        let manifest_path = cache.join(adamantium_packages::PACKAGE_MANIFEST);
+        let manifest_bytes = fs::read(&manifest_path)
+            .map_err(|error| format!("could not read {}: {error}", manifest_path.display()))?;
+        adamantium_packages::verify_checksum(
+            &checksums,
+            adamantium_packages::PACKAGE_MANIFEST,
+            &manifest_bytes,
+        )
+        .map_err(|error| format!("package '{}': {error}", package.name))?;
         let cached_wasm = cache.join("adamantium_packet.wasm");
-        if package.version == "nightly" || !valid_wasm_file(&cached_wasm) {
+        let cached_wasm_valid = fs::read(&cached_wasm).is_ok_and(|bytes| {
+            adamantium_wasm::validate_package(&bytes).is_ok()
+                && adamantium_packages::verify_checksum(
+                    &checksums,
+                    adamantium_packages::PACKAGE_WASM,
+                    &bytes,
+                )
+                .is_ok()
+        });
+        if package.version == "nightly" || !cached_wasm_valid {
             let temporary = cache.join("adamantium_packet.wasm.download");
-            let tag = package_release_tag(&package.version);
             let url = format!(
                 "{}/releases/download/{tag}/adamantium_packet.wasm",
                 package.source
             );
             download_package_file(&downloader, &url, &temporary, &package)?;
-            if !valid_wasm_file(&temporary) {
+            let bytes = fs::read(&temporary)
+                .map_err(|error| format!("could not read downloaded package: {error}"))?;
+            if adamantium_wasm::validate_package(&bytes).is_err() {
                 let _ = fs::remove_file(&temporary);
                 return Err(format!(
                     "package '{}' did not contain a valid WebAssembly binary",
                     package.name
                 ));
             }
+            if let Err(error) = adamantium_packages::verify_checksum(
+                &checksums,
+                adamantium_packages::PACKAGE_WASM,
+                &bytes,
+            ) {
+                let _ = fs::remove_file(&temporary);
+                return Err(format!("package '{}': {error}", package.name));
+            }
             replace_file(&temporary, &cached_wasm)?;
         }
+        replace_file(
+            &checksums_temporary,
+            &cache.join(adamantium_packages::PACKAGE_CHECKSUMS),
+        )?;
         let directory = root
             .join("packages")
             .join(&package.name)
@@ -1312,10 +1349,6 @@ fn package_cache_directory(root: &Path, package: &Package) -> Result<PathBuf, St
         .join(repository.0)
         .join(repository.1.trim_end_matches(".git"))
         .join(&package.version))
-}
-
-fn valid_wasm_file(path: &Path) -> bool {
-    fs::read(path).is_ok_and(|bytes| adamantium_wasm::validate_package(&bytes).is_ok())
 }
 
 fn replace_file(source: &Path, destination: &Path) -> Result<(), String> {
