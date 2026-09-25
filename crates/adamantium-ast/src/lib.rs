@@ -17,6 +17,20 @@ impl Identifier {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum BinaryOperator {
+    Assign,
+    AddAssign,
+    SubtractAssign,
+    MultiplyAssign,
+    DivideAssign,
+    RemainderAssign,
+    LogicalOr,
+    LogicalAnd,
+    Equal,
+    NotEqual,
+    Less,
+    LessEqual,
+    Greater,
+    GreaterEqual,
     Add,
     Subtract,
     Multiply,
@@ -27,6 +41,7 @@ pub enum BinaryOperator {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum UnaryOperator {
     Negate,
+    Not,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

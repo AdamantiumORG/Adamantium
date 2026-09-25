@@ -26,7 +26,15 @@ pub fn parse_checked(source: &str, tokens: &[Token]) -> Result<ParsedFile, Vec<P
     let errors = tokens
         .windows(2)
         .filter_map(|pair| match (&pair[0].kind, &pair[1].kind) {
-            (TokenKind::Equals, TokenKind::Semicolon | TokenKind::Eof) => Some(ParseError {
+            (
+                TokenKind::Equals
+                | TokenKind::PlusEqual
+                | TokenKind::MinusEqual
+                | TokenKind::StarEqual
+                | TokenKind::SlashEqual
+                | TokenKind::PercentEqual,
+                TokenKind::Semicolon | TokenKind::Eof,
+            ) => Some(ParseError {
                 message: "expected expression after '='".into(),
                 span: pair[1].span,
             }),
@@ -138,13 +146,14 @@ where
     I: Iterator<Item = Token>,
 {
     fn expression(&mut self, minimum_precedence: u8) -> Result<Expression, ParseError> {
-        let mut left = self.unary()?;
-        while let Some((operator, precedence)) = self.binary_operator() {
-            if precedence < minimum_precedence {
+        let mut left = self.prefix()?;
+        while let Some((operator, left_binding_power, right_binding_power)) = self.infix_operator()
+        {
+            if left_binding_power < minimum_precedence {
                 break;
             }
             self.tokens.advance();
-            let right = self.expression(precedence + 1)?;
+            let right = self.expression(right_binding_power)?;
             let left_span = left.span();
             let right_span = right.span();
             left = Expression::Binary {
@@ -160,20 +169,23 @@ where
         Ok(left)
     }
 
-    fn unary(&mut self) -> Result<Expression, ParseError> {
-        if self
-            .tokens
-            .peek()
-            .is_some_and(|token| token.kind == TokenKind::Minus)
-        {
+    fn prefix(&mut self) -> Result<Expression, ParseError> {
+        let unary_operator = match self.tokens.peek().map(|token| &token.kind) {
+            Some(TokenKind::Minus) => Some(UnaryOperator::Negate),
+            Some(TokenKind::Bang | TokenKind::Keyword(adamantium_lexer::Keyword::Not)) => {
+                Some(UnaryOperator::Not)
+            }
+            _ => None,
+        };
+        if let Some(unary_operator) = unary_operator {
             let operator = self.tokens.advance().ok_or_else(|| ParseError {
-                message: "expected unary operand".into(),
+                message: "expected prefix operator".into(),
                 span: Span::default(),
             })?;
-            let operand = self.unary()?;
+            let operand = self.expression(8)?;
             let operand_span = operand.span();
             return Ok(Expression::Unary {
-                operator: UnaryOperator::Negate,
+                operator: unary_operator,
                 operand: Box::new(operand),
                 span: Span {
                     start: operator.span.start,
@@ -211,13 +223,31 @@ where
         }
     }
 
-    fn binary_operator(&mut self) -> Option<(BinaryOperator, u8)> {
+    fn infix_operator(&mut self) -> Option<(BinaryOperator, u8, u8)> {
         Some(match &self.tokens.peek()?.kind {
-            TokenKind::Plus => (BinaryOperator::Add, 1),
-            TokenKind::Minus => (BinaryOperator::Subtract, 1),
-            TokenKind::Star => (BinaryOperator::Multiply, 2),
-            TokenKind::Slash => (BinaryOperator::Divide, 2),
-            TokenKind::Percent => (BinaryOperator::Remainder, 2),
+            TokenKind::Equals => (BinaryOperator::Assign, 1, 1),
+            TokenKind::PlusEqual => (BinaryOperator::AddAssign, 1, 1),
+            TokenKind::MinusEqual => (BinaryOperator::SubtractAssign, 1, 1),
+            TokenKind::StarEqual => (BinaryOperator::MultiplyAssign, 1, 1),
+            TokenKind::SlashEqual => (BinaryOperator::DivideAssign, 1, 1),
+            TokenKind::PercentEqual => (BinaryOperator::RemainderAssign, 1, 1),
+            TokenKind::LogicalOr | TokenKind::Keyword(adamantium_lexer::Keyword::Or) => {
+                (BinaryOperator::LogicalOr, 2, 3)
+            }
+            TokenKind::LogicalAnd | TokenKind::Keyword(adamantium_lexer::Keyword::And) => {
+                (BinaryOperator::LogicalAnd, 3, 4)
+            }
+            TokenKind::EqualEqual => (BinaryOperator::Equal, 4, 5),
+            TokenKind::NotEqual => (BinaryOperator::NotEqual, 4, 5),
+            TokenKind::Less => (BinaryOperator::Less, 5, 6),
+            TokenKind::LessEqual => (BinaryOperator::LessEqual, 5, 6),
+            TokenKind::Greater => (BinaryOperator::Greater, 5, 6),
+            TokenKind::GreaterEqual => (BinaryOperator::GreaterEqual, 5, 6),
+            TokenKind::Plus => (BinaryOperator::Add, 6, 7),
+            TokenKind::Minus => (BinaryOperator::Subtract, 6, 7),
+            TokenKind::Star => (BinaryOperator::Multiply, 7, 8),
+            TokenKind::Slash => (BinaryOperator::Divide, 7, 8),
+            TokenKind::Percent => (BinaryOperator::Remainder, 7, 8),
             _ => return None,
         })
     }

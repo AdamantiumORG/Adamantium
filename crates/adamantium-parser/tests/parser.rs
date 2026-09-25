@@ -131,3 +131,90 @@ fn expression_parser_accepts_any_owned_token_iterator() {
         .unwrap();
     assert!(adamantium_parser::parse_expression_tokens(source, tokens).is_ok());
 }
+
+#[test]
+fn pratt_parser_applies_logical_comparison_and_arithmetic_precedence() {
+    use adamantium_ast::{BinaryOperator, Expression};
+
+    let source = "a+b*c<d&&e!=f||g==h";
+    let tokens = adamantium_lexer::lex(source).unwrap();
+    let expression = adamantium_parser::parse_expression(source, &tokens).unwrap();
+    let Expression::Binary {
+        operator: BinaryOperator::LogicalOr,
+        left,
+        right,
+        ..
+    } = expression
+    else {
+        panic!("logical OR should have the lowest non-assignment precedence");
+    };
+    assert!(matches!(
+        *left,
+        Expression::Binary {
+            operator: BinaryOperator::LogicalAnd,
+            ..
+        }
+    ));
+    assert!(matches!(
+        *right,
+        Expression::Binary {
+            operator: BinaryOperator::Equal,
+            ..
+        }
+    ));
+}
+
+#[test]
+fn pratt_parser_makes_assignments_right_associative() {
+    use adamantium_ast::{BinaryOperator, Expression};
+
+    let source = "a=b+=c*2";
+    let tokens = adamantium_lexer::lex(source).unwrap();
+    let expression = adamantium_parser::parse_expression(source, &tokens).unwrap();
+    let Expression::Binary {
+        operator: BinaryOperator::Assign,
+        right,
+        ..
+    } = expression
+    else {
+        panic!("expected outer assignment");
+    };
+    assert!(matches!(
+        *right,
+        Expression::Binary {
+            operator: BinaryOperator::AddAssign,
+            right,
+            ..
+        } if matches!(
+            *right,
+            Expression::Binary {
+                operator: BinaryOperator::Multiply,
+                ..
+            }
+        )
+    ));
+}
+
+#[test]
+fn pratt_parser_supports_symbolic_and_word_prefix_and_logical_operators() {
+    use adamantium_ast::{BinaryOperator, Expression, UnaryOperator};
+
+    for source in ["!a||b", "not a or b"] {
+        let tokens = adamantium_lexer::lex(source).unwrap();
+        let expression = adamantium_parser::parse_expression(source, &tokens).unwrap();
+        assert!(matches!(
+            expression,
+            Expression::Binary {
+                operator: BinaryOperator::LogicalOr,
+                left,
+                ..
+            } if matches!(
+                *left,
+                Expression::Unary {
+                    operator: UnaryOperator::Not,
+                    ..
+                }
+            )
+        ));
+    }
+}
