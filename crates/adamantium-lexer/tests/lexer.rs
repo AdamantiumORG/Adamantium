@@ -1,4 +1,4 @@
-use adamantium_lexer::{Keyword, LexError, Lexer, TokenKind, keyword_kind, lex};
+use adamantium_lexer::{Keyword, LexError, Lexer, TokenKind, keyword_kind, lex, lex_recovering};
 
 #[test]
 fn classifies_all_keywords_in_one_contract() {
@@ -271,7 +271,7 @@ fn reports_an_unterminated_multiline_comment_with_its_full_span() {
     let source = "/* first\nsecond";
     assert_eq!(
         lex(source).unwrap_err(),
-        LexError::UnterminatedBlockComment {
+        LexError::UnterminatedComment {
             span: adamantium_lexer::Span {
                 start: 0,
                 end: source.len(),
@@ -280,6 +280,45 @@ fn reports_an_unterminated_multiline_comment_with_its_full_span() {
             }
         }
     );
+}
+
+#[test]
+fn recovering_lexer_reports_multiple_errors_and_keeps_valid_tokens() {
+    let source = "@ var first=1; # \"bad\\q\" var second=2; 123abc";
+    let output = lex_recovering(source);
+
+    assert_eq!(output.errors.len(), 4);
+    assert!(matches!(
+        output.errors[0],
+        LexError::UnexpectedCharacter { character: '@', .. }
+    ));
+    assert!(matches!(
+        output.errors[1],
+        LexError::UnexpectedCharacter { character: '#', .. }
+    ));
+    assert!(matches!(
+        output.errors[2],
+        LexError::InvalidEscape { escape: 'q', .. }
+    ));
+    assert!(matches!(output.errors[3], LexError::InvalidNumber { .. }));
+    assert_eq!(
+        output
+            .tokens
+            .iter()
+            .filter(|token| token.kind == TokenKind::Keyword(Keyword::Variable))
+            .count(),
+        2
+    );
+    assert_eq!(output.tokens.last().unwrap().kind, TokenKind::Eof);
+}
+
+#[test]
+fn lexer_diagnostics_never_panic_on_invalid_user_input() {
+    for source in ["@", "\"unterminated", "\"bad\\q\"", "/* open", "1e+"] {
+        let result = std::panic::catch_unwind(|| lex_recovering(source));
+        assert!(result.is_ok(), "lexer panicked for {source:?}");
+        assert!(!result.unwrap().errors.is_empty());
+    }
 }
 
 #[test]

@@ -5,13 +5,17 @@ pub fn pipeline_layers() -> &'static [&'static str] {
 pub fn architecture_smoke_test(
     source: &str,
 ) -> Result<String, Vec<adamantium_diagnostics::Diagnostic>> {
-    let tokens = adamantium_lexer::lex(source).map_err(|error| {
-        vec![adamantium_diagnostics::Diagnostic::error(
-            "E100",
-            error.message(),
-            error.span(),
-        )]
-    })?;
+    let lexed = adamantium_lexer::lex_recovering(source);
+    if !lexed.errors.is_empty() {
+        return Err(lexed
+            .errors
+            .iter()
+            .map(|error| {
+                adamantium_diagnostics::Diagnostic::error("E100", error.message(), error.span())
+            })
+            .collect());
+    }
+    let tokens = lexed.tokens;
     let _parsed = adamantium_parser::parse(source, &tokens);
     let diagnostics = adamantium_semantics::analyze(source, &tokens);
     if !diagnostics.is_empty() {

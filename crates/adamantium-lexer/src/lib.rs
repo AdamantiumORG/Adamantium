@@ -118,7 +118,7 @@ pub enum LexError {
     RawNewlineInString { span: Span },
     UnterminatedEscape { span: Span },
     InvalidEscape { span: Span, escape: char },
-    UnterminatedBlockComment { span: Span },
+    UnterminatedComment { span: Span },
 }
 
 impl LexError {
@@ -130,7 +130,7 @@ impl LexError {
             | Self::RawNewlineInString { span }
             | Self::UnterminatedEscape { span }
             | Self::InvalidEscape { span, .. }
-            | Self::UnterminatedBlockComment { span } => *span,
+            | Self::UnterminatedComment { span } => *span,
         }
     }
 
@@ -146,9 +146,7 @@ impl LexError {
             Self::InvalidEscape { escape, .. } => {
                 format!("unsupported string escape \\{escape}")
             }
-            Self::UnterminatedBlockComment { .. } => {
-                "unterminated block comment; expected '*/'".into()
-            }
+            Self::UnterminatedComment { .. } => "unterminated block comment; expected '*/'".into(),
         }
     }
 }
@@ -168,14 +166,37 @@ impl fmt::Display for LexError {
 impl std::error::Error for LexError {}
 
 pub fn lex(source: &str) -> Result<Vec<Token>, LexError> {
+    let mut output = lex_recovering(source);
+    if output.errors.is_empty() {
+        Ok(output.tokens)
+    } else {
+        Err(output.errors.remove(0))
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct LexOutput {
+    pub tokens: Vec<Token>,
+    pub errors: Vec<LexError>,
+}
+
+pub fn lex_recovering(source: &str) -> LexOutput {
     let mut lexer = Lexer::new(source);
     let mut tokens = Vec::new();
+    let mut errors = Vec::new();
     loop {
-        let token = lexer.next_token()?;
-        let finished = token.kind == TokenKind::Eof;
-        tokens.push(token);
-        if finished {
-            return Ok(tokens);
+        match lexer.next_token() {
+            Ok(token) => {
+                let finished = token.kind == TokenKind::Eof;
+                tokens.push(token);
+                if finished {
+                    return LexOutput { tokens, errors };
+                }
+            }
+            Err(error) => {
+                lexer.recover(&error);
+                errors.push(error);
+            }
         }
     }
 }
@@ -258,6 +279,20 @@ impl<'src> Lexer<'src> {
             };
             span.end = self.position;
             return Ok(Token { kind, span });
+        }
+    }
+
+    fn recover(&mut self, error: &LexError) {
+        if matches!(error, LexError::InvalidEscape { .. }) {
+            while let Some(character) = self.advance() {
+                match character {
+                    '"' | '\n' | '\r' => break,
+                    '\\' => {
+                        self.advance();
+                    }
+                    _ => {}
+                }
+            }
         }
     }
 
@@ -436,7 +471,7 @@ impl<'src> Lexer<'src> {
                 return Ok(());
             }
         }
-        Err(LexError::UnterminatedBlockComment {
+        Err(LexError::UnterminatedComment {
             span: self.finished_span(span),
         })
     }
