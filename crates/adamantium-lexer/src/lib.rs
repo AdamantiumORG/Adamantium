@@ -252,6 +252,7 @@ pub struct Lexer<'src> {
     source: &'src str,
     position: usize,
     preserve_comments: bool,
+    iterator_finished: bool,
 }
 
 impl<'src> Lexer<'src> {
@@ -260,6 +261,7 @@ impl<'src> Lexer<'src> {
             source,
             position: 0,
             preserve_comments: false,
+            iterator_finished: false,
         }
     }
 
@@ -527,6 +529,24 @@ impl<'src> Lexer<'src> {
         }
         self.advance();
         symbol(first)
+    }
+}
+
+impl Iterator for Lexer<'_> {
+    type Item = Result<Token, LexError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.iterator_finished {
+            return None;
+        }
+        let result = self.next_token();
+        if result
+            .as_ref()
+            .is_ok_and(|token| token.kind == TokenKind::Eof)
+        {
+            self.iterator_finished = true;
+        }
+        Some(result)
     }
 }
 

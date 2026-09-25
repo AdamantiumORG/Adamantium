@@ -176,6 +176,22 @@ fn exposes_a_streaming_scanner() {
 }
 
 #[test]
+fn lexer_implements_a_finite_token_iterator() {
+    let tokens = Lexer::new("var value=10;")
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+    assert_eq!(tokens[0].kind, TokenKind::Keyword(Keyword::Variable));
+    assert_eq!(tokens.last().unwrap().kind, TokenKind::Eof);
+    assert_eq!(
+        tokens
+            .iter()
+            .filter(|token| token.kind == TokenKind::Eof)
+            .count(),
+        1
+    );
+}
+
+#[test]
 fn spans_slice_the_exact_utf8_source_text() {
     let source = "var text=\"żółw\";";
     let tokens = lex(source).unwrap();

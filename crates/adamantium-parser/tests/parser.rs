@@ -105,3 +105,29 @@ fn parses_minus_as_unary_or_binary_from_context() {
         )
     ));
 }
+
+#[test]
+fn token_stream_owns_parser_lookahead_and_expectations() {
+    use adamantium_lexer::TokenKind;
+    use adamantium_parser::TokenStream;
+
+    let tokens = adamantium_lexer::lex("a+2").unwrap();
+    let mut stream = TokenStream::new(tokens.into_iter());
+    assert_eq!(stream.peek().unwrap().kind, TokenKind::Identifier);
+    assert_eq!(stream.peek_n(1).unwrap().kind, TokenKind::Plus);
+    assert_eq!(stream.advance().unwrap().kind, TokenKind::Identifier);
+    stream
+        .expect(&TokenKind::Plus, "expected '+'")
+        .expect("plus should be present");
+    assert_eq!(stream.advance().unwrap().kind, TokenKind::IntLiteral);
+    assert_eq!(stream.advance().unwrap().kind, TokenKind::Eof);
+}
+
+#[test]
+fn expression_parser_accepts_any_owned_token_iterator() {
+    let source = "a+2";
+    let tokens = adamantium_lexer::Lexer::new(source)
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+    assert!(adamantium_parser::parse_expression_tokens(source, tokens).is_ok());
+}

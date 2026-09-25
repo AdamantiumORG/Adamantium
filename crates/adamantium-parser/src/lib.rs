@@ -47,35 +47,103 @@ pub struct ParseError {
 }
 
 pub fn parse_expression(source: &str, tokens: &[Token]) -> Result<Expression, ParseError> {
+    parse_expression_tokens(source, tokens.iter().cloned())
+}
+
+pub fn parse_expression_tokens(
+    source: &str,
+    tokens: impl IntoIterator<Item = Token>,
+) -> Result<Expression, ParseError> {
     let mut parser = Parser {
         source: SourceFile::new(source),
-        tokens,
-        cursor: 0,
+        tokens: TokenStream::new(tokens.into_iter()),
     };
     let expression = parser.expression(0)?;
-    if parser.take(&TokenKind::Semicolon) {
+    if parser.tokens.take(&TokenKind::Semicolon).is_some() {
         // A statement terminator belongs to the surrounding grammar.
     }
-    match parser.peek().map(|token| &token.kind) {
+    match parser.tokens.peek().map(|token| &token.kind) {
         None | Some(TokenKind::Eof) => Ok(expression),
         Some(_) => Err(parser.error("expected end of expression")),
     }
 }
 
-struct Parser<'src, 'tokens> {
-    source: SourceFile<'src>,
-    tokens: &'tokens [Token],
-    cursor: usize,
+pub struct TokenStream<I>
+where
+    I: Iterator<Item = Token>,
+{
+    input: I,
+    lookahead: std::collections::VecDeque<Token>,
 }
 
-impl Parser<'_, '_> {
+impl<I> TokenStream<I>
+where
+    I: Iterator<Item = Token>,
+{
+    pub fn new(tokens: I) -> Self {
+        Self {
+            input: tokens,
+            lookahead: std::collections::VecDeque::new(),
+        }
+    }
+    pub fn peek(&mut self) -> Option<&Token> {
+        self.peek_n(0)
+    }
+
+    pub fn peek_n(&mut self, distance: usize) -> Option<&Token> {
+        while self.lookahead.len() <= distance {
+            self.lookahead.push_back(self.input.next()?);
+        }
+        self.lookahead.get(distance)
+    }
+
+    pub fn advance(&mut self) -> Option<Token> {
+        self.lookahead.pop_front().or_else(|| self.input.next())
+    }
+
+    pub fn take(&mut self, expected: &TokenKind) -> Option<Token> {
+        if self.peek().is_some_and(|token| &token.kind == expected) {
+            self.advance()
+        } else {
+            None
+        }
+    }
+
+    pub fn expect(
+        &mut self,
+        expected: &TokenKind,
+        message: impl Into<String>,
+    ) -> Result<Token, ParseError> {
+        if let Some(token) = self.take(expected) {
+            Ok(token)
+        } else {
+            Err(ParseError {
+                message: message.into(),
+                span: self.peek().map_or_else(Span::default, |token| token.span),
+            })
+        }
+    }
+}
+
+struct Parser<'src, I>
+where
+    I: Iterator<Item = Token>,
+{
+    source: SourceFile<'src>,
+    tokens: TokenStream<I>,
+}
+
+impl<I> Parser<'_, I>
+where
+    I: Iterator<Item = Token>,
+{
     fn expression(&mut self, minimum_precedence: u8) -> Result<Expression, ParseError> {
         let mut left = self.unary()?;
         while let Some((operator, precedence)) = self.binary_operator() {
             if precedence < minimum_precedence {
                 break;
             }
-            self.cursor += 1;
+            self.tokens.advance();
             let right = self.expression(precedence + 1)?;
             let left_span = left.span();
             let right_span = right.span();
@@ -94,11 +162,14 @@ impl Parser<'_, '_> {
 
     fn unary(&mut self) -> Result<Expression, ParseError> {
         if self
+            .tokens
             .peek()
             .is_some_and(|token| token.kind == TokenKind::Minus)
         {
-            let operator = self.tokens[self.cursor].clone();
-            self.cursor += 1;
+            let operator = self.tokens.advance().ok_or_else(|| ParseError {
+                message: "expected unary operand".into(),
+                span: Span::default(),
+            })?;
             let operand = self.unary()?;
             let operand_span = operand.span();
             return Ok(Expression::Unary {
@@ -114,12 +185,10 @@ impl Parser<'_, '_> {
     }
 
     fn primary(&mut self) -> Result<Expression, ParseError> {
-        let token = self
-            .tokens
-            .get(self.cursor)
-            .cloned()
-            .ok_or_else(|| self.error("expected expression"))?;
-        self.cursor += 1;
+        let token = self.tokens.advance().ok_or_else(|| ParseError {
+            message: "expected expression".into(),
+            span: Span::default(),
+        })?;
         match token.kind {
             TokenKind::Identifier => Ok(Expression::Identifier(Identifier::new(
                 self.source.text(token.span).unwrap_or_default(),
@@ -131,9 +200,8 @@ impl Parser<'_, '_> {
             }),
             TokenKind::LeftParen => {
                 let expression = self.expression(0)?;
-                if !self.take(&TokenKind::RightParen) {
-                    return Err(self.error("expected ')' after expression"));
-                }
+                self.tokens
+                    .expect(&TokenKind::RightParen, "expected ')' after expression")?;
                 Ok(expression)
             }
             _ => Err(ParseError {
@@ -143,8 +211,8 @@ impl Parser<'_, '_> {
         }
     }
 
-    fn binary_operator(&self) -> Option<(BinaryOperator, u8)> {
-        Some(match &self.peek()?.kind {
+    fn binary_operator(&mut self) -> Option<(BinaryOperator, u8)> {
+        Some(match &self.tokens.peek()?.kind {
             TokenKind::Plus => (BinaryOperator::Add, 1),
             TokenKind::Minus => (BinaryOperator::Subtract, 1),
             TokenKind::Star => (BinaryOperator::Multiply, 2),
@@ -154,23 +222,13 @@ impl Parser<'_, '_> {
         })
     }
 
-    fn peek(&self) -> Option<&Token> {
-        self.tokens.get(self.cursor)
-    }
-
-    fn take(&mut self, expected: &TokenKind) -> bool {
-        if self.peek().is_some_and(|token| &token.kind == expected) {
-            self.cursor += 1;
-            true
-        } else {
-            false
-        }
-    }
-
-    fn error(&self, message: impl Into<String>) -> ParseError {
+    fn error(&mut self, message: impl Into<String>) -> ParseError {
         ParseError {
             message: message.into(),
-            span: self.peek().map_or_else(Span::default, |token| token.span),
+            span: self
+                .tokens
+                .peek()
+                .map_or_else(Span::default, |token| token.span),
         }
     }
 }
