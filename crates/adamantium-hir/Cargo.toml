@@ -1,9 +1,9 @@
 [package]
-name = "adamantium-ir"
+name = "adamantium-hir"
 version.workspace = true
 edition.workspace = true
 license-file = "../../LICENCE.md"
 
 [dependencies]
-adamantium-types = { path = "../adamantium-types" }
 adamantium-lexer = { path = "../adamantium-lexer" }
+adamantium-types = { path = "../adamantium-types" }

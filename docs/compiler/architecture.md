@@ -5,11 +5,15 @@ Adamantium is organized as a Rust workspace with a CLI and focused compiler crat
 ```text
 CLI and project loading
         |
-lexer and parser
+lexer -> tokens
         |
-name resolution and AST validation
+parser -> AST
         |
-type checking and target-independent typed IR
+name resolution -> SymbolId / DefId / LocalId
+        |
+type checking -> canonical TypeId
+        |
+HIR -> MIR -> target-independent IR
         |
 x86-64 NASM generation
         |
@@ -28,6 +32,25 @@ place as the operator set grows.
 `adamantium-cli` currently owns the mature parser, semantic checker, and NASM generator while their public crate APIs are stabilized. The checker lowers parsed syntax into `adamantium_ir::typed::Program<Type, Value>`. `adamantium-ir` owns the target-independent control-flow, expression, class, package-call, and operator representation. It has no dependency on the parser or a native backend.
 
 The existing NASM generator consumes this shared typed IR. A future LLVM ARM64 generator can consume the same IR without translating parser syntax or depending on x86-64 register conventions.
+
+## Crate contracts
+
+| Crate | Accepts | Produces | May depend on |
+| --- | --- | --- | --- |
+| `adamantium-lexer` | UTF-8 source | tokens or lexical errors | no compiler layer |
+| `adamantium-parser` | tokens and source map | AST or parse errors | lexer, AST |
+| `adamantium-semantics` | AST | resolved HIR and diagnostics | parser, HIR, canonical types |
+| `adamantium-hir` | resolved language concepts | definitions using stable IDs | spans, canonical types |
+| `adamantium-mir` | typed HIR | explicit control-flow operations | HIR, canonical types |
+| `adamantium-lowering` | HIR or MIR | the next representation | HIR, MIR, IR |
+| `adamantium-ir` | lowered operations | target-independent backend IR | spans, canonical types |
+| `adamantium-codegen` | IR | target assembly | IR only |
+
+Backends must not depend on the parser, AST, name resolution, or source text.
+Every representation that survives a lowering boundary carries its original
+`Span`. Human-readable names are interned once and referenced by `SymbolId`;
+definitions and locals use `DefId` and `LocalId`. Types are interned once and
+referenced by `TypeId`.
 
 The exact input, output, invariants, and responsibilities of every stage are defined in [Compiler phase contracts](phases.md).
 

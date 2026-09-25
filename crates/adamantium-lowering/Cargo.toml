@@ -1,12 +1,11 @@
 [package]
-name = "adamantium-semantics"
+name = "adamantium-lowering"
 version.workspace = true
 edition.workspace = true
 license-file = "../../LICENCE.md"
 
 [dependencies]
-adamantium-lexer = { path = "../adamantium-lexer" }
 adamantium-hir = { path = "../adamantium-hir" }
-adamantium-parser = { path = "../adamantium-parser" }
+adamantium-mir = { path = "../adamantium-mir" }
+adamantium-ir = { path = "../adamantium-ir" }
 adamantium-types = { path = "../adamantium-types" }
-adamantium-diagnostics = { path = "../adamantium-diagnostics" }

@@ -8,6 +8,26 @@ fn connects_compiler_layers() {
 }
 
 #[test]
+fn exposes_every_compiler_phase_in_order() {
+    assert_eq!(
+        adamantium_compiler::pipeline_layers(),
+        [
+            "lexer",
+            "parser",
+            "ast",
+            "name-resolution",
+            "type-checking",
+            "hir",
+            "mir",
+            "ir",
+            "codegen",
+            "nasm",
+            "linker",
+        ]
+    );
+}
+
+#[test]
 fn reports_all_lexer_errors_in_one_compiler_pass() {
     let diagnostics = adamantium_compiler::architecture_smoke_test("@ fun main #")
         .expect_err("invalid characters should produce diagnostics");

@@ -2,6 +2,40 @@ use rustc_apfloat::{
     Float, FloatConvert, Round, Status,
     ieee::{Double, Quad, Single},
 };
+use std::collections::HashMap;
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub struct TypeId(pub u32);
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum TypeKind {
+    Primitive(Type),
+    Optional(TypeId),
+    List(TypeId),
+    Offset(TypeId),
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct TypeInterner {
+    kinds: Vec<TypeKind>,
+    ids: HashMap<TypeKind, TypeId>,
+}
+
+impl TypeInterner {
+    pub fn intern(&mut self, kind: TypeKind) -> TypeId {
+        if let Some(id) = self.ids.get(&kind) {
+            return *id;
+        }
+        let id = TypeId(u32::try_from(self.kinds.len()).expect("too many canonical types"));
+        self.kinds.push(kind.clone());
+        self.ids.insert(kind, id);
+        id
+    }
+
+    pub fn kind(&self, id: TypeId) -> Option<&TypeKind> {
+        self.kinds.get(id.0 as usize)
+    }
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PrimitiveType {
@@ -12,7 +46,7 @@ pub enum PrimitiveType {
     None,
 }
 
-pub fn infer_literal(text: &str, _span: adamantium_ast::Span) -> PrimitiveType {
+pub fn infer_literal(text: &str) -> PrimitiveType {
     if text == "None" {
         PrimitiveType::None
     } else if text.starts_with('"') {
@@ -24,7 +58,7 @@ pub fn infer_literal(text: &str, _span: adamantium_ast::Span) -> PrimitiveType {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Type {
     I8,
     I16,

@@ -14,6 +14,17 @@ pub fn integer(value: i64) -> Instruction {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SpannedInstruction {
+    pub instruction: Instruction,
+    pub span: adamantium_lexer::Span,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct Program {
+    pub instructions: Vec<SpannedInstruction>,
+}
+
 pub mod typed {
     use super::HashMap;
 

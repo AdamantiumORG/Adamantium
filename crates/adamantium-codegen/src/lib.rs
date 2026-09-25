@@ -8,3 +8,12 @@ pub fn emit(instructions: &[adamantium_ir::Instruction]) -> String {
         })
         .collect()
 }
+
+pub fn emit_program(program: &adamantium_ir::Program) -> String {
+    let instructions = program
+        .instructions
+        .iter()
+        .map(|instruction| instruction.instruction.clone())
+        .collect::<Vec<_>>();
+    emit(&instructions)
+}

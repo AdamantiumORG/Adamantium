@@ -39,9 +39,12 @@ version = "0.1.0"
 dependencies = [
  "adamantium-codegen",
  "adamantium-diagnostics",
+ "adamantium-hir",
  "adamantium-ir",
  "adamantium-lexer",
  "adamantium-linker",
+ "adamantium-lowering",
+ "adamantium-mir",
  "adamantium-nasm",
  "adamantium-packages",
  "adamantium-parser",
@@ -59,9 +62,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "adamantium-hir"
+version = "0.1.0"
+dependencies = [
+ "adamantium-lexer",
+ "adamantium-types",
+]
+
+[[package]]
 name = "adamantium-ir"
 version = "0.1.0"
 dependencies = [
+ "adamantium-lexer",
  "adamantium-types",
 ]
 
@@ -72,6 +84,25 @@ version = "0.1.0"
 [[package]]
 name = "adamantium-linker"
 version = "0.1.0"
+
+[[package]]
+name = "adamantium-lowering"
+version = "0.1.0"
+dependencies = [
+ "adamantium-hir",
+ "adamantium-ir",
+ "adamantium-mir",
+ "adamantium-types",
+]
+
+[[package]]
+name = "adamantium-mir"
+version = "0.1.0"
+dependencies = [
+ "adamantium-hir",
+ "adamantium-lexer",
+ "adamantium-types",
+]
 
 [[package]]
 name = "adamantium-nasm"
@@ -124,6 +155,7 @@ name = "adamantium-semantics"
 version = "0.1.0"
 dependencies = [
  "adamantium-diagnostics",
+ "adamantium-hir",
  "adamantium-lexer",
  "adamantium-parser",
  "adamantium-types",
@@ -144,7 +176,6 @@ dependencies = [
 name = "adamantium-types"
 version = "0.1.0"
 dependencies = [
- "adamantium-ast",
  "rustc_apfloat",
 ]
 
