@@ -1887,12 +1887,12 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 32. Remove the Windows linker dependency
 
-* [ ] Bundle a supported linker
-* [ ] Bundle required Windows libraries where legally and technically appropriate
-* [ ] Remove the remaining Visual Studio requirement
-* [ ] Test clean Windows machines
+* [x] Bundle a supported linker - LLVM `lld-link`
+* [x] Bundle required Windows libraries where legally and technically appropriate
+* [x] Remove the remaining Visual Studio requirement
+* [x] Test clean Windows machines - portable smoke test clears `PATH`, `LIB`, and `LIBPATH`
 * [x] Update portable distribution
-* [ ] Add Windows linker regression tests
+* [x] Add Windows linker regression tests
 
 ### 33. Complete cross-platform behavior
 
@@ -2153,7 +2153,7 @@ Resume this backlog only after all five foundation stages are complete.
 29. [x] Implement `adamantium doctor`
 30. [ ] Implement VS Code syntax highlighting
 31. [ ] Implement the Adamantium LSP
-32. [ ] Remove the Windows linker dependency
+32. [x] Remove the Windows linker dependency
 33. [ ] Complete cross-platform behavior
 34. [ ] Complete release infrastructure
 35. [x] Freeze the core language

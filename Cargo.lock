@@ -16,6 +16,7 @@ dependencies = [
  "adamantium-compiler",
  "adamantium-diagnostics",
  "adamantium-ir",
+ "adamantium-linker",
  "adamantium-packages",
  "adamantium-project",
  "adamantium-testing",

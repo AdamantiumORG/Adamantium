@@ -926,24 +926,40 @@ fn nasm_command() -> OsString {
 }
 
 fn linker_probe() -> (OsString, Vec<&'static str>) {
-    if let Some(linker) = env::var_os("ADAMANTIUM_LINKER") {
-        return (linker, vec!["--version"]);
-    }
-    if let Some(tools) = portable_tools_directory() {
-        let bundled = if cfg!(windows) {
-            tools.join("lld-link.exe")
-        } else {
-            tools.join("zig/zig")
-        };
-        if bundled.is_file() {
+    if cfg!(windows) {
+        let linker = windows_linker().unwrap_or_else(|| "lld-link.exe".into());
+        (linker.into_os_string(), vec!["/?"])
+    } else {
+        if let Some(linker) = env::var_os("ADAMANTIUM_LINKER") {
+            return (linker, vec!["--version"]);
+        }
+        if let Some(bundled) = portable_tools_directory()
+            .map(|tools| tools.join("zig/zig"))
+            .filter(|linker| linker.is_file())
+        {
             return (bundled.into_os_string(), vec!["--version"]);
         }
-    }
-    if cfg!(windows) {
-        ("link.exe".into(), vec!["/?"])
-    } else {
         ("cc".into(), vec!["--version"])
     }
+}
+
+fn windows_linker() -> Option<PathBuf> {
+    adamantium_linker::select_windows_linker(
+        env::var_os("ADAMANTIUM_LINKER").map(PathBuf::from),
+        portable_tools_directory().as_deref(),
+        rust_sysroot().as_deref(),
+    )
+}
+
+fn rust_sysroot() -> Option<PathBuf> {
+    let output = Command::new("rustc")
+        .args(["--print", "sysroot"])
+        .output()
+        .ok()?;
+    output
+        .status
+        .success()
+        .then(|| PathBuf::from(String::from_utf8_lossy(&output.stdout).trim()))
 }
 
 fn command_summary(command: &OsString, arguments: &[&str]) -> Option<String> {
@@ -1451,7 +1467,7 @@ fn load_modules(code: &Path) -> Result<Vec<(String, String)>, String> {
     })
 }
 
-fn link(target: &Path, name: &str, obj: &Path, runtime: &Path, exe: &Path) -> Result<(), String> {
+fn link(target: &Path, _name: &str, obj: &Path, runtime: &Path, exe: &Path) -> Result<(), String> {
     if cfg!(target_os = "linux") {
         let libraries = include_str!(concat!(env!("OUT_DIR"), "/runtime-libraries.txt"));
         let configured = env::var_os("ADAMANTIUM_LINKER");
@@ -1497,44 +1513,15 @@ fn link(target: &Path, name: &str, obj: &Path, runtime: &Path, exe: &Path) -> Re
     );
     arguments.push("kernel32.lib".into());
 
-    if let Some(linker) = env::var_os("ADAMANTIUM_LINKER") {
-        return execute(
-            Command::new(linker).args(&arguments),
-            "Microsoft linker configured by ADAMANTIUM_LINKER",
-        );
+    if let Some(tools) = portable_tools_directory()
+        && tools.join("lib").is_dir()
+    {
+        arguments.push(format!("/libpath:{}", tools.join("lib").display()).into());
     }
-    if let Some(tools) = portable_tools_directory() {
-        let linker = tools.join("lld-link.exe");
-        if linker.is_file() {
-            arguments.push(format!("/libpath:{}", tools.join("lib").display()).into());
-            return execute(Command::new(linker).args(&arguments), "bundled LLVM linker");
-        }
-    }
-    if env::var_os("VSCMD_ARG_TGT_ARCH").is_some() {
-        return execute(
-            Command::new("link.exe").args(&arguments),
-            "Microsoft linker",
-        );
-    }
-
-    let vcvars = find_vcvars64().ok_or(
-        "could not find Visual Studio C++ build tools; install the MSVC x64 tools or run from an x64 Native Tools Command Prompt",
+    let linker = windows_linker().ok_or(
+        "could not find lld-link; use the Adamantium portable distribution or set ADAMANTIUM_LINKER",
     )?;
-    let response = target.join(format!("{name}.link.rsp"));
-    let response_text = arguments
-        .iter()
-        .map(|argument| format!("\"{}\"", argument.to_string_lossy().replace('"', "\\\"")))
-        .collect::<Vec<_>>()
-        .join("\n");
-    fs::write(&response, response_text).map_err(|e| format!("{}: {e}", response.display()))?;
-    execute(
-        Command::new("cmd.exe")
-            .args(["/d", "/c", "call"])
-            .arg(&vcvars)
-            .args([">", "nul", "&&", "link.exe"])
-            .arg(format!("@{}", response.display())),
-        "Microsoft linker through the Visual Studio x64 environment",
-    )
+    execute(Command::new(linker).args(&arguments), "LLVM Windows linker")
 }
 
 fn linux_runtime_libraries(libraries: &str) -> Vec<&str> {
@@ -1596,49 +1583,6 @@ fn extract_runtime_auxiliary_libraries(target: &Path) -> Result<Vec<PathBuf>, St
         paths.push(path);
     }
     Ok(paths)
-}
-
-fn find_vcvars64() -> Option<PathBuf> {
-    let program_files_x86 = env::var_os("ProgramFiles(x86)")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(r"C:\Program Files (x86)"));
-    let vswhere = program_files_x86.join("Microsoft Visual Studio/Installer/vswhere.exe");
-    if let Ok(output) = Command::new(vswhere)
-        .args([
-            "-latest",
-            "-products",
-            "*",
-            "-requires",
-            "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
-            "-property",
-            "installationPath",
-        ])
-        .output()
-        && output.status.success()
-        && let Ok(installation) = String::from_utf8(output.stdout)
-    {
-        let candidate = PathBuf::from(installation.trim()).join("VC/Auxiliary/Build/vcvars64.bat");
-        if candidate.is_file() {
-            return Some(candidate);
-        }
-    }
-
-    let program_files = env::var_os("ProgramFiles")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(r"C:\Program Files"));
-    for year in ["2022", "2019"] {
-        for edition in ["Community", "Professional", "Enterprise", "BuildTools"] {
-            let candidate = program_files
-                .join("Microsoft Visual Studio")
-                .join(year)
-                .join(edition)
-                .join("VC/Auxiliary/Build/vcvars64.bat");
-            if candidate.is_file() {
-                return Some(candidate);
-            }
-        }
-    }
-    None
 }
 
 fn read_toml(path: &Path) -> Result<toml::Table, String> {
