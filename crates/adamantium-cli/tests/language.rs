@@ -71,3 +71,29 @@ fn optimization_levels_preserve_program_output() {
     assert_eq!(String::from_utf8_lossy(&outputs[0]).trim(), "5");
     fs::remove_dir_all(root).unwrap();
 }
+
+#[test]
+fn published_examples_pass_static_analysis() {
+    let examples = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples");
+    let mut directories = fs::read_dir(&examples)
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .filter(|path| path.is_dir())
+        .collect::<Vec<_>>();
+    directories.sort();
+    assert!(!directories.is_empty(), "no published examples found");
+
+    for directory in directories {
+        let output = Command::new(env!("CARGO_BIN_EXE_adamantium"))
+            .arg("check")
+            .arg(&directory)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}:\n{}",
+            directory.display(),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+}

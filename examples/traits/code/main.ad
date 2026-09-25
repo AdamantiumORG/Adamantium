@@ -1,0 +1,13 @@
+trait Named {
+    fun name() result:string;
+}
+
+class Item(pub text:string) implements Named {
+    fun __new__() {}
+    pub fun name() result:string { result=self.text; }
+}
+
+fun main() {
+    var item = Item(text="Example item");
+    print.newline(item.name());
+}

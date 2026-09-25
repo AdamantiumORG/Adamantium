@@ -1,93 +1,141 @@
 [![CI](https://github.com/AdamantiumORG/Adamantium/actions/workflows/ci.yml/badge.svg)](https://github.com/AdamantiumORG/Adamantium/actions/workflows/ci.yml)
-[![License: GPL](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://opensource.org/licenses/gpl-3-0)
+[![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENCE.md)
+[![Status: Early development](https://img.shields.io/badge/status-early_development-orange.svg)](#project-status)
 
 # Adamantium
 
-## What is Adamantium?
+**A simple native programming language for people who want readable syntax
+without giving up explicit control.**
 
-Adamantium is a programming language for beginners and experienced developers. Its compiler is written in Rust and translates Adamantium source code into NASM assembly, then builds native Windows or Linux x86-64 executables.
+[Install](#installation) | [Documentation](docs/README.md) | [Examples](examples/README.md) | [Contributing](CONTRIBUTING.md)
+
+Adamantium is an experiment in building an approachable, statically typed
+language from scratch. Its Rust compiler turns `.ad` source into NASM assembly
+and then into native Windows or Linux x86-64 executables.
+
+```text
+$ adamantium new HelloWorld
+$ cd HelloWorld
+$ adamantium run
+Hello, world!
+```
 
 ```adamantium
-fun fibonacci(n: i32) r: i32 {
-    var a = 0;
-    var b = 1;
-    var i = 0;
-
-    while i < n {
-        print(a);
-
-        var next = a + b;
-        a = b;
-        b = next;
-        i = i + 1;
-    }
-
-    r = a;
-}
-
 fun main() {
-    fibonacci(10);
+    var numbers = List[1, 2, 3, 4, 5];
+
+    for number in numbers {
+        print.newline(number);
+    }
 }
+```
+
+```text
+Adamantium source -> compiler written in Rust -> NASM -> native x86-64 executable
 ```
 
 ## Why Adamantium?
 
-Adamantium aims to provide readable syntax while exposing functions, classes, enums, traits, generics, modules, explicit types, memory operations, and native compilation. Projects use a predictable directory structure and can be checked, built, run, and tested through one CLI. The project is pre-1.0, so advanced features remain experimental even when they are implemented and tested.
+Why build another programming language? Adamantium explores a space between
+high-level readability and native compilation. It does not aim to replace an
+established language. It is a place to test whether explicit types, native code,
+memory operations, and modern language features can remain approachable.
 
-## Hello World
+| Language | Strengths | Typical tradeoff |
+| --- | --- | --- |
+| C and C++ | Mature ecosystems and direct machine control | Large, complex languages with many unsafe edges |
+| Python | Easy to learn and productive | Higher runtime abstraction and dynamic typing |
+| Rust | Strong safety model and powerful type system | A steeper learning curve |
+| Adamantium | Readable syntax, static typing, native compilation, and explicit control | Young ecosystem and experimental pre-1.0 design |
 
-Create `code/main.ad`:
+Adamantium is for people interested in language design, compiler construction,
+and native programs who want to learn by reading, running, and changing real
+code.
+
+## Language tour
+
+Functions use explicit parameters and a named result:
 
 ```adamantium
-fun main() {
-    print.newline("Hello, world!");
+fun fibonacci(n:int) result:int {
+    if n <= 1 then {
+        result = n;
+    } else {
+        result = fibonacci(n-1) + fibonacci(n-2);
+    }
 }
 ```
 
-Run it from the project directory:
+Enums work with exhaustive `match` expressions:
 
-```text
-adamantium run
+```adamantium
+enum Status { ready, running, finished }
+
+fun show(status:Status) result:None {
+    match status {
+        Status.ready => { print.newline("Ready"); }
+        Status.running => { print.newline("Running"); }
+        Status.finished => { print.newline("Finished"); }
+    }
+}
 ```
+
+Generic functions and trait-constrained classes are part of the current
+experimental language:
+
+```adamantium
+fun identity<T>(value:T) result:T {
+    result = value;
+}
+
+trait Named {
+    fun name() result:string;
+}
+
+class Item(pub text:string) implements Named {
+    fun __new__() {}
+    pub fun name() result:string { result=self.text; }
+}
+```
+
+Explore complete projects in [`examples`](examples/README.md).
 
 ## Features
 
-- Mutable and static variables with type inference
-- Integers, floating-point values, strings, booleans, lists, and optional values
-- Functions with typed parameters and named return values
-- Classes, visibility rules, methods, and lifecycle hooks
-- Enums, traits, generics, and operator overloading
-- `if`, `match`, `for`, `while`, `until`, and `loop`
-- Nested lexical scopes
-- Multiple source files with `pack` and `use`
-- WASI packages loaded with `mod`
-- Value aliases, offsets, and memory-safety diagnostics
-- Project tests and file-based language conformance tests
-- Native Windows and Linux x86-64 output
-- Configurable `-O0`, `-O1`, and `-O2` optimization levels
+- Native Windows and Linux x86-64 executables
+- Static types with inference and Professional Mode with explicit declarations
+- Functions, classes, enums, traits, generics, lists, and optional values
+- `if`, exhaustive `match`, `for`, `while`, `until`, and `loop`
+- Modules through `pack` and `use`
+- Checked aliases, offsets, lifecycle hooks, and memory diagnostics
+- WASI packages with explicit imports, integrity checks, and runtime limits
+- Built-in project and language test runners
+- `-O0`, `-O1`, and `-O2` optimization profiles
+- Structured diagnostics with source spans and stable error families
 
 ## Installation
 
-Build and install the CLI from source:
+The easiest installation is a portable Nightly archive from the
+[Nightly release](https://github.com/AdamantiumORG/Adamantium/releases/tag/nightly).
+
+- `windows_portable_x86_64.zip` includes the CLI, NASM, LLVM linker, and import libraries.
+- `linux_portable_x86_64.zip` includes the CLI, NASM, and Zig linker toolchain.
+
+Extract the complete archive and add its directory to `PATH`. Verify the
+published SHA-256 file before use. Rust and separate native build tools are not
+required by the portable archives.
+
+To build the CLI from source:
 
 ```text
-cargo install --path crates/adamantium-cli
+cargo install --path crates/adamantium-cli --locked
+adamantium doctor
 ```
 
-For Windows x86-64, download `windows_portable_x86_64.zip` from the [Nightly release](https://github.com/AdamantiumORG/Adamantium/releases/tag/nightly), extract the complete directory, and add that directory to `PATH`. The portable package includes the CLI, NASM, the LLVM linker, and the required Windows import libraries. It does not require Rust, Cargo, Visual Studio, the Windows SDK, or a separate NASM installation. Nightly is replaced automatically after all Windows tests pass on the default branch.
+Source builds use the host Rust toolchain. Compiling Adamantium programs also
+needs NASM and a supported linker configuration.
 
-For Linux x86-64, download `linux_portable_x86_64.zip` from the same Nightly release. It includes the CLI, NASM, and the Zig linker toolchain, so Rust, Cargo, NASM, GCC, Clang, and system development packages are not required. The Linux archive is rebuilt and its Nightly assets are replaced after all Linux CLI tests pass on the default branch.
-
-Building the Rust CLI from source requires the normal Rust host toolchain. Building Adamantium programs with that CLI requires NASM and a supported linker configuration:
-
-- Windows: bundled or configured `rust-lld`, or another linker selected by the CLI
-- Linux: a C linker available as `cc`, or the portable Zig linker toolchain
-
-Each portable archive contains `INSTALL.txt`, and a SHA-256 checksum is published beside it.
-
-## Quick Start
-
-Create a project:
+## Quick start
 
 ```text
 adamantium new FirstProject
@@ -96,22 +144,21 @@ adamantium check
 adamantium run
 ```
 
-The generated project contains:
+Generated project layout:
 
 ```text
 FirstProject/
-├── code/
-│   └── main.ad
-├── target/
-├── project.toml
-└── requirement.toml
+|-- code/
+|   `-- main.ad
+|-- target/
+|-- project.toml
+`-- requirement.toml
 ```
 
-Useful commands:
+Common commands:
 
 ```text
 adamantium check
-adamantium build
 adamantium build -O2
 adamantium run
 adamantium test list
@@ -121,30 +168,25 @@ adamantium clean
 adamantium doctor
 ```
 
-## Example
+## Roadmap
 
-```adamantium
-enum Operation { add, multiply }
+- [x] Scanner lexer, parser, AST, name resolution, and type checking
+- [x] NASM x86-64 backend and native Windows/Linux executables
+- [x] Classes, enums, traits, generics, modules, tests, and optimization profiles
+- [x] WASI package format, dependency locking, checksums, and execution limits
+- [ ] Broader standard library and package ecosystem
+- [ ] Language server and editor integration
+- [ ] Debugger integration
+- [ ] Stabilized compatibility policy and 1.0 release
 
-fun calculate(a:int,b:int,operation:Operation) result:int {
-    match operation {
-        Operation.add => { result=a+b; },
-        Operation.multiply => { result=a*b; }
-    }
-}
+The detailed engineering backlog is in [`TODO.md`](TODO.md).
 
-fun main() {
-    var values=List[2,3,4];
-    var result=calculate(values[0],values[1],Operation.multiply);
+## Project status
 
-    if result > 5 then {
-        print.newline(result);
-    }
-}
-```
+Adamantium is in early development. The 0.1 core syntax, primitive types, and
+memory rules have written contracts, while advanced features and tooling remain
+experimental. The project has not completed an independent security audit.
 
-## Project Status
-
-Adamantium is under active development. Native and portable builds target Windows and Linux on x86-64, with ARM64 work tracked separately. The 0.1 core syntax, primitive types, and memory rules are documented as frozen contracts, while advanced language features, the package ABI, diagnostics, and implementation architecture remain experimental before the first stable release. Adamantium has not completed an independent security audit.
-
-Detailed language, compiler, package, testing, memory-safety, and target documentation is available in [`docs`](docs/README.md). Current and planned compiler work is tracked in [`TODO.md`](TODO.md). Security reports follow [`SECURITY.md`](SECURITY.md).
+The best way to help is to run an example, report a focused issue, improve a
+diagnostic, or discuss a concrete language-design tradeoff. See
+[`CONTRIBUTING.md`](CONTRIBUTING.md) and [`SECURITY.md`](SECURITY.md).

@@ -1,0 +1,8 @@
+fun main() {
+    var numbers = List[1, 2, 3, 4, 5];
+    numbers[1] = 20;
+
+    for number in numbers {
+        print.newline(number);
+    }
+}

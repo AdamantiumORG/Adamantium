@@ -1,0 +1,16 @@
+class Counter(pub value:int) {
+    fun __new__() {
+        print.newline("Counter created");
+    }
+
+    pub fun increment() result:int {
+        self.value = self.value + 1;
+        result = self.value;
+    }
+}
+
+fun main() {
+    var counter = Counter(value=0);
+    print.newline(counter.increment());
+    print.newline(counter.increment());
+}

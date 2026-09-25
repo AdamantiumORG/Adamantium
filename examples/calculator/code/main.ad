@@ -1,0 +1,14 @@
+enum Operation { add, subtract, multiply, divide }
+
+fun calculate(left:int,right:int,operation:Operation) result:int {
+    match operation {
+        Operation.add => { result=left+right; }
+        Operation.subtract => { result=left-right; }
+        Operation.multiply => { result=left*right; }
+        Operation.divide => { result=left/right; }
+    }
+}
+
+fun main() {
+    print.newline(calculate(12,3,Operation.multiply));
+}

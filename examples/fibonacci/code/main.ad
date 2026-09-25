@@ -1,0 +1,13 @@
+fun fibonacci(n:int) result:int {
+    if n <= 1 then {
+        result = n;
+    } else {
+        result = fibonacci(n-1) + fibonacci(n-2);
+    }
+}
+
+fun main() {
+    for index in 0..10 {
+        print.newline(fibonacci(index));
+    }
+}
