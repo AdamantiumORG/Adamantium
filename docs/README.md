@@ -31,3 +31,8 @@
 - [WASM package ABI](packages/WASM_ABI.md)
 - [Memory safety](MEMORY_SAFETY.md)
 - [Compilation targets](TARGETS.md)
+
+## Project governance
+
+- [Security policy](../SECURITY.md)
+- [Contributing](../CONTRIBUTING.md)

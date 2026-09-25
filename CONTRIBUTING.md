@@ -6,18 +6,22 @@ the compiler.
 
 ## Set up your environment
 
-Install Rust with edition 2024 support, NASM, and the Visual Studio C++ build
-tools with the Windows SDK. See [README.md](README.md) for tool configuration.
+Install the Rust toolchain used by the workspace. NASM and a supported native
+linker are needed only for tests that build Adamantium executables. Portable
+archives carry their own native tools. Run repository commands from the workspace
+root, which contains this file and the top-level `Cargo.toml`.
 
-Fork and clone the repository, create a branch for your change, and open an
-**x64 Native Tools Command Prompt for VS 2022**. Run the following commands
-from the `compiler` directory:
+```text
+cargo check --locked --workspace --all-targets
+cargo test --locked --workspace --all-targets
+cargo run -p adamantium-cli -- check example-project
+```
 
-```bat
-cargo build --workspace
-cargo test --workspace
-cargo run -p adamantium-cli -- ../adamantium-project
-..\adamantium-project\target\FirstProject.exe
+Use `adamantium doctor`, or its Cargo equivalent below, to inspect the native
+toolchain available on the current machine:
+
+```text
+cargo run -p adamantium-cli -- doctor
 ```
 
 ## Report a bug
@@ -25,71 +29,64 @@ cargo run -p adamantium-cli -- ../adamantium-project
 Search existing issues before opening a new one. Include:
 
 - A short description of the problem and the expected behavior.
-- The smallest `main.ad` example that reproduces it, plus relevant project settings.
-- The exact command you ran and the complete error output.
-- Your Windows version and Rust, NASM, and linker versions.
+- The smallest `.ad` example that reproduces it and relevant project settings.
+- The exact command and complete error output.
+- The commit, operating system, architecture, and tool versions.
 
-Remove private information from examples and logs before sharing them.
+Remove private information from examples and logs. Report suspected security
+issues through [SECURITY.md](SECURITY.md), not a public issue.
 
 ## Propose a feature
 
-Explain the problem the feature solves and show an example of the intended
-Adamantium syntax or compiler behavior. For substantial language changes,
-opening an issue first helps contributors discuss the design before implementation.
-Keep both beginners and professional users in mind when designing syntax and
-error messages.
+Explain the problem and show the intended Adamantium syntax or compiler behavior.
+Discuss substantial language changes before implementation. A language change
+must account for parsing, semantics, diagnostics, code generation, tests, and
+documentation, including Professional Mode where relevant.
 
 ## Make changes
 
-- Keep each pull request focused on one bug, feature, or documentation improvement.
-- Follow the existing Rust style and use `cargo fmt` to format code.
-- Write code comments, diagnostics, and documentation in English.
-- Add meaningful regression tests for bug fixes and tests for new language behavior,
-  including invalid input where relevant.
-- Update documentation and examples when supported syntax or commands change.
+- Keep each pull request focused on one bug, feature, or documentation change.
+- Write code, diagnostics, tests, and documentation in English.
+- Add valid and invalid regression cases for changed language behavior.
+- Preserve source spans and structured diagnostics across compiler phases.
+- Update examples and contracts when supported behavior changes.
+- Keep generated artifacts out of commits and keep `Cargo.lock` tracked.
 - Avoid unrelated formatting changes and unnecessary dependencies.
-- Keep generated build artifacts out of commits. Keep `Cargo.lock` tracked and
-  update it when dependency changes require it.
 
-The repository is a Cargo workspace. `crates/adamantium-cli/src/main.rs` handles
-project configuration and invokes NASM and the linker. Its syntax, typed, codegen,
-and assembly modules contain the current production pipeline while those parts are
-moved incrementally behind the dedicated crate APIs. `crates/adamantium-runtime/`
-implements typed operations and output, including software `f128` arithmetic.
-See `docs/compiler/workspace.md` for crate responsibilities and selective CI.
-The example project lives in `../adamantium-project`.
+Crate responsibilities and selective CI behavior are documented in
+[`docs/compiler/workspace.md`](docs/compiler/workspace.md). The canonical sample
+project is [`example-project`](example-project).
 
 ## Verify your work
 
-For compiler changes, run:
+Run the checks relevant to the change:
 
-```bat
+```text
 cargo fmt --all --check
+cargo check --locked --workspace --all-targets
 cargo test --locked --workspace --all-targets
-cargo test --locked -p adamantium-cli --test native -- --ignored
-cargo clippy --workspace --all-targets -- -D warnings
-cargo run -p adamantium-cli -- ../adamantium-project
-..\adamantium-project\target\FirstProject.exe
+cargo clippy --locked --workspace --all-targets -- -D warnings
 ```
 
-Check that the generated executable prints the expected output. For assembly
-generation changes, also compile and run an example that exercises the changed
-behavior. Only run the executable after compilation succeeds, because an older
-EXE may remain after a failed build.
+For native compiler or runtime changes, also run the ignored native suite on a
+supported host with the required tools:
 
-For documentation-only changes, check the wording, relative links, and command
-paths; rebuilding the compiler is not necessary.
+```text
+cargo test --locked -p adamantium-cli --test native -- --ignored
+cargo run -p adamantium-cli -- build example-project
+```
+
+For documentation-only changes, verify wording, relative links, and command
+paths. The repository CI runs formatting, spelling, lint, affected-crate tests,
+platform CLI tests, release builds, and proof generation.
 
 ## Submit a pull request
 
-Describe the problem, what your change does, and how you verified it. Link any
-related issue and mention limitations or checks you could not run. Include a
-small before-and-after example when it helps explain a behavior change.
-
-Keep review discussions respectful and focused on the code. Questions and
-requests for clarification are welcome.
+Describe the problem, resulting behavior, and validation. Link related issues
+and state any platform or test limitation. Update [`TODO.md`](TODO.md) when a
+change completes a tracked compiler item.
 
 ## License
 
-Review [LICENCE.md](LICENCE.md) before contributing. Submit only code and other
-material that you have the right to contribute under the project's license.
+Review [LICENCE.md](LICENCE.md) before contributing. Submit only material that
+you have the right to contribute under the project's license.

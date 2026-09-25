@@ -16,7 +16,7 @@ The checked-in language suite covers valid and invalid programs. A deterministic
 provides continuous coverage-guided fuzzing with `cargo-fuzz` for normal and
 Professional Mode parsing.
 
-Parser recovery that continues after multiple grammar errors in one module is
-still under development. Until it is complete, the compiler guarantees a clear,
-located diagnostic for the first grammar error and aggregates errors in phases
-that already support independent validation.
+Parser recovery uses synchronization points at declarations, statements and
+block boundaries. It reports multiple independent grammar errors where recovery
+can continue safely. Regression and mutation tests require malformed user input
+to produce structured diagnostics without exposing a Rust panic.

@@ -17,9 +17,13 @@ jobs:
     name: Quality
     uses: ./.github/workflows/quality.yml
 
+  security:
+    name: Security
+    uses: ./.github/workflows/security.yml
+
   affected-tests:
     name: Affected Tests
-    needs: quality
+    needs: [quality, security]
     uses: ./.github/workflows/affected-tests.yml
     with:
       crates: ${{ needs.quality.outputs.crates }}

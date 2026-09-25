@@ -32,7 +32,7 @@ fun main() {
 
 ## Why Adamantium?
 
-Adamantium aims to provide readable syntax while still exposing functions, classes, enums, traits, generics, modules, explicit types, memory operations, and native compilation. Projects use a predictable directory structure and can be checked, built, run, and tested through one CLI.
+Adamantium aims to provide readable syntax while exposing functions, classes, enums, traits, generics, modules, explicit types, memory operations, and native compilation. Projects use a predictable directory structure and can be checked, built, run, and tested through one CLI. The project is pre-1.0, so advanced features remain experimental even when they are implemented and tested.
 
 ## Hello World
 
@@ -78,10 +78,10 @@ For Windows x86-64, download `windows_portable_x86_64.zip` from the [Nightly rel
 
 For Linux x86-64, download `linux_portable_x86_64.zip` from the same Nightly release. It includes the CLI, NASM, and the Zig linker toolchain, so Rust, Cargo, NASM, GCC, Clang, and system development packages are not required. The Linux archive is rebuilt and its Nightly assets are replaced after all Linux CLI tests pass on the default branch.
 
-When building the CLI from source, building Adamantium programs requires NASM and a platform linker:
+Building the Rust CLI from source requires the normal Rust host toolchain. Building Adamantium programs with that CLI requires NASM and a supported linker configuration:
 
-- Windows: Visual Studio C++ Build Tools and the Windows SDK
-- Linux: a C linker available as `cc`
+- Windows: bundled or configured `rust-lld`, or another linker selected by the CLI
+- Linux: a C linker available as `cc`, or the portable Zig linker toolchain
 
 Each portable archive contains `INSTALL.txt`, and a SHA-256 checksum is published beside it.
 
@@ -118,6 +118,7 @@ adamantium test list
 adamantium test run
 adamantium install
 adamantium clean
+adamantium doctor
 ```
 
 ## Example
@@ -144,6 +145,6 @@ fun main() {
 
 ## Project Status
 
-Adamantium is under active development. The compiler currently supports Windows and Linux on x86-64. Language behavior, package ABI, memory-safety rules, diagnostics, and compiler architecture are still being expanded and may change before the first stable release.
+Adamantium is under active development. Native and portable builds target Windows and Linux on x86-64, with ARM64 work tracked separately. The 0.1 core syntax, primitive types, and memory rules are documented as frozen contracts, while advanced language features, the package ABI, diagnostics, and implementation architecture remain experimental before the first stable release. Adamantium has not completed an independent security audit.
 
-Detailed language, compiler, package, testing, memory-safety, and target documentation is available in [`docs`](docs/README.md). Current and planned work is tracked in [`TODO.md`](TODO.md).
+Detailed language, compiler, package, testing, memory-safety, and target documentation is available in [`docs`](docs/README.md). Current and planned compiler work is tracked in [`TODO.md`](TODO.md). Security reports follow [`SECURITY.md`](SECURITY.md).
