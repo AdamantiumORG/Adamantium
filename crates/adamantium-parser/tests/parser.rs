@@ -42,3 +42,23 @@ fn parser_reports_tokens_instead_of_retokenizing_text() {
     assert_eq!(error.span.start, 2);
     assert!(error.message.contains("expected"));
 }
+
+#[test]
+fn lexically_valid_missing_expression_is_a_parser_error() {
+    let source = "var x = ;";
+    let tokens = adamantium_lexer::lex(source).expect("the source is lexically valid");
+    let errors = adamantium_parser::parse_checked(source, &tokens).unwrap_err();
+    assert_eq!(errors.len(), 1);
+    assert_eq!(errors[0].message, "expected expression after '='");
+    assert_eq!(tokens[3].kind, adamantium_lexer::TokenKind::Semicolon);
+    assert_eq!(errors[0].span, tokens[3].span);
+}
+
+#[test]
+fn invalid_characters_remain_lexer_errors() {
+    let error = adamantium_lexer::lex("var x = @;").unwrap_err();
+    assert!(matches!(
+        error,
+        adamantium_lexer::LexError::UnexpectedCharacter { character: '@', .. }
+    ));
+}

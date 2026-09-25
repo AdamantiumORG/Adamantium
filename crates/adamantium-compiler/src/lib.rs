@@ -16,7 +16,14 @@ pub fn architecture_smoke_test(
             .collect());
     }
     let tokens = lexed.tokens;
-    let _parsed = adamantium_parser::parse(source, &tokens);
+    let _parsed = adamantium_parser::parse_checked(source, &tokens).map_err(|errors| {
+        errors
+            .into_iter()
+            .map(|error| {
+                adamantium_diagnostics::Diagnostic::error("E110", error.message, error.span)
+            })
+            .collect::<Vec<_>>()
+    })?;
     let diagnostics = adamantium_semantics::analyze(source, &tokens);
     if !diagnostics.is_empty() {
         return Err(diagnostics);

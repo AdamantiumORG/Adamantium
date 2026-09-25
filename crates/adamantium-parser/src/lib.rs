@@ -18,6 +18,24 @@ pub fn parse(source: &str, tokens: &[Token]) -> ParsedFile {
     }
 }
 
+pub fn parse_checked(source: &str, tokens: &[Token]) -> Result<ParsedFile, Vec<ParseError>> {
+    let errors = tokens
+        .windows(2)
+        .filter_map(|pair| match (&pair[0].kind, &pair[1].kind) {
+            (TokenKind::Equals, TokenKind::Semicolon | TokenKind::Eof) => Some(ParseError {
+                message: "expected expression after '='".into(),
+                span: pair[1].span,
+            }),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    if errors.is_empty() {
+        Ok(parse(source, tokens))
+    } else {
+        Err(errors)
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ParseError {
     pub message: String,
