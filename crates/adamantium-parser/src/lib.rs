@@ -3,12 +3,14 @@ use adamantium_lexer::{SourceFile, Token, TokenKind};
 
 #[derive(Debug)]
 pub struct ParsedFile {
+    pub span: Span,
     pub identifiers: Vec<Identifier>,
 }
 
 pub fn parse(source: &str, tokens: &[Token]) -> ParsedFile {
     let source_file = SourceFile::new(source);
     ParsedFile {
+        span: source_file.span(),
         identifiers: tokens
             .iter()
             .filter_map(|token| match &token.kind {
@@ -188,7 +190,7 @@ where
         if let Some(unary_operator) = unary_operator {
             let operator = self.tokens.advance().ok_or_else(|| ParseError {
                 message: "expected prefix operator".into(),
-                span: Span::default(),
+                span: self.source.end_span(),
             })?;
             let operand = self.expression(8)?;
             let operand_span = operand.span();
@@ -280,7 +282,7 @@ where
     fn primary(&mut self) -> Result<Expression, ParseError> {
         let token = self.tokens.advance().ok_or_else(|| ParseError {
             message: "expected expression".into(),
-            span: Span::default(),
+            span: self.source.end_span(),
         })?;
         match token.kind {
             TokenKind::Identifier => Ok(Expression::Identifier(Identifier::new(
@@ -310,7 +312,7 @@ where
             span: self
                 .tokens
                 .peek()
-                .map_or_else(Span::default, |token| token.span),
+                .map_or_else(|| self.source.end_span(), |token| token.span),
         }
     }
 }

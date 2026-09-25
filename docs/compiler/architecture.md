@@ -52,6 +52,14 @@ Every representation that survives a lowering boundary carries its original
 definitions and locals use `DefId` and `LocalId`. Types are interned once and
 referenced by `TypeId`.
 
+`Span` uses byte offsets into the original UTF-8 source. Tokens, identifiers,
+AST expressions, resolved definitions, HIR definitions, MIR instructions and
+IR instructions retain that span. Program nodes retain the complete source
+span. Synthetic instructions use an empty span at the source location where
+they are inserted, rather than the unrelated `0..0` default. Code generation
+keeps an instruction-to-span map next to the emitted assembly so backend and
+runtime diagnostics can still identify the originating source construct.
+
 The exact input, output, invariants, and responsibilities of every stage are defined in [Compiler phase contracts](phases.md).
 
 ## Workspace direction

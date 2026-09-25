@@ -43,5 +43,6 @@ pub struct Definition {
 
 #[derive(Clone, Debug, Default)]
 pub struct Program {
+    pub span: Span,
     pub definitions: Vec<Definition>,
 }

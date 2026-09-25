@@ -3,6 +3,14 @@ fn parses_identifier_stream() {
     let tokens = adamantium_lexer::lex("fun main() {}").unwrap();
     let parsed = adamantium_parser::parse("fun main() {}", &tokens);
     assert_eq!(parsed.identifiers[0].name, "main");
+    assert_eq!(parsed.span, adamantium_lexer::Span { start: 0, end: 13 });
+}
+
+#[test]
+fn end_of_input_errors_point_at_the_end_of_the_source() {
+    let tokens = adamantium_lexer::lex("value+").unwrap();
+    let error = adamantium_parser::parse_expression("value+", &tokens).unwrap_err();
+    assert_eq!(error.span, adamantium_lexer::Span::empty_at(6));
 }
 
 #[test]

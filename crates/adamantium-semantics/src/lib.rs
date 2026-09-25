@@ -23,6 +23,7 @@ pub fn analyze(
 }
 
 pub struct Resolution {
+    pub span: adamantium_lexer::Span,
     pub definitions: Vec<ResolvedDefinition>,
     pub symbols: adamantium_hir::SymbolInterner,
 }
@@ -61,6 +62,7 @@ pub fn resolve(
     }
     if diagnostics.is_empty() {
         Ok(Resolution {
+            span: parsed.span,
             definitions,
             symbols,
         })
@@ -77,6 +79,7 @@ pub fn type_check(
         adamantium_types::Type::I32,
     ));
     adamantium_hir::Program {
+        span: resolution.span,
         definitions: resolution
             .definitions
             .iter()

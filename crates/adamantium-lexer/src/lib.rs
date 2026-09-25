@@ -6,6 +6,22 @@ pub struct Span {
     pub end: u32,
 }
 
+impl Span {
+    pub fn cover(self, other: Self) -> Self {
+        Self {
+            start: self.start.min(other.start),
+            end: self.end.max(other.end),
+        }
+    }
+
+    pub fn empty_at(offset: u32) -> Self {
+        Self {
+            start: offset,
+            end: offset,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct SourceLocation {
     pub line: u32,
@@ -36,6 +52,17 @@ impl<'src> SourceFile<'src> {
 
     pub fn text(&self, span: Span) -> Option<&'src str> {
         self.source.get(span.start as usize..span.end as usize)
+    }
+
+    pub fn span(&self) -> Span {
+        Span {
+            start: 0,
+            end: u32::try_from(self.source.len()).unwrap_or(u32::MAX),
+        }
+    }
+
+    pub fn end_span(&self) -> Span {
+        Span::empty_at(self.span().end)
     }
 
     pub fn location(&self, offset: u32) -> Option<SourceLocation> {

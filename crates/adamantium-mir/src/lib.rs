@@ -17,6 +17,7 @@ pub enum InstructionKind {
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Program {
+    pub span: Span,
     pub instructions: Vec<Instruction>,
 }
 
@@ -33,7 +34,10 @@ pub fn lower(hir: &adamantium_hir::Program, none: TypeId) -> Program {
     instructions.push(Instruction {
         kind: InstructionKind::Return,
         ty: none,
-        span: Span::default(),
+        span: Span::empty_at(hir.span.end),
     });
-    Program { instructions }
+    Program {
+        span: hir.span,
+        instructions,
+    }
 }

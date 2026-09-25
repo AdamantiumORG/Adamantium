@@ -9,6 +9,7 @@ fn lowering_preserves_definition_spans_and_type_ids() {
     let none = types.intern(TypeKind::Primitive(Type::None));
     let source_span = Span { start: 4, end: 8 };
     let hir = adamantium_hir::Program {
+        span: Span { start: 0, end: 12 },
         definitions: vec![Definition {
             id: DefId(0),
             symbol: adamantium_hir::SymbolId(0),
@@ -20,4 +21,6 @@ fn lowering_preserves_definition_spans_and_type_ids() {
     assert_eq!(mir.instructions[0].span, source_span);
     assert_eq!(mir.instructions[0].ty, integer);
     assert_eq!(mir.instructions[1].ty, none);
+    assert_eq!(mir.span, hir.span);
+    assert_eq!(mir.instructions[1].span, Span::empty_at(hir.span.end));
 }

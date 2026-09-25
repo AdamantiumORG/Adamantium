@@ -6,6 +6,7 @@ pub fn hir_to_mir(hir: &adamantium_hir::Program, none: TypeId) -> adamantium_mir
 
 pub fn mir_to_ir(mir: &adamantium_mir::Program) -> adamantium_ir::Program {
     adamantium_ir::Program {
+        span: mir.span,
         instructions: mir
             .instructions
             .iter()

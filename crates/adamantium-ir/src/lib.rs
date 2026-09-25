@@ -1,6 +1,8 @@
 use adamantium_types::PrimitiveType;
 use std::collections::HashMap;
 
+pub use adamantium_lexer::Span;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Instruction {
     Constant { value: i64, ty: PrimitiveType },
@@ -17,11 +19,12 @@ pub fn integer(value: i64) -> Instruction {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SpannedInstruction {
     pub instruction: Instruction,
-    pub span: adamantium_lexer::Span,
+    pub span: Span,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Program {
+    pub span: Span,
     pub instructions: Vec<SpannedInstruction>,
 }
 

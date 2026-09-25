@@ -10,10 +10,27 @@ pub fn emit(instructions: &[adamantium_ir::Instruction]) -> String {
 }
 
 pub fn emit_program(program: &adamantium_ir::Program) -> String {
+    emit_program_with_spans(program).assembly
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct EmittedProgram {
+    pub assembly: String,
+    pub instruction_spans: Vec<adamantium_ir::Span>,
+}
+
+pub fn emit_program_with_spans(program: &adamantium_ir::Program) -> EmittedProgram {
     let instructions = program
         .instructions
         .iter()
         .map(|instruction| instruction.instruction.clone())
         .collect::<Vec<_>>();
-    emit(&instructions)
+    EmittedProgram {
+        assembly: emit(&instructions),
+        instruction_spans: program
+            .instructions
+            .iter()
+            .map(|instruction| instruction.span)
+            .collect(),
+    }
 }
