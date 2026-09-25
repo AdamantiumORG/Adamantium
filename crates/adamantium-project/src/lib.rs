@@ -92,6 +92,48 @@ pub fn create(root: &Path) -> Result<(), String> {
     Ok(())
 }
 
+pub fn initialize(root: &Path) -> Result<(), String> {
+    if !root.is_dir() {
+        return Err(format!("{} is not an existing directory", root.display()));
+    }
+    let name = root
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or("project path must end with a valid UTF-8 project name")?;
+    validate_name(name)?;
+    for manifest in ["project.toml", "requirement.toml"] {
+        if root.join(manifest).exists() {
+            return Err(format!(
+                "{} already contains {manifest}; refusing to overwrite an existing project",
+                root.display()
+            ));
+        }
+    }
+    let code = root.join("code");
+    fs::create_dir_all(&code).map_err(|e| format!("could not create {}: {e}", code.display()))?;
+    let main = code.join("main.ad");
+    if !main.exists() {
+        fs::write(
+            &main,
+            "fun main() {\n    print.newline(\"Hello, Adamantium!\");\n}\n",
+        )
+        .map_err(|e| format!("could not create {}: {e}", main.display()))?;
+    }
+    fs::write(
+        root.join("project.toml"),
+        format!("name = \"{name}\"\nversion = \"0.1.0\"\ndescription = \"\"\nauthors = []\nprofessional = false\n"),
+    )
+    .map_err(|e| format!("could not create project.toml: {e}"))?;
+    fs::write(root.join("requirement.toml"), "[packages]\n")
+        .map_err(|e| format!("could not create requirement.toml: {e}"))?;
+    let gitignore = root.join(".gitignore");
+    if !gitignore.exists() {
+        fs::write(gitignore, "/target/\n/packages/\n")
+            .map_err(|e| format!("could not create .gitignore: {e}"))?;
+    }
+    Ok(())
+}
+
 pub fn read_toml(path: &Path) -> Result<toml::Table, String> {
     fs::read_to_string(path)
         .map_err(|e| format!("{}: {e}", path.display()))?
@@ -264,5 +306,24 @@ mod tests {
             ["utils", ""]
         );
         fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn initializes_an_existing_directory_without_overwriting_source() {
+        let root = temp().join("Existing");
+        fs::create_dir_all(root.join("code")).unwrap();
+        fs::write(root.join("code/main.ad"), "fun main() {}\n").unwrap();
+        initialize(&root).unwrap();
+        assert_eq!(
+            fs::read_to_string(root.join("code/main.ad")).unwrap(),
+            "fun main() {}\n"
+        );
+        assert!(root.join("project.toml").is_file());
+        assert!(
+            initialize(&root)
+                .unwrap_err()
+                .contains("refusing to overwrite")
+        );
+        fs::remove_dir_all(root.parent().unwrap()).unwrap();
     }
 }

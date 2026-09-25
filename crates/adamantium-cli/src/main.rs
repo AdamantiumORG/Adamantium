@@ -15,6 +15,7 @@ use std::{
     env,
     ffi::OsString,
     fs,
+    io::IsTerminal,
     path::{Path, PathBuf},
     process::{Command, ExitCode},
     sync::{
@@ -24,9 +25,23 @@ use std::{
     thread,
 };
 
+#[derive(Clone, Copy, Debug, Default)]
+struct GlobalOptions {
+    no_color: bool,
+    quiet: bool,
+    verbose: bool,
+}
+
 fn main() -> ExitCode {
     debug_assert!(!adamantium_compiler::pipeline_layers().is_empty());
-    let arguments = env::args_os().skip(1).collect();
+    let mut arguments = env::args_os().skip(1).collect::<Vec<_>>();
+    let options = match global_options(&mut arguments) {
+        Ok(options) => options,
+        Err(error) => {
+            eprintln!("{error}");
+            return ExitCode::from(64);
+        }
+    };
     let panic_hook = std::panic::take_hook();
     std::panic::set_hook(Box::new(|_| {}));
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| cli(arguments)));
@@ -36,10 +51,66 @@ fn main() -> ExitCode {
     }) {
         Ok(code) => code,
         Err(error) => {
-            eprintln!("{}", diagnostics::render_errors(&error));
-            ExitCode::FAILURE
+            let rendered = diagnostics::render_errors(&error);
+            if !options.quiet {
+                if !options.no_color && std::io::stderr().is_terminal() {
+                    eprintln!("\x1b[31m{rendered}\x1b[0m");
+                } else {
+                    eprintln!("{rendered}");
+                }
+            }
+            error_exit_code(&error)
         }
     }
+}
+
+fn global_options(arguments: &mut Vec<OsString>) -> Result<GlobalOptions, String> {
+    let enabled = |name: &str| env::var_os(name).is_some_and(|value| value != "0");
+    let mut options = GlobalOptions {
+        no_color: env::var_os("NO_COLOR").is_some() || enabled("ADAMANTIUM_NO_COLOR"),
+        quiet: enabled("ADAMANTIUM_QUIET"),
+        verbose: enabled("ADAMANTIUM_VERBOSE"),
+    };
+    while let Some(argument) = arguments.first().and_then(|value| value.to_str()) {
+        match argument {
+            "--no-color" => options.no_color = true,
+            "--quiet" | "-q" => options.quiet = true,
+            "--verbose" | "-v" => options.verbose = true,
+            _ => break,
+        }
+        arguments.remove(0);
+    }
+    if options.quiet && options.verbose {
+        return Err("--quiet and --verbose cannot be used together".into());
+    }
+    if options.verbose {
+        eprintln!("Adamantium {}", env!("CARGO_PKG_VERSION"));
+    }
+    Ok(options)
+}
+
+fn error_exit_code(error: &str) -> ExitCode {
+    let code = if error.contains("linker") || error.contains("NASM") {
+        5
+    } else if error.contains("project.toml")
+        || error.contains("requirement.toml")
+        || error.contains("configuration")
+    {
+        4
+    } else if error.contains("error[E300]") || error.contains("type checking") {
+        3
+    } else if error.contains("error[E1") || error.contains("syntax") || error.contains("lexer") {
+        2
+    } else if error.contains("unknown option")
+        || error.contains("unknown command")
+        || error.contains("too many arguments")
+        || error.contains("requires ")
+    {
+        64
+    } else {
+        1
+    };
+    ExitCode::from(code)
 }
 
 struct CliLanguageCompiler;
@@ -58,7 +129,7 @@ impl adamantium_testing::LanguageCompiler for CliLanguageCompiler {
     }
 }
 
-const HELP: &str = "Adamantium compiler (Windows/Linux x86-64)\n\
+const HELP: &str = "Adamantium compiler\n\
 Usage:\n\
   adamantium check [PROJECT_DIRECTORY]\n\
   adamantium doctor [PROJECT_DIRECTORY]\n\
@@ -74,12 +145,27 @@ Usage:\n\
   adamantium test run [PROJECT_DIRECTORY] [TEST_NAME] [--verbose]\n\
   adamantium test language [SUITE_DIRECTORY] [--verbose]\n\
   adamantium new <PROJECT_NAME_OR_PATH>\n\
+  adamantium init [PROJECT_DIRECTORY]\n\
+  adamantium completions <bash|zsh|fish|powershell>\n\
   adamantium --help\n\
   adamantium --version\n\n\
-PROJECT_DIRECTORY defaults to the current directory.\n\
+Options:\n\
+  -O0, -O1, -O2    Select optimization level (default: -O1)\n\
+  --verbose         Show detailed test output\n\
+  --quiet, -q       Suppress compiler error output\n\
+  --no-color        Disable terminal colors\n\
+  --help, -h        Show this help\n\
+  --version, -V     Show the compiler version\n\n\
+PROJECT_DIRECTORY defaults to the current directory. `clean` and `clear` are aliases and remove only PROJECT_DIRECTORY/target.\n\
 For compatibility, `adamantium PROJECT_DIRECTORY` is the same as `adamantium build PROJECT_DIRECTORY`.\n\
 The portable Windows and Linux packages include NASM and a linker. Source builds require NASM and a platform linker.\n\
-Override tools with ADAMANTIUM_NASM and ADAMANTIUM_LINKER.";
+Override tools with ADAMANTIUM_NASM and ADAMANTIUM_LINKER.\n\n\
+Examples:\n\
+  adamantium new HelloWorld\n\
+  cd HelloWorld && adamantium run\n\
+  adamantium check .\n\
+  adamantium test run . addition --verbose\n\
+  adamantium completions powershell";
 
 enum Action {
     Help,
@@ -97,6 +183,8 @@ enum Action {
     Build(PathBuf, optimizer::Level),
     Run(PathBuf, optimizer::Level, Vec<OsString>),
     New(PathBuf),
+    Init(PathBuf),
+    Completions(String),
 }
 
 type SourceFiles = Vec<(String, String)>;
@@ -157,6 +245,11 @@ fn cli(args: Vec<OsString>) -> Result<ExitCode, String> {
             create_project(&root)?;
             println!("Created Adamantium project at {}", root.display());
         }
+        Action::Init(root) => {
+            adamantium_project::initialize(&root)?;
+            println!("Initialized Adamantium project at {}", root.display());
+        }
+        Action::Completions(shell) => print!("{}", shell_completions(&shell)?),
     }
     Ok(ExitCode::SUCCESS)
 }
@@ -180,6 +273,20 @@ fn action(args: Vec<OsString>) -> Result<Action, String> {
             .ok_or("adamantium new requires a project name or path; use --help")?;
         no_more_args(args)?;
         return Ok(Action::New(root.into()));
+    }
+    if first == "init" {
+        let root = args.next().map_or_else(current_directory, Ok)?;
+        no_more_args(args)?;
+        return Ok(Action::Init(root.into()));
+    }
+    if first == "completions" {
+        let shell = args
+            .next()
+            .ok_or("adamantium completions requires bash, zsh, fish, or powershell; use --help")?
+            .to_string_lossy()
+            .into_owned();
+        no_more_args(args)?;
+        return Ok(Action::Completions(shell));
     }
     if first == "build" {
         let (level, remaining) = optimization_arguments(args.collect())?;
@@ -305,7 +412,17 @@ fn action(args: Vec<OsString>) -> Result<Action, String> {
         && let Some(command) = closest_name(
             &text,
             &[
-                "build", "check", "clean", "clear", "doctor", "fmt", "install", "new", "run",
+                "build",
+                "check",
+                "clean",
+                "clear",
+                "completions",
+                "doctor",
+                "fmt",
+                "init",
+                "install",
+                "new",
+                "run",
                 "test",
             ],
         )
@@ -316,6 +433,28 @@ fn action(args: Vec<OsString>) -> Result<Action, String> {
     }
     no_more_args(args)?;
     Ok(Action::Build(first.into(), optimizer::Level::default()))
+}
+
+fn shell_completions(shell: &str) -> Result<&'static str, String> {
+    const COMMANDS: &str =
+        "build check clean clear completions doctor fmt init install new package run test";
+    match shell {
+        "bash" => Ok(
+            "_adamantium() { COMPREPLY=( $(compgen -W 'build check clean clear completions doctor fmt init install new package run test' -- \"${COMP_WORDS[COMP_CWORD]}\") ); }\ncomplete -F _adamantium adamantium\n",
+        ),
+        "zsh" => Ok(
+            "#compdef adamantium\n_arguments '1:command:(build check clean clear completions doctor fmt init install new package run test)'\n",
+        ),
+        "fish" => Ok(
+            "complete -c adamantium -f -a 'build check clean clear completions doctor fmt init install new package run test'\n",
+        ),
+        "powershell" => Ok(
+            "Register-ArgumentCompleter -Native -CommandName adamantium -ScriptBlock { param($wordToComplete) 'build','check','clean','clear','completions','doctor','fmt','init','install','new','package','run','test' | Where-Object { $_ -like \"$wordToComplete*\" } }\n",
+        ),
+        _ => Err(format!(
+            "unsupported shell '{shell}'; expected bash, zsh, fish, or powershell ({COMMANDS})"
+        )),
+    }
 }
 
 fn optimization_arguments(

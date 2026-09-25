@@ -11,6 +11,18 @@
 * [x] Add compiler error handling
 * [x] Add compiler warning system - nonfatal warnings with codes and source locations
 * [x] Create basic documentation structure
+* [x] Keep the CLI version in the workspace package version
+* [x] Document every CLI command, option, and common example in `--help`
+* [x] Validate the native toolchain with `adamantium doctor`
+* [x] Keep `clean` and `clear` as aliases that remove only the project target directory
+* [x] Validate project names, destination paths, and existing directories in `new`
+* [x] Initialize existing directories with `adamantium init`
+* [x] Support global environment configuration and project configuration
+* [x] Use stable CLI exit-code classes for usage, syntax, type, configuration, and toolchain errors
+* [x] Suggest corrections for unknown commands and reject unknown options
+* [x] Generate Bash, Zsh, Fish, and PowerShell completions
+* [x] Color terminal errors and support `--no-color`/`NO_COLOR`
+* [x] Support global `--verbose` and `--quiet` output modes
 
 ---
 
@@ -1232,9 +1244,9 @@ Create the official standard library.
 * [x] `adamantium run`
 * [x] `adamantium install`
 * [x] `adamantium clean`
-* [ ] `adamantium doctor`
+* [x] `adamantium doctor`
 * [x] `adamantium new`
-* [ ] `adamantium init`
+* [x] `adamantium init`
 
 ---
 

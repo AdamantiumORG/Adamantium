@@ -21,6 +21,9 @@ fn help_and_version_are_available() {
         assert!(stdout.contains("adamantium doctor [PROJECT_DIRECTORY]"));
         assert!(stdout.contains("adamantium run [PROJECT_DIRECTORY]"));
         assert!(stdout.contains("adamantium package prepare [PACKAGE_DIRECTORY]"));
+        assert!(stdout.contains("adamantium init [PROJECT_DIRECTORY]"));
+        assert!(stdout.contains("adamantium completions <bash|zsh|fish|powershell>"));
+        assert!(stdout.contains("Examples:"));
     }
 
     let output = adamantium().arg("--version").output().unwrap();
@@ -121,6 +124,41 @@ fn fmt_formats_source_ids_idempotently_and_keeps_project_valid() {
         String::from_utf8_lossy(&checked.stderr)
     );
     fs::remove_dir_all(base).unwrap();
+}
+
+#[test]
+fn init_preserves_existing_sources_and_completions_cover_all_shells() {
+    let root = std::env::temp_dir().join(format!(
+        "adamantium-cli-init-{}-{}",
+        std::process::id(),
+        NEXT_PROJECT.fetch_add(1, Ordering::Relaxed)
+    ));
+    fs::create_dir_all(root.join("code")).unwrap();
+    fs::write(root.join("code/main.ad"), "fun main() {}\n").unwrap();
+    let initialized = adamantium()
+        .args(["init", root.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(initialized.status.success());
+    assert_eq!(
+        fs::read_to_string(root.join("code/main.ad")).unwrap(),
+        "fun main() {}\n"
+    );
+    assert!(root.join("project.toml").is_file());
+
+    for shell in ["bash", "zsh", "fish", "powershell"] {
+        let output = adamantium().args(["completions", shell]).output().unwrap();
+        assert!(output.status.success(), "{shell}");
+        let completion = String::from_utf8_lossy(&output.stdout);
+        assert!(completion.contains("build"), "{shell}: {completion}");
+        assert!(completion.contains("doctor"), "{shell}: {completion}");
+    }
+    let invalid = adamantium()
+        .args(["completions", "unknown"])
+        .output()
+        .unwrap();
+    assert_eq!(invalid.status.code(), Some(1));
+    fs::remove_dir_all(root).unwrap();
 }
 
 #[test]
@@ -231,7 +269,7 @@ fn check_analyzes_projects_without_build_tools_or_artifacts() {
         .args(["check", base.to_str().unwrap()])
         .output()
         .unwrap();
-    assert_eq!(invalid.status.code(), Some(1));
+    assert_eq!(invalid.status.code(), Some(3));
     let stderr = String::from_utf8_lossy(&invalid.stderr);
     assert!(stderr.contains("error[E300]"), "{stderr}");
     assert!(stderr.contains("main.ad"), "{stderr}");
@@ -329,13 +367,43 @@ fn clean_and_clear_remove_only_project_targets() {
 fn invalid_cli_arguments_are_rejected() {
     for arguments in [vec!["--unknown"], vec!["build", "one", "two"], vec!["new"]] {
         let output = adamantium().args(arguments).output().unwrap();
-        assert_eq!(output.status.code(), Some(1));
+        assert_eq!(output.status.code(), Some(64));
         assert!(String::from_utf8_lossy(&output.stderr).contains("use --help"));
     }
     let misspelled_build = String::from_utf8([98, 117, 105, 100].into()).unwrap(); // i cant put there what it means ): ; typos flag it as a typo (it is tho)
     let typo = adamantium().arg(misspelled_build).output().unwrap();
-    assert_eq!(typo.status.code(), Some(1));
+    assert_eq!(typo.status.code(), Some(64));
     assert!(String::from_utf8_lossy(&typo.stderr).contains("Did you mean 'build'?"));
+}
+
+#[test]
+fn global_output_options_and_exit_code_classes_are_stable() {
+    let conflict = adamantium()
+        .args(["--quiet", "--verbose", "--help"])
+        .output()
+        .unwrap();
+    assert_eq!(conflict.status.code(), Some(64));
+
+    let quiet = adamantium()
+        .args(["--quiet", "--unknown"])
+        .output()
+        .unwrap();
+    assert_eq!(quiet.status.code(), Some(64));
+    assert!(quiet.stderr.is_empty());
+
+    let no_color = adamantium()
+        .args(["--no-color", "--unknown"])
+        .output()
+        .unwrap();
+    assert_eq!(no_color.status.code(), Some(64));
+    assert!(!no_color.stderr.contains(&0x1b));
+
+    let verbose = adamantium()
+        .args(["--verbose", "--version"])
+        .output()
+        .unwrap();
+    assert!(verbose.status.success());
+    assert!(String::from_utf8_lossy(&verbose.stderr).contains("Adamantium"));
 }
 
 #[test]
@@ -366,7 +434,7 @@ fn reports_multiple_independent_manifest_errors() {
         .args(["check", base.to_str().unwrap()])
         .output()
         .unwrap();
-    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(output.status.code(), Some(4));
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert_eq!(stderr.matches("error[E400]").count(), 5, "{stderr}");
     assert!(stderr.contains("name must be a string"));
