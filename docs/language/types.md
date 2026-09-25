@@ -11,6 +11,12 @@ var text = "hello":string;
 
 Defaults are `i32` for integer literals and `f64` for decimal literals. Explicit conversions use `value.as(Type)` and are checked by the compiler.
 
+A decimal literal requires at least one digit on both sides of `.`. Therefore
+`123.45` is one floating-point literal, while `123.` is an integer followed by
+`.` and `.123` is `.` followed by an integer. Two consecutive dots always form
+the `..` range token, so `0..10` is two integer literals separated by a range
+operator.
+
 ## Strings
 
 Strings are immutable UTF-8 values. Assignment may share their backing bytes because string contents cannot be changed. Concatenation with `+` creates a new runtime-owned string. Comparisons use string contents and support `==`, `!=`, `<`, `<=`, `>` and `>=`.

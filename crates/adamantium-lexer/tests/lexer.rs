@@ -137,7 +137,7 @@ fn operators_use_maximal_munch() {
             &TokenKind::StarEqual,
             &TokenKind::SlashEqual,
             &TokenKind::PercentEqual,
-            &TokenKind::Range,
+            &TokenKind::DotDot,
             &TokenKind::DoubleColon,
             &TokenKind::Eof,
         ]
@@ -169,6 +169,35 @@ fn minus_is_always_separate_from_numeric_literals() {
         ]
     );
     assert_eq!(tokens[1].text(source), "123");
+}
+
+#[test]
+fn distinguishes_decimal_points_member_dots_and_ranges() {
+    let source = "foo.bar 123.45 123. .123 1..10 0..10";
+    let tokens = lex(source).unwrap();
+    assert_eq!(
+        tokens.iter().map(|token| &token.kind).collect::<Vec<_>>(),
+        [
+            &TokenKind::Identifier,
+            &TokenKind::Dot,
+            &TokenKind::Identifier,
+            &TokenKind::FloatLiteral,
+            &TokenKind::IntLiteral,
+            &TokenKind::Dot,
+            &TokenKind::Dot,
+            &TokenKind::IntLiteral,
+            &TokenKind::IntLiteral,
+            &TokenKind::DotDot,
+            &TokenKind::IntLiteral,
+            &TokenKind::IntLiteral,
+            &TokenKind::DotDot,
+            &TokenKind::IntLiteral,
+            &TokenKind::Eof,
+        ]
+    );
+    assert_eq!(tokens[3].text(source), "123.45");
+    assert_eq!(tokens[4].text(source), "123");
+    assert_eq!(tokens[9].text(source), "..");
 }
 
 #[test]

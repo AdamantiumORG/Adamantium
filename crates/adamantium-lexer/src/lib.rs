@@ -51,7 +51,7 @@ pub enum TokenKind {
     Ampersand,
     LogicalAnd,
     Dollar,
-    Range,
+    DotDot,
     DoubleColon,
     LineComment,
     BlockComment,
@@ -493,7 +493,7 @@ impl<'src> Lexer<'src> {
             ('%', Some('=')) => Some(TokenKind::PercentEqual),
             ('|', Some('|')) => Some(TokenKind::LogicalOr),
             ('&', Some('&')) => Some(TokenKind::LogicalAnd),
-            ('.', Some('.')) => Some(TokenKind::Range),
+            ('.', Some('.')) => Some(TokenKind::DotDot),
             (':', Some(':')) => Some(TokenKind::DoubleColon),
             _ => None,
         };
