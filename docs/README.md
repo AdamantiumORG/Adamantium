@@ -16,6 +16,7 @@
 - [Errors](language/errors.md)
 - [Professional Mode](language/professional.md)
 - [Decorators](language/decorators.md)
+- [Standard library](language/standard-library.md)
 
 ## Compiler
 

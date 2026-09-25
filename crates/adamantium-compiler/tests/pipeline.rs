@@ -29,7 +29,7 @@ fn exposes_every_compiler_phase_in_order() {
 
 #[test]
 fn reports_all_lexer_errors_in_one_compiler_pass() {
-    let diagnostics = adamantium_compiler::architecture_smoke_test("@ fun main #")
+    let diagnostics = adamantium_compiler::architecture_smoke_test("? fun main ~")
         .expect_err("invalid characters should produce diagnostics");
     assert_eq!(diagnostics.len(), 2);
     assert!(

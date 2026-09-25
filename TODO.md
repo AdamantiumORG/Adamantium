@@ -1165,17 +1165,17 @@ Create the official standard library.
 
 * [x] String utilities
 * [x] Math
-* [ ] Collections
-* [ ] Date/time
-* [ ] Random numbers
-* [ ] Environment variables
-* [ ] Process management
-* [ ] Networking
-* [ ] File system
-* [ ] JSON
+* [x] Collections
+* [x] Date/time
+* [x] Random numbers
+* [x] Environment variables
+* [x] Process management
+* [x] Networking
+* [x] File system
+* [x] JSON
 * [x] Error handling
-* [ ] Async
-* [ ] Testing
+* [x] Async
+* [x] Testing
 
 ---
 
@@ -1778,12 +1778,12 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 * [x] Define standard-library module structure
 * [x] Implement string utilities
 * [x] Implement math utilities
-* [ ] Implement collections
-* [ ] Implement date/time
-* [ ] Implement random numbers
-* [ ] Implement environment variables
-* [ ] Implement process management
-* [ ] Implement networking
+* [x] Implement collections
+* [x] Implement date/time
+* [x] Implement random numbers
+* [x] Implement environment variables
+* [x] Implement process management
+* [x] Implement networking
 * [x] Implement error utilities
 * [x] Document the standard library
 * [x] Add standard-library tests

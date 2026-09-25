@@ -45,6 +45,7 @@ The existing NASM generator consumes this shared typed IR. A future LLVM ARM64 g
 | `adamantium-lowering` | HIR or MIR | the next representation | HIR, MIR, IR |
 | `adamantium-ir` | lowered operations | target-independent backend IR | spans, canonical types |
 | `adamantium-codegen` | IR | target assembly | IR only |
+| `adamantium-stdlib` | typed host-service requests | values or structured errors | no compiler layer |
 
 Backends must not depend on the parser, AST, name resolution, or source text.
 Every representation that survives a lowering boundary carries its original
@@ -64,7 +65,7 @@ The exact input, output, invariants, and responsibilities of every stage are def
 
 ## Workspace direction
 
-The workspace contains focused crates including `adamantium-cli`, `adamantium-lexer`, `adamantium-parser`, `adamantium-ast`, `adamantium-semantics`, `adamantium-types`, `adamantium-diagnostics`, `adamantium-ir`, `adamantium-codegen`, `adamantium-nasm`, `adamantium-linker`, `adamantium-runtime`, `adamantium-project`, `adamantium-packages`, `adamantium-wasm`, and `adamantium-testing`.
+The workspace contains focused crates including `adamantium-cli`, `adamantium-lexer`, `adamantium-parser`, `adamantium-ast`, `adamantium-semantics`, `adamantium-types`, `adamantium-diagnostics`, `adamantium-ir`, `adamantium-codegen`, `adamantium-nasm`, `adamantium-linker`, `adamantium-runtime`, `adamantium-project`, `adamantium-packages`, `adamantium-wasm`, `adamantium-testing`, and `adamantium-stdlib`.
 
 Crates should be extracted only after the corresponding in-crate API has a clear input, output, ownership model, and diagnostic boundary. This avoids cyclic dependencies and prevents internal data structures from becoming public APIs accidentally.
 

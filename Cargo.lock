@@ -164,6 +164,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "adamantium-stdlib"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "adamantium-testing"
 version = "0.1.0"
 dependencies = [
