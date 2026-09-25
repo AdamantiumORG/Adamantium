@@ -18,6 +18,7 @@ fn help_and_version_are_available() {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("adamantium build [PROJECT_DIRECTORY]"));
         assert!(stdout.contains("adamantium check [PROJECT_DIRECTORY]"));
+        assert!(stdout.contains("adamantium doctor [PROJECT_DIRECTORY]"));
         assert!(stdout.contains("adamantium run [PROJECT_DIRECTORY]"));
         assert!(stdout.contains("adamantium package prepare [PACKAGE_DIRECTORY]"));
     }
@@ -120,6 +121,39 @@ fn fmt_formats_source_ids_idempotently_and_keeps_project_valid() {
         String::from_utf8_lossy(&checked.stderr)
     );
     fs::remove_dir_all(base).unwrap();
+}
+
+#[test]
+fn doctor_reports_tools_and_invalid_project_configuration() {
+    let root = std::env::temp_dir().join(format!(
+        "adamantium-cli-doctor-{}-{}",
+        std::process::id(),
+        NEXT_PROJECT.fetch_add(1, Ordering::Relaxed)
+    ));
+    fs::create_dir_all(root.join("code")).unwrap();
+    fs::write(root.join("project.toml"), "name = 7\n").unwrap();
+    fs::write(root.join("requirement.toml"), "[packages]\n").unwrap();
+    fs::write(root.join("code/main.ad"), "fun main() {}\n").unwrap();
+
+    let output = adamantium()
+        .args(["doctor", root.to_str().unwrap()])
+        .env("ADAMANTIUM_NASM", "adamantium-doctor-missing-nasm")
+        .env("ADAMANTIUM_LINKER", "adamantium-doctor-missing-linker")
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("Adamantium doctor"), "{stdout}");
+    assert!(stdout.contains("[error] NASM:"), "{stdout}");
+    assert!(stdout.contains("[error] linker:"), "{stdout}");
+    assert!(
+        stdout.contains("project or package configuration"),
+        "{stdout}"
+    );
+    assert!(stdout.contains("help:"), "{stdout}");
+    assert!(stdout.contains("blocking problem(s)"), "{stdout}");
+
+    fs::remove_dir_all(root).unwrap();
 }
 
 #[test]

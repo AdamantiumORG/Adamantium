@@ -1849,13 +1849,13 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 29. Implement `adamantium doctor`
 
-* [ ] Detect missing compiler dependencies
-* [ ] Detect missing NASM
-* [ ] Detect missing linker dependencies
-* [ ] Detect invalid project configuration
-* [ ] Detect invalid package configuration
-* [ ] Provide actionable diagnostics
-* [ ] Add `adamantium doctor`
+* [x] Detect missing compiler dependencies
+* [x] Detect missing NASM
+* [x] Detect missing linker dependencies
+* [x] Detect invalid project configuration
+* [x] Detect invalid package configuration
+* [x] Provide actionable diagnostics
+* [x] Add `adamantium doctor`
 
 ### 30. Implement VS Code support
 
@@ -2150,7 +2150,7 @@ Resume this backlog only after all five foundation stages are complete.
 26. [x] Implement compiler optimizations
 27. [x] Add optimization levels
 28. [x] Implement `adamantium fmt`
-29. [ ] Implement `adamantium doctor`
+29. [x] Implement `adamantium doctor`
 30. [ ] Implement VS Code syntax highlighting
 31. [ ] Implement the Adamantium LSP
 32. [ ] Remove the Windows linker dependency

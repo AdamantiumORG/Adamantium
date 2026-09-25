@@ -61,6 +61,7 @@ impl adamantium_testing::LanguageCompiler for CliLanguageCompiler {
 const HELP: &str = "Adamantium compiler (Windows/Linux x86-64)\n\
 Usage:\n\
   adamantium check [PROJECT_DIRECTORY]\n\
+  adamantium doctor [PROJECT_DIRECTORY]\n\
   adamantium fmt [PROJECT_DIRECTORY]\n\
   adamantium install [PROJECT_DIRECTORY]\n\
   adamantium package prepare [PACKAGE_DIRECTORY]\n\
@@ -84,6 +85,7 @@ enum Action {
     Help,
     Version,
     Check(PathBuf),
+    Doctor(PathBuf),
     Format(PathBuf),
     Install(PathBuf),
     PackagePrepare(PathBuf),
@@ -115,6 +117,7 @@ fn cli(args: Vec<OsString>) -> Result<ExitCode, String> {
             check(&root)?;
             println!("Checked {}", root.display());
         }
+        Action::Doctor(root) => return doctor(&root),
         Action::Format(root) => {
             let changed = format_project(&root)?;
             println!("Formatted {changed} source file(s) in {}", root.display());
@@ -191,6 +194,11 @@ fn action(args: Vec<OsString>) -> Result<Action, String> {
         let root = args.next().map_or_else(current_directory, Ok)?;
         no_more_args(args)?;
         return Ok(Action::Check(root.into()));
+    }
+    if first == "doctor" {
+        let root = args.next().map_or_else(current_directory, Ok)?;
+        no_more_args(args)?;
+        return Ok(Action::Doctor(root.into()));
     }
     if first == "fmt" {
         let root = args.next().map_or_else(current_directory, Ok)?;
@@ -297,7 +305,8 @@ fn action(args: Vec<OsString>) -> Result<Action, String> {
         && let Some(command) = closest_name(
             &text,
             &[
-                "build", "check", "clean", "clear", "fmt", "install", "new", "run", "test",
+                "build", "check", "clean", "clear", "doctor", "fmt", "install", "new", "run",
+                "test",
             ],
         )
     {
@@ -787,31 +796,7 @@ fn emit_executable(
         codegen::assembly_entry(&optimized, entry, level == optimizer::Level::O2),
     )
     .map_err(|e| e.to_string())?;
-    let nasm = env::var_os("ADAMANTIUM_NASM").unwrap_or_else(|| {
-        let bundled = env::current_exe().ok().and_then(|executable| {
-            executable.parent().map(|parent| {
-                parent.join(if cfg!(windows) {
-                    "tools/nasm.exe"
-                } else {
-                    "tools/nasm"
-                })
-            })
-        });
-        if let Some(bundled) = bundled
-            && bundled.is_file()
-        {
-            return bundled.into_os_string();
-        }
-        let installed = PathBuf::from(
-            env::var_os("ProgramFiles").unwrap_or_else(|| "C:\\Program Files".into()),
-        )
-        .join("NASM/nasm.exe");
-        if installed.is_file() {
-            installed.into_os_string()
-        } else {
-            "nasm".into()
-        }
-    });
+    let nasm = nasm_command();
     execute(
         Command::new(nasm)
             .arg("-f")
@@ -831,6 +816,154 @@ fn emit_executable(
 
 fn check(root: &Path) -> Result<(), String> {
     analyze(root).map(|_| ())
+}
+
+fn doctor(root: &Path) -> Result<ExitCode, String> {
+    println!("Adamantium doctor {}", env!("CARGO_PKG_VERSION"));
+    let mut failures = 0usize;
+    doctor_result(
+        cfg!(all(
+            any(target_os = "windows", target_os = "linux"),
+            target_arch = "x86_64"
+        )),
+        format!("platform: {}-{}", env::consts::OS, env::consts::ARCH),
+        "use a supported Windows or Linux x86-64 build of Adamantium",
+        &mut failures,
+    );
+    doctor_result(
+        !include_bytes!(concat!(env!("OUT_DIR"), "/runtime.lib")).is_empty(),
+        "embedded runtime: available".into(),
+        "reinstall Adamantium because this executable has no embedded runtime",
+        &mut failures,
+    );
+    doctor_result(
+        adamantium_compiler::architecture_smoke_test("fun main").is_ok(),
+        "compiler frontend: operational".into(),
+        "reinstall Adamantium because the compiler self-check failed",
+        &mut failures,
+    );
+
+    let nasm = nasm_command();
+    let nasm_check = command_summary(&nasm, &["--version"]);
+    doctor_result(
+        nasm_check.is_some(),
+        format!(
+            "NASM: {}",
+            nasm_check.unwrap_or_else(|| format!("not found ({})", nasm.to_string_lossy()))
+        ),
+        "install NASM, use the portable distribution, or set ADAMANTIUM_NASM",
+        &mut failures,
+    );
+
+    let (linker, linker_arguments) = linker_probe();
+    let linker_check = command_summary(&linker, &linker_arguments);
+    doctor_result(
+        linker_check.is_some(),
+        format!(
+            "linker: {}",
+            linker_check.unwrap_or_else(|| format!("not found ({})", linker.to_string_lossy()))
+        ),
+        "use the portable distribution, install platform linker tools, or set ADAMANTIUM_LINKER",
+        &mut failures,
+    );
+
+    if root.join("project.toml").is_file() {
+        match analyze(root) {
+            Ok(_) => println!("[ok] project and package configuration: {}", root.display()),
+            Err(error) => {
+                failures += 1;
+                println!("[error] project or package configuration: {error}");
+                println!(
+                    "        help: fix project.toml, requirement.toml, and reported source errors"
+                );
+            }
+        }
+    } else {
+        println!(
+            "[skip] project configuration: no project.toml in {}",
+            root.display()
+        );
+    }
+
+    if failures == 0 {
+        println!("Doctor found no problems.");
+        Ok(ExitCode::SUCCESS)
+    } else {
+        println!("Doctor found {failures} blocking problem(s).");
+        Ok(ExitCode::FAILURE)
+    }
+}
+
+fn doctor_result(success: bool, message: String, help: &str, failures: &mut usize) {
+    if success {
+        println!("[ok] {message}");
+    } else {
+        *failures += 1;
+        println!("[error] {message}");
+        println!("        help: {help}");
+    }
+}
+
+fn nasm_command() -> OsString {
+    env::var_os("ADAMANTIUM_NASM").unwrap_or_else(|| {
+        let bundled = portable_tools_directory()
+            .map(|tools| tools.join(if cfg!(windows) { "nasm.exe" } else { "nasm" }));
+        if let Some(bundled) = bundled
+            && bundled.is_file()
+        {
+            return bundled.into_os_string();
+        }
+        let installed = PathBuf::from(
+            env::var_os("ProgramFiles").unwrap_or_else(|| "C:\\Program Files".into()),
+        )
+        .join("NASM/nasm.exe");
+        if installed.is_file() {
+            installed.into_os_string()
+        } else {
+            "nasm".into()
+        }
+    })
+}
+
+fn linker_probe() -> (OsString, Vec<&'static str>) {
+    if let Some(linker) = env::var_os("ADAMANTIUM_LINKER") {
+        return (linker, vec!["--version"]);
+    }
+    if let Some(tools) = portable_tools_directory() {
+        let bundled = if cfg!(windows) {
+            tools.join("lld-link.exe")
+        } else {
+            tools.join("zig/zig")
+        };
+        if bundled.is_file() {
+            return (bundled.into_os_string(), vec!["--version"]);
+        }
+    }
+    if cfg!(windows) {
+        ("link.exe".into(), vec!["/?"])
+    } else {
+        ("cc".into(), vec!["--version"])
+    }
+}
+
+fn command_summary(command: &OsString, arguments: &[&str]) -> Option<String> {
+    let output = Command::new(command).args(arguments).output().ok()?;
+    let text = if output.stdout.is_empty() {
+        &output.stderr
+    } else {
+        &output.stdout
+    };
+    let first_line = String::from_utf8_lossy(text)
+        .lines()
+        .next()
+        .unwrap_or("available")
+        .trim()
+        .to_owned();
+    Some(if first_line.is_empty() {
+        "available".into()
+    } else {
+        first_line
+    })
 }
 
 fn clean_project(root: &Path) -> Result<(), String> {
