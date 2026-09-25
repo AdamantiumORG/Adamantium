@@ -148,6 +148,36 @@ fn operators_use_maximal_munch() {
 }
 
 #[test]
+fn compound_operators_win_without_surrounding_whitespace() {
+    let source = "a==b a!=b a<=b a>=b a&&b a||b a+=b a-=b a*=b a/=b x=>y x->y a::b 0..10";
+    let tokens = lex(source).unwrap();
+    let compounds = tokens
+        .iter()
+        .filter(|token| {
+            matches!(
+                token.kind,
+                TokenKind::EqualEqual
+                    | TokenKind::NotEqual
+                    | TokenKind::LessEqual
+                    | TokenKind::GreaterEqual
+                    | TokenKind::LogicalAnd
+                    | TokenKind::LogicalOr
+                    | TokenKind::PlusEqual
+                    | TokenKind::MinusEqual
+                    | TokenKind::StarEqual
+                    | TokenKind::SlashEqual
+                    | TokenKind::FatArrow
+                    | TokenKind::Arrow
+                    | TokenKind::DoubleColon
+                    | TokenKind::DotDot
+            )
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(compounds.len(), 14);
+    assert!(compounds.iter().all(|token| token.text(source).len() == 2));
+}
+
+#[test]
 fn minus_is_always_separate_from_numeric_literals() {
     let source = "-123 -a a-123 a--b";
     let tokens = lex(source).unwrap();

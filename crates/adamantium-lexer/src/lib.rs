@@ -479,25 +479,9 @@ impl<'src> Lexer<'src> {
     fn operator_or_punctuation(&mut self) -> Option<TokenKind> {
         let first = self.peek()?;
         let second = self.peek_next();
-        let combined = match (first, second) {
-            ('=', Some('=')) => Some(TokenKind::EqualEqual),
-            ('=', Some('>')) => Some(TokenKind::FatArrow),
-            ('!', Some('=')) => Some(TokenKind::NotEqual),
-            ('<', Some('=')) => Some(TokenKind::LessEqual),
-            ('>', Some('=')) => Some(TokenKind::GreaterEqual),
-            ('-', Some('>')) => Some(TokenKind::Arrow),
-            ('+', Some('=')) => Some(TokenKind::PlusEqual),
-            ('-', Some('=')) => Some(TokenKind::MinusEqual),
-            ('*', Some('=')) => Some(TokenKind::StarEqual),
-            ('/', Some('=')) => Some(TokenKind::SlashEqual),
-            ('%', Some('=')) => Some(TokenKind::PercentEqual),
-            ('|', Some('|')) => Some(TokenKind::LogicalOr),
-            ('&', Some('&')) => Some(TokenKind::LogicalAnd),
-            ('.', Some('.')) => Some(TokenKind::DotDot),
-            (':', Some(':')) => Some(TokenKind::DoubleColon),
-            _ => None,
-        };
-        if let Some(kind) = combined {
+        if let Some(second) = second
+            && let Some(kind) = compound_symbol(first, second)
+        {
             self.advance();
             self.advance();
             return Some(kind);
@@ -505,6 +489,27 @@ impl<'src> Lexer<'src> {
         self.advance();
         symbol(first)
     }
+}
+
+fn compound_symbol(first: char, second: char) -> Option<TokenKind> {
+    Some(match (first, second) {
+        ('=', '=') => TokenKind::EqualEqual,
+        ('=', '>') => TokenKind::FatArrow,
+        ('!', '=') => TokenKind::NotEqual,
+        ('<', '=') => TokenKind::LessEqual,
+        ('>', '=') => TokenKind::GreaterEqual,
+        ('-', '>') => TokenKind::Arrow,
+        ('+', '=') => TokenKind::PlusEqual,
+        ('-', '=') => TokenKind::MinusEqual,
+        ('*', '=') => TokenKind::StarEqual,
+        ('/', '=') => TokenKind::SlashEqual,
+        ('%', '=') => TokenKind::PercentEqual,
+        ('|', '|') => TokenKind::LogicalOr,
+        ('&', '&') => TokenKind::LogicalAnd,
+        ('.', '.') => TokenKind::DotDot,
+        (':', ':') => TokenKind::DoubleColon,
+        _ => return None,
+    })
 }
 
 fn symbol(character: char) -> Option<TokenKind> {
