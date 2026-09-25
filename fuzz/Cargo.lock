@@ -5,6 +5,9 @@ version = 4
 [[package]]
 name = "adamantium-ast"
 version = "0.1.0"
+dependencies = [
+ "adamantium-lexer",
+]
 
 [[package]]
 name = "adamantium-cli"
@@ -36,6 +39,7 @@ dependencies = [
  "adamantium-codegen",
  "adamantium-diagnostics",
  "adamantium-ir",
+ "adamantium-lexer",
  "adamantium-linker",
  "adamantium-nasm",
  "adamantium-packages",
@@ -58,6 +62,7 @@ name = "adamantium-fuzz"
 version = "0.0.0"
 dependencies = [
  "adamantium-cli",
+ "adamantium-lexer",
  "libfuzzer-sys",
 ]
 
@@ -71,9 +76,6 @@ dependencies = [
 [[package]]
 name = "adamantium-lexer"
 version = "0.1.0"
-dependencies = [
- "adamantium-ast",
-]
 
 [[package]]
 name = "adamantium-linker"
@@ -117,6 +119,7 @@ name = "adamantium-semantics"
 version = "0.1.0"
 dependencies = [
  "adamantium-diagnostics",
+ "adamantium-lexer",
  "adamantium-parser",
  "adamantium-types",
 ]

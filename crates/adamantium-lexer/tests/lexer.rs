@@ -6,6 +6,8 @@ fn token_text<'src>(source: &'src str, token: &Token) -> &'src str {
     SourceFile::new(source).text(token.span).unwrap()
 }
 
+type ErrorMatcher = fn(&LexError) -> bool;
+
 #[test]
 fn classifies_all_keywords_in_one_contract() {
     let cases = [
@@ -57,6 +59,69 @@ fn classifies_all_keywords_in_one_contract() {
         assert_eq!(keyword_kind(text), Some(expected), "keyword {text:?}");
     }
     assert_eq!(keyword_kind("custom_name"), None);
+}
+
+#[test]
+fn token_contract_table_covers_core_lexemes() {
+    let cases = [
+        ("var", TokenKind::Keyword(Keyword::Variable)),
+        ("foo", TokenKind::Identifier),
+        ("123", TokenKind::IntLiteral),
+        ("1.5", TokenKind::FloatLiteral),
+        ("\"hello\"", TokenKind::StringLiteral("hello".into())),
+        ("true", TokenKind::BoolLiteral(true)),
+        ("false", TokenKind::BoolLiteral(false)),
+        ("None", TokenKind::Keyword(Keyword::None)),
+        ("+", TokenKind::Plus),
+        ("+=", TokenKind::PlusEqual),
+        ("==", TokenKind::EqualEqual),
+        ("!=", TokenKind::NotEqual),
+    ];
+
+    for (source, expected) in cases {
+        let tokens = lex(source).unwrap();
+        assert_eq!(tokens.len(), 2, "unexpected token count for {source:?}");
+        assert_eq!(tokens[0].kind, expected, "wrong token for {source:?}");
+        assert_eq!(tokens[1].kind, TokenKind::Eof);
+    }
+
+    for source in ["// hello", "/* hello */"] {
+        let tokens = lex(source).unwrap();
+        assert_eq!(tokens.len(), 1, "comment was not skipped for {source:?}");
+        assert_eq!(tokens[0].kind, TokenKind::Eof);
+    }
+}
+
+#[test]
+fn lexical_error_contract_table_covers_invalid_input() {
+    let cases: [(&str, ErrorMatcher); 6] = [
+        ("@", |error| {
+            matches!(error, LexError::UnexpectedCharacter { character: '@', .. })
+        }),
+        ("\"unterminated", |error| {
+            matches!(error, LexError::UnterminatedString { .. })
+        }),
+        ("/*", |error| {
+            matches!(error, LexError::UnterminatedComment { .. })
+        }),
+        ("1.2.3", |error| {
+            matches!(error, LexError::InvalidNumber { .. })
+        }),
+        ("1e", |error| {
+            matches!(error, LexError::InvalidNumber { .. })
+        }),
+        ("123abc", |error| {
+            matches!(error, LexError::InvalidNumber { .. })
+        }),
+    ];
+
+    for (source, matches_expected_variant) in cases {
+        let error = lex(source).unwrap_err();
+        assert!(
+            matches_expected_variant(&error),
+            "wrong error for {source:?}: {error:?}"
+        );
+    }
 }
 
 #[test]
@@ -427,6 +492,28 @@ fn lexer_diagnostics_never_panic_on_invalid_user_input() {
         let result = std::panic::catch_unwind(|| lex_recovering(source));
         assert!(result.is_ok(), "lexer panicked for {source:?}");
         assert!(!result.unwrap().errors.is_empty());
+    }
+}
+
+#[test]
+fn randomized_utf8_input_never_panics_the_lexer() {
+    let alphabet = [
+        'a', 'Z', '0', '_', '{', '}', '(', ')', '[', ']', ';', ':', '=', ',', '+', '-', '*', '/',
+        '%', '!', '<', '>', '|', '&', '$', '"', '\n', '\0', 'ż', '界', '🦀',
+    ];
+    let mut state = 0x517c_c1b7_2722_0a95_u64;
+    for case in 0..10_000 {
+        state ^= state << 7;
+        state ^= state >> 9;
+        state ^= state << 8;
+        let length = state as usize % 128;
+        let mut source = String::with_capacity(length);
+        for _ in 0..length {
+            state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+            source.push(alphabet[state as usize % alphabet.len()]);
+        }
+        let result = std::panic::catch_unwind(|| lex_recovering(&source));
+        assert!(result.is_ok(), "lexer panicked for corpus case {case}");
     }
 }
 
