@@ -1,4 +1,4 @@
-use adamantium_ast::{BinaryOperator, Expression, Identifier, Span};
+use adamantium_ast::{BinaryOperator, Expression, Identifier, Span, UnaryOperator};
 use adamantium_lexer::{Token, TokenKind};
 
 #[derive(Debug)]
@@ -66,7 +66,7 @@ struct Parser<'src, 'tokens> {
 
 impl Parser<'_, '_> {
     fn expression(&mut self, minimum_precedence: u8) -> Result<Expression, ParseError> {
-        let mut left = self.primary()?;
+        let mut left = self.unary()?;
         while let Some((operator, precedence)) = self.binary_operator() {
             if precedence < minimum_precedence {
                 break;
@@ -88,6 +88,29 @@ impl Parser<'_, '_> {
             };
         }
         Ok(left)
+    }
+
+    fn unary(&mut self) -> Result<Expression, ParseError> {
+        if self
+            .peek()
+            .is_some_and(|token| token.kind == TokenKind::Minus)
+        {
+            let operator = self.tokens[self.cursor].clone();
+            self.cursor += 1;
+            let operand = self.unary()?;
+            let operand_span = operand.span();
+            return Ok(Expression::Unary {
+                operator: UnaryOperator::Negate,
+                operand: Box::new(operand),
+                span: Span {
+                    start: operator.span.start,
+                    end: operand_span.end,
+                    line: operator.span.line,
+                    column: operator.span.column,
+                },
+            });
+        }
+        self.primary()
     }
 
     fn primary(&mut self) -> Result<Expression, ParseError> {

@@ -24,11 +24,21 @@ pub enum BinaryOperator {
     Remainder,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum UnaryOperator {
+    Negate,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Expression {
     Identifier(Identifier),
     Number {
         literal: String,
+        span: Span,
+    },
+    Unary {
+        operator: UnaryOperator,
+        operand: Box<Expression>,
         span: Span,
     },
     Binary {
@@ -43,7 +53,9 @@ impl Expression {
     pub fn span(&self) -> Span {
         match self {
             Self::Identifier(identifier) => identifier.span,
-            Self::Number { span, .. } | Self::Binary { span, .. } => *span,
+            Self::Number { span, .. } | Self::Unary { span, .. } | Self::Binary { span, .. } => {
+                *span
+            }
         }
     }
 }

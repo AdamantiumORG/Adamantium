@@ -148,6 +148,30 @@ fn operators_use_maximal_munch() {
 }
 
 #[test]
+fn minus_is_always_separate_from_numeric_literals() {
+    let source = "-123 -a a-123 a--b";
+    let tokens = lex(source).unwrap();
+    assert_eq!(
+        tokens.iter().map(|token| &token.kind).collect::<Vec<_>>(),
+        [
+            &TokenKind::Minus,
+            &TokenKind::IntLiteral,
+            &TokenKind::Minus,
+            &TokenKind::Identifier,
+            &TokenKind::Identifier,
+            &TokenKind::Minus,
+            &TokenKind::IntLiteral,
+            &TokenKind::Identifier,
+            &TokenKind::Minus,
+            &TokenKind::Minus,
+            &TokenKind::Identifier,
+            &TokenKind::Eof,
+        ]
+    );
+    assert_eq!(tokens[1].text(source), "123");
+}
+
+#[test]
 fn literal_kinds_are_complete_and_unambiguous() {
     let source = "10 1.5 1e3 true false \"text\"";
     let tokens = lex(source).unwrap();

@@ -62,3 +62,46 @@ fn invalid_characters_remain_lexer_errors() {
         adamantium_lexer::LexError::UnexpectedCharacter { character: '@', .. }
     ));
 }
+
+#[test]
+fn parses_minus_as_unary_or_binary_from_context() {
+    use adamantium_ast::{BinaryOperator, Expression, UnaryOperator};
+
+    let tokens = adamantium_lexer::lex("a--b;").unwrap();
+    let expression = adamantium_parser::parse_expression("a--b;", &tokens).unwrap();
+    let Expression::Binary {
+        operator,
+        right,
+        span,
+        ..
+    } = expression
+    else {
+        panic!("expected subtraction");
+    };
+    assert_eq!(operator, BinaryOperator::Subtract);
+    assert!(matches!(
+        *right,
+        Expression::Unary {
+            operator: UnaryOperator::Negate,
+            ..
+        }
+    ));
+    assert_eq!((span.start, span.end), (0, 4));
+
+    let tokens = adamantium_lexer::lex("-a*2;").unwrap();
+    let expression = adamantium_parser::parse_expression("-a*2;", &tokens).unwrap();
+    assert!(matches!(
+        expression,
+        Expression::Binary {
+            operator: BinaryOperator::Multiply,
+            left,
+            ..
+        } if matches!(
+            *left,
+            Expression::Unary {
+                operator: UnaryOperator::Negate,
+                ..
+            }
+        )
+    ));
+}
