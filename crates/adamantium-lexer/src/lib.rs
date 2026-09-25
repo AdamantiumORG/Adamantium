@@ -2,10 +2,63 @@ use std::fmt;
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct Span {
-    pub start: usize,
-    pub end: usize,
-    pub line: usize,
-    pub column: usize,
+    pub start: u32,
+    pub end: u32,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct SourceLocation {
+    pub line: u32,
+    pub column: u32,
+}
+
+#[derive(Clone, Debug)]
+pub struct SourceFile<'src> {
+    source: &'src str,
+    line_starts: Vec<u32>,
+}
+
+impl<'src> SourceFile<'src> {
+    pub fn new(source: &'src str) -> Self {
+        let mut line_starts = vec![0];
+        line_starts.extend(
+            source
+                .bytes()
+                .enumerate()
+                .filter(|(_, byte)| *byte == b'\n')
+                .filter_map(|(offset, _)| u32::try_from(offset + 1).ok()),
+        );
+        Self {
+            source,
+            line_starts,
+        }
+    }
+
+    pub fn text(&self, span: Span) -> Option<&'src str> {
+        self.source.get(span.start as usize..span.end as usize)
+    }
+
+    pub fn location(&self, offset: u32) -> Option<SourceLocation> {
+        if offset as usize > self.source.len() || !self.source.is_char_boundary(offset as usize) {
+            return None;
+        }
+        let line_index = self.line_starts.partition_point(|start| *start <= offset) - 1;
+        let line_start = self.line_starts[line_index];
+        let column = self
+            .source
+            .get(line_start as usize..offset as usize)?
+            .chars()
+            .count()
+            + 1;
+        Some(SourceLocation {
+            line: u32::try_from(line_index + 1).ok()?,
+            column: u32::try_from(column).ok()?,
+        })
+    }
+
+    pub fn span_location(&self, span: Span) -> Option<SourceLocation> {
+        self.location(span.start)
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -104,12 +157,6 @@ pub struct Token {
     pub span: Span,
 }
 
-impl Token {
-    pub fn text<'src>(&self, source: &'src str) -> &'src str {
-        &source[self.span.start..self.span.end]
-    }
-}
-
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum LexError {
     UnexpectedCharacter { span: Span, character: char },
@@ -155,9 +202,9 @@ impl fmt::Display for LexError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             formatter,
-            "{}:{}: {}",
-            self.span().line,
-            self.span().column,
+            "bytes {}..{}: {}",
+            self.span().start,
+            self.span().end,
             self.message()
         )
     }
@@ -204,8 +251,6 @@ pub fn lex_recovering(source: &str) -> LexOutput {
 pub struct Lexer<'src> {
     source: &'src str,
     position: usize,
-    line: usize,
-    column: usize,
     preserve_comments: bool,
 }
 
@@ -214,8 +259,6 @@ impl<'src> Lexer<'src> {
         Self {
             source,
             position: 0,
-            line: 1,
-            column: 1,
             preserve_comments: false,
         }
     }
@@ -245,7 +288,7 @@ impl<'src> Lexer<'src> {
                     self.advance();
                 }
                 if self.preserve_comments {
-                    span.end = self.position;
+                    span.end = self.offset();
                     return Ok(Token {
                         kind: TokenKind::LineComment,
                         span,
@@ -258,7 +301,7 @@ impl<'src> Lexer<'src> {
                 self.advance();
                 self.block_comment(span)?;
                 if self.preserve_comments {
-                    span.end = self.position;
+                    span.end = self.offset();
                     return Ok(Token {
                         kind: TokenKind::BlockComment,
                         span,
@@ -277,7 +320,7 @@ impl<'src> Lexer<'src> {
                 self.operator_or_punctuation()
                     .ok_or(LexError::UnexpectedCharacter { span, character })?
             };
-            span.end = self.position;
+            span.end = self.offset();
             return Ok(Token { kind, span });
         }
     }
@@ -307,22 +350,18 @@ impl<'src> Lexer<'src> {
     fn advance(&mut self) -> Option<char> {
         let character = self.peek()?;
         self.position += character.len_utf8();
-        if character == '\n' {
-            self.line += 1;
-            self.column = 1;
-        } else {
-            self.column += 1;
-        }
         Some(character)
     }
 
     fn span(&self) -> Span {
         Span {
-            start: self.position,
-            end: self.position,
-            line: self.line,
-            column: self.column,
+            start: self.offset(),
+            end: self.offset(),
         }
+    }
+
+    fn offset(&self) -> u32 {
+        u32::try_from(self.position).unwrap_or(u32::MAX)
     }
 
     fn word(&mut self) -> TokenKind {
@@ -412,7 +451,7 @@ impl<'src> Lexer<'src> {
     }
 
     fn number_error(&self, mut span: Span, message: &str) -> LexError {
-        span.end = self.position;
+        span.end = self.offset();
         LexError::InvalidNumber {
             span,
             message: message.into(),
@@ -460,7 +499,7 @@ impl<'src> Lexer<'src> {
     }
 
     fn finished_span(&self, mut span: Span) -> Span {
-        span.end = self.position;
+        span.end = self.offset();
         span
     }
 

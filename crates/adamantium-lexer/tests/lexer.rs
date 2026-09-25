@@ -1,4 +1,10 @@
-use adamantium_lexer::{Keyword, LexError, Lexer, TokenKind, keyword_kind, lex, lex_recovering};
+use adamantium_lexer::{
+    Keyword, LexError, Lexer, SourceFile, Token, TokenKind, keyword_kind, lex, lex_recovering,
+};
+
+fn token_text<'src>(source: &'src str, token: &Token) -> &'src str {
+    SourceFile::new(source).text(token.span).unwrap()
+}
 
 #[test]
 fn classifies_all_keywords_in_one_contract() {
@@ -89,8 +95,10 @@ fn separates_calls_and_tracks_positions() {
             &TokenKind::Eof,
         ]
     );
-    assert_eq!(tokens[0].span.line, 2);
-    assert_eq!(tokens[0].span.column, 1);
+    assert_eq!(
+        SourceFile::new("// call\nfoo(a,b)").span_location(tokens[0].span),
+        Some(adamantium_lexer::SourceLocation { line: 2, column: 1 })
+    );
 }
 
 #[test]
@@ -106,12 +114,12 @@ fn exposes_a_streaming_scanner() {
 fn spans_slice_the_exact_utf8_source_text() {
     let source = "var text=\"żółw\";";
     let tokens = lex(source).unwrap();
-    assert_eq!(tokens[0].text(source), "var");
-    assert_eq!(tokens[1].text(source), "text");
-    assert_eq!(tokens[3].text(source), "\"żółw\"");
+    assert_eq!(token_text(source, &tokens[0]), "var");
+    assert_eq!(token_text(source, &tokens[1]), "text");
+    assert_eq!(token_text(source, &tokens[3]), "\"żółw\"");
     assert_eq!(tokens[3].span.start, 9);
     assert_eq!(tokens[3].span.end, 18);
-    assert_eq!(tokens.last().unwrap().text(source), "");
+    assert_eq!(token_text(source, tokens.last().unwrap()), "");
 }
 
 #[test]
@@ -143,7 +151,10 @@ fn operators_use_maximal_munch() {
         ]
     );
     for token in &tokens[..tokens.len() - 1] {
-        assert_eq!(token.text(source).len(), token.span.end - token.span.start);
+        assert_eq!(
+            token_text(source, token).len(),
+            (token.span.end - token.span.start) as usize
+        );
     }
 }
 
@@ -174,7 +185,11 @@ fn compound_operators_win_without_surrounding_whitespace() {
         })
         .collect::<Vec<_>>();
     assert_eq!(compounds.len(), 14);
-    assert!(compounds.iter().all(|token| token.text(source).len() == 2));
+    assert!(
+        compounds
+            .iter()
+            .all(|token| token_text(source, token).len() == 2)
+    );
 }
 
 #[test]
@@ -198,7 +213,7 @@ fn minus_is_always_separate_from_numeric_literals() {
             &TokenKind::Eof,
         ]
     );
-    assert_eq!(tokens[1].text(source), "123");
+    assert_eq!(token_text(source, &tokens[1]), "123");
 }
 
 #[test]
@@ -225,9 +240,9 @@ fn distinguishes_decimal_points_member_dots_and_ranges() {
             &TokenKind::Eof,
         ]
     );
-    assert_eq!(tokens[3].text(source), "123.45");
-    assert_eq!(tokens[4].text(source), "123");
-    assert_eq!(tokens[9].text(source), "..");
+    assert_eq!(token_text(source, &tokens[3]), "123.45");
+    assert_eq!(token_text(source, &tokens[4]), "123");
+    assert_eq!(token_text(source, &tokens[9]), "..");
 }
 
 #[test]
@@ -246,8 +261,8 @@ fn literal_kinds_are_complete_and_unambiguous() {
             &TokenKind::Eof,
         ]
     );
-    assert_eq!(tokens[0].text(source), "10");
-    assert_eq!(tokens[2].text(source), "1e3");
+    assert_eq!(token_text(source, &tokens[0]), "10");
+    assert_eq!(token_text(source, &tokens[2]), "1e3");
 }
 
 #[test]
@@ -267,9 +282,9 @@ fn recognizes_numeric_suffixes_without_allocating_literal_values() {
             &TokenKind::Eof,
         ]
     );
-    assert_eq!(tokens[3].text(source), "123:i32");
-    assert_eq!(tokens[5].text(source), "1.5:f64");
-    assert_eq!(tokens[6].text(source), "1e3:f128");
+    assert_eq!(token_text(source, &tokens[3]), "123:i32");
+    assert_eq!(token_text(source, &tokens[5]), "1.5:f64");
+    assert_eq!(token_text(source, &tokens[6]), "1e3:f128");
 }
 
 #[test]
@@ -288,7 +303,7 @@ fn rejects_malformed_numeric_literals_with_their_complete_span() {
             "unexpected error for {source:?}: {error}"
         );
         assert_eq!(error.span().start, 0);
-        assert_eq!(error.span().end, source.len());
+        assert_eq!(error.span().end, source.len() as u32);
     }
 }
 
@@ -317,10 +332,20 @@ fn skips_comments_by_default_and_preserves_them_on_request() {
         .filter(|token| matches!(token.kind, TokenKind::LineComment | TokenKind::BlockComment))
         .collect::<Vec<_>>();
     assert_eq!(comments.len(), 2);
-    assert_eq!(comments[0].text(source), "// explanation");
-    assert_eq!(comments[1].text(source), "/* block */");
-    assert_eq!((comments[0].span.line, comments[0].span.column), (1, 11));
-    assert_eq!((comments[1].span.line, comments[1].span.column), (2, 1));
+    let source_file = SourceFile::new(source);
+    assert_eq!(source_file.text(comments[0].span), Some("// explanation"));
+    assert_eq!(source_file.text(comments[1].span), Some("/* block */"));
+    assert_eq!(
+        source_file.span_location(comments[0].span),
+        Some(adamantium_lexer::SourceLocation {
+            line: 1,
+            column: 11,
+        })
+    );
+    assert_eq!(
+        source_file.span_location(comments[1].span),
+        Some(adamantium_lexer::SourceLocation { line: 2, column: 1 })
+    );
 }
 
 #[test]
@@ -345,8 +370,11 @@ fn comments_never_reach_the_default_parser_token_stream() {
             &TokenKind::Eof,
         ]
     );
-    assert_eq!(tokens[5].text(source), "print");
-    assert_eq!((tokens[5].span.line, tokens[5].span.column), (4, 1));
+    assert_eq!(token_text(source, &tokens[5]), "print");
+    assert_eq!(
+        SourceFile::new(source).span_location(tokens[5].span),
+        Some(adamantium_lexer::SourceLocation { line: 4, column: 1 })
+    );
 }
 
 #[test]
@@ -357,9 +385,7 @@ fn reports_an_unterminated_multiline_comment_with_its_full_span() {
         LexError::UnterminatedComment {
             span: adamantium_lexer::Span {
                 start: 0,
-                end: source.len(),
-                line: 1,
-                column: 1,
+                end: source.len() as u32,
             }
         }
     );
@@ -432,7 +458,7 @@ fn decodes_string_escapes_and_unicode() {
         tokens[3].kind,
         TokenKind::StringLiteral("unicode: żółw".into())
     );
-    assert_eq!(tokens[3].text(source), "\"unicode: żółw\"");
+    assert_eq!(token_text(source, &tokens[3]), "\"unicode: żółw\"");
 }
 
 #[test]
@@ -441,12 +467,7 @@ fn returns_structured_string_errors_with_precise_spans() {
     assert_eq!(
         unterminated,
         LexError::UnterminatedString {
-            span: adamantium_lexer::Span {
-                start: 0,
-                end: 13,
-                line: 1,
-                column: 1,
-            }
+            span: adamantium_lexer::Span { start: 0, end: 13 }
         }
     );
 
@@ -454,12 +475,7 @@ fn returns_structured_string_errors_with_precise_spans() {
     assert_eq!(
         invalid_escape,
         LexError::InvalidEscape {
-            span: adamantium_lexer::Span {
-                start: 12,
-                end: 14,
-                line: 1,
-                column: 13,
-            },
+            span: adamantium_lexer::Span { start: 12, end: 14 },
             escape: 'q',
         }
     );
@@ -474,7 +490,10 @@ fn returns_structured_string_errors_with_precise_spans() {
 fn lexes_literals_comments_and_reports_errors() {
     let tokens = lex("/* x */ 12.5e-2 \"line\\ntext\"").unwrap();
     assert_eq!(tokens[0].kind, TokenKind::FloatLiteral);
-    assert_eq!(tokens[0].text("/* x */ 12.5e-2 \"line\\ntext\""), "12.5e-2");
+    assert_eq!(
+        token_text("/* x */ 12.5e-2 \"line\\ntext\"", &tokens[0]),
+        "12.5e-2"
+    );
     assert_eq!(
         tokens[1].kind,
         TokenKind::StringLiteral("line\ntext".into())

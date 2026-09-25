@@ -1,5 +1,5 @@
 use adamantium_ast::{BinaryOperator, Expression, Identifier, Span, UnaryOperator};
-use adamantium_lexer::{Token, TokenKind};
+use adamantium_lexer::{SourceFile, Token, TokenKind};
 
 #[derive(Debug)]
 pub struct ParsedFile {
@@ -7,11 +7,15 @@ pub struct ParsedFile {
 }
 
 pub fn parse(source: &str, tokens: &[Token]) -> ParsedFile {
+    let source_file = SourceFile::new(source);
     ParsedFile {
         identifiers: tokens
             .iter()
             .filter_map(|token| match &token.kind {
-                TokenKind::Identifier => Some(Identifier::new(token.text(source), token.span)),
+                TokenKind::Identifier => Some(Identifier::new(
+                    source_file.text(token.span).unwrap_or_default(),
+                    token.span,
+                )),
                 _ => None,
             })
             .collect(),
@@ -44,7 +48,7 @@ pub struct ParseError {
 
 pub fn parse_expression(source: &str, tokens: &[Token]) -> Result<Expression, ParseError> {
     let mut parser = Parser {
-        source,
+        source: SourceFile::new(source),
         tokens,
         cursor: 0,
     };
@@ -59,7 +63,7 @@ pub fn parse_expression(source: &str, tokens: &[Token]) -> Result<Expression, Pa
 }
 
 struct Parser<'src, 'tokens> {
-    source: &'src str,
+    source: SourceFile<'src>,
     tokens: &'tokens [Token],
     cursor: usize,
 }
@@ -82,8 +86,6 @@ impl Parser<'_, '_> {
                 span: Span {
                     start: left_span.start,
                     end: right_span.end,
-                    line: left_span.line,
-                    column: left_span.column,
                 },
             };
         }
@@ -105,8 +107,6 @@ impl Parser<'_, '_> {
                 span: Span {
                     start: operator.span.start,
                     end: operand_span.end,
-                    line: operator.span.line,
-                    column: operator.span.column,
                 },
             });
         }
@@ -122,11 +122,11 @@ impl Parser<'_, '_> {
         self.cursor += 1;
         match token.kind {
             TokenKind::Identifier => Ok(Expression::Identifier(Identifier::new(
-                token.text(self.source),
+                self.source.text(token.span).unwrap_or_default(),
                 token.span,
             ))),
             TokenKind::IntLiteral | TokenKind::FloatLiteral => Ok(Expression::Number {
-                literal: token.text(self.source).to_owned(),
+                literal: self.source.text(token.span).unwrap_or_default().to_owned(),
                 span: token.span,
             }),
             TokenKind::LeftParen => {
