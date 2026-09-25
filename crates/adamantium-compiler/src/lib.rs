@@ -23,7 +23,13 @@ pub fn architecture_smoke_test(
             .errors
             .iter()
             .map(|error| {
-                adamantium_diagnostics::Diagnostic::error("E100", error.message(), error.span())
+                adamantium_diagnostics::Diagnostic::at_stage(
+                    adamantium_diagnostics::Stage::Lexing,
+                    adamantium_diagnostics::Severity::Error,
+                    "E100",
+                    error.message(),
+                    error.span(),
+                )
             })
             .collect());
     }
@@ -32,7 +38,13 @@ pub fn architecture_smoke_test(
         errors
             .into_iter()
             .map(|error| {
-                adamantium_diagnostics::Diagnostic::error("E110", error.message, error.span)
+                adamantium_diagnostics::Diagnostic::at_stage(
+                    adamantium_diagnostics::Stage::Parsing,
+                    adamantium_diagnostics::Severity::Error,
+                    "E110",
+                    error.message,
+                    error.span,
+                )
             })
             .collect::<Vec<_>>()
     })?;

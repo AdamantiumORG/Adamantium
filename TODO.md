@@ -2056,9 +2056,71 @@ Async should be implemented **only after the core language, runtime, package sys
 
 # Current Execution Order
 
-The following list is the **single source of truth for what should be worked on next**.
+The following foundation stages are the **single source of truth for what should be worked on next**.
 
-Do not skip ahead to later phases unless a current task is blocked.
+Do not add more language features until the unfinished frontend foundation work
+is complete. Work from the top of each stage and do not skip ahead unless the
+current item is blocked.
+
+## Stage 1 - Frontend foundation
+
+* [x] Define byte-based `Span`
+* [x] Define `SourceFile` and offset-to-line/column conversion
+* [x] Define `Token` as `TokenKind` plus `Span`
+* [x] Stabilize the complete `TokenKind` contract
+* [x] Define structured `LexError` variants
+* [x] Implement the character scanner
+* [x] Centralize the keyword table
+* [x] Implement maximal-munch operator recognition
+* [x] Implement string and number scanning
+* [x] Handle line and block comments in the lexer
+* [x] Emit EOF explicitly
+* [x] Define UTF-8 source and byte-offset behavior
+
+## Stage 2 - Lexer verification
+
+* [x] Test valid token streams
+* [x] Test lexical edge cases
+* [x] Test malformed input and precise error spans
+* [x] Test Unicode source and strings
+* [x] Test comments and unterminated comments
+* [x] Test maximal-munch operators
+* [x] Test valid and invalid numbers
+* [x] Test string escapes and unterminated strings
+* [x] Fuzz arbitrary UTF-8 input and prevent lexer panics
+
+## Stage 3 - Parser foundation
+
+* [x] Give the parser a token stream instead of raw source parsing
+* [x] Implement lookahead, advance, take and expect
+* [ ] Implement parser error recovery and synchronization points
+* [x] Implement Pratt expression parsing
+* [x] Parse statements from tokens
+* [x] Parse declarations from tokens
+* [x] Parse nested blocks from tokens
+
+## Stage 4 - AST contract
+
+* [x] Store source spans on canonical AST nodes
+* [x] Keep lexer tokens out of the AST
+* [x] Represent operators and language meaning with semantic AST enums
+* [x] Preserve spans through resolution, HIR, MIR, IR and code generation
+
+## Stage 5 - Unified diagnostics
+
+* [x] Define common severity, code and message fields
+* [x] Define primary spans and labeled secondary spans
+* [x] Define notes and actionable help
+* [x] Identify lexer, parser, name, type and semantic diagnostic stages
+* [x] Connect lexer and parser errors to the common diagnostic model
+* [x] Connect name-resolution and semantic errors to the common diagnostic model
+* [ ] Connect every mature type-checker error to the common diagnostic model
+* [ ] Render secondary labels, notes and help consistently in the CLI
+* [ ] Add parser recovery regression and fuzz tests
+
+## Later feature backlog
+
+Resume this backlog only after all five foundation stages are complete.
 
 1. [x] Complete nested lexical scopes
 2. [x] Complete public/private import enforcement

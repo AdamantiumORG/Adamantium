@@ -12,7 +12,9 @@ pub fn analyze(
             if seen.insert(identifier.name.clone()) {
                 None
             } else {
-                Some(adamantium_diagnostics::Diagnostic::error(
+                Some(adamantium_diagnostics::Diagnostic::at_stage(
+                    adamantium_diagnostics::Stage::SemanticAnalysis,
+                    adamantium_diagnostics::Severity::Error,
                     "E100",
                     format!("duplicate identifier '{}'", identifier.name),
                     identifier.span,
@@ -44,7 +46,9 @@ pub fn resolve(
     for identifier in &parsed.identifiers {
         let symbol = symbols.intern(&identifier.name);
         if defined.contains_key(&symbol) {
-            diagnostics.push(adamantium_diagnostics::Diagnostic::error(
+            diagnostics.push(adamantium_diagnostics::Diagnostic::at_stage(
+                adamantium_diagnostics::Stage::NameResolution,
+                adamantium_diagnostics::Severity::Error,
                 "E200",
                 format!("duplicate identifier '{}'", identifier.name),
                 identifier.span,

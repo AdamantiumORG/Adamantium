@@ -274,10 +274,18 @@ fn validate_identifier(value: &str, label: &str) -> Result<(), String> {
 pub fn release_asset(version: &str) -> Result<String, adamantium_diagnostics::Diagnostic> {
     let _layout = adamantium_project::ProjectLayout::new(".");
     let version = version.parse::<Version>().map_err(|error| {
-        adamantium_diagnostics::Diagnostic::error("E400", error, Default::default())
+        adamantium_diagnostics::Diagnostic::at_stage(
+            adamantium_diagnostics::Stage::Package,
+            adamantium_diagnostics::Severity::Error,
+            "E400",
+            error,
+            Default::default(),
+        )
     })?;
     if version.is_nightly() {
-        return Err(adamantium_diagnostics::Diagnostic::error(
+        return Err(adamantium_diagnostics::Diagnostic::at_stage(
+            adamantium_diagnostics::Stage::Package,
+            adamantium_diagnostics::Severity::Error,
             "E610",
             "nightly is a release channel, not a package manifest version",
             Default::default(),

@@ -37,8 +37,9 @@ fn reports_all_lexer_errors_in_one_compiler_pass() {
             .iter()
             .all(|diagnostic| diagnostic.code == "E100")
     );
-    assert_eq!(diagnostics[0].span.start, 0);
-    assert_eq!(diagnostics[1].span.start, 11);
+    assert_eq!(diagnostics[0].span().start, 0);
+    assert_eq!(diagnostics[1].span().start, 11);
+    assert_eq!(diagnostics[0].stage, adamantium_diagnostics::Stage::Lexing);
 }
 
 #[test]
@@ -52,4 +53,5 @@ fn keeps_lexer_and_parser_diagnostics_separate() {
     assert_eq!(syntax.len(), 1);
     assert_eq!(syntax[0].code, "E110");
     assert_eq!(syntax[0].message, "expected expression after '='");
+    assert_eq!(syntax[0].stage, adamantium_diagnostics::Stage::Parsing);
 }

@@ -29,7 +29,9 @@ impl ProjectLayout {
         if self.source().is_file() {
             Ok(())
         } else {
-            Err(adamantium_diagnostics::Diagnostic::error(
+            Err(adamantium_diagnostics::Diagnostic::at_stage(
+                adamantium_diagnostics::Stage::Project,
+                adamantium_diagnostics::Severity::Error,
                 "E300",
                 "missing code/main.ad",
                 Default::default(),
