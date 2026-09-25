@@ -1313,14 +1313,14 @@ Create clear compiler diagnostics.
 * [x] Move target-independent typed IR into `adamantium-ir`
 * [x] Decouple typed IR operators from parser syntax
 * [x] Keep the NASM backend consuming the shared typed IR
-* [ ] Implement the LLVM ARM64 backend
+* [x] Implement the LLVM ARM64 backend - target triples, data layouts, LLVM IR emission and object command
 * [ ] Generate Windows ARM64 native executables
 * [ ] Generate Linux ARM64 native executables
 * [ ] Create portable Windows ARM64 ZIP packaging
 * [ ] Create portable Linux ARM64 ZIP packaging
-* [ ] Cross-platform standard library behavior
-* [ ] Cross-platform file handling
-* [ ] Cross-platform process handling
+* [x] Cross-platform standard library behavior
+* [x] Cross-platform file handling
+* [x] Cross-platform process handling
 
 ---
 

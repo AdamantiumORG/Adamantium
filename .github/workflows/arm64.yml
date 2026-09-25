@@ -1,0 +1,43 @@
+name: ARM64 backend
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    name: Native LLVM (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            executable: arm64-smoke.exe
+          - runner: ubuntu-26.04-arm
+            target: aarch64-unknown-linux-gnu
+            executable: arm64-smoke
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Test ARM64 backend crates
+        run: cargo test --locked -p adamantium-codegen -p adamantium-linker -p adamantium-stdlib
+      - name: Emit LLVM ARM64 module
+        run: cargo run --locked -p adamantium-codegen --example arm64-smoke -- ${{ matrix.target }} arm64-smoke.ll
+      - name: Build native ARM64 executable
+        run: clang -target ${{ matrix.target }} arm64-smoke.ll -o ${{ matrix.executable }}
+      - name: Run native ARM64 executable
+        shell: pwsh
+        run: |
+          & (Join-Path $PWD '${{ matrix.executable }}')
+          if ($LASTEXITCODE -ne 0) {
+            throw "Generated ARM64 executable returned $LASTEXITCODE."
+          }

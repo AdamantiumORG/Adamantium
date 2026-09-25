@@ -11,17 +11,30 @@ Adamantium function calls use the compiler's internal stack-based value ABI on
 both targets. Platform entry points and calls into the Rust runtime use adapters
 for the operating system ABI.
 
-## Planned ARM64 targets
+## ARM64 backend
 
-Future ARM64 work will use these target names:
+The LLVM backend recognizes these target names:
 
 * `aarch64-pc-windows-msvc`
 * `aarch64-unknown-linux-gnu`
 * `aarch64-apple-darwin`
 
-The ARM64 backend must be implemented as a separate instruction encoder. It
-must not translate generated x86-64 assembly text. Every `Value` remains 16
-bytes, with two 64-bit words, and must keep the same runtime type identifiers.
+The ARM64 backend emits LLVM IR directly from target-independent IR. It does
+not translate generated x86-64 assembly text. Windows and Linux use separate
+target triples and data layouts. Object generation invokes Clang with an
+explicit target, and linker argument construction selects ARM64 explicitly.
+Every runtime `Value` remains 16 bytes, with two 64-bit words, and keeps the
+same runtime type identifiers.
+
+The core LLVM emitter is implemented. Portable ARM64 distributions remain
+blocked until the mature CLI lowering path feeds all language operations into
+the shared IR and native ARM64 language tests pass. An ARM64 CLI archive that
+cannot compile Adamantium programs is not considered a supported portable
+distribution.
+
+The `ARM64 backend` workflow runs on native Windows ARM64 and Linux ARM64
+runners. It emits LLVM IR through `adamantium-codegen`, lets Clang create the
+platform executable, and runs that executable on the matching architecture.
 
 Before an ARM64 target can be marked supported, it must provide:
 

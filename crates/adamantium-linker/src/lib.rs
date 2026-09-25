@@ -36,3 +36,37 @@ pub fn windows_linker_driver_arguments(linker: &Path) -> &'static [&'static str]
         &[]
     }
 }
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Arm64Platform {
+    Windows,
+    Linux,
+}
+
+pub fn arm64_link_arguments(
+    platform: Arm64Platform,
+    object: &Path,
+    runtime: &Path,
+    output: &Path,
+) -> Vec<String> {
+    match platform {
+        Arm64Platform::Windows => vec![
+            "-flavor".into(),
+            "link".into(),
+            "/machine:arm64".into(),
+            "/subsystem:console".into(),
+            "/entry:mainCRTStartup".into(),
+            format!("/out:{}", output.display()),
+            object.display().to_string(),
+            runtime.display().to_string(),
+        ],
+        Arm64Platform::Linux => vec![
+            "-target".into(),
+            "aarch64-unknown-linux-gnu".into(),
+            object.display().to_string(),
+            runtime.display().to_string(),
+            "-o".into(),
+            output.display().to_string(),
+        ],
+    }
+}
