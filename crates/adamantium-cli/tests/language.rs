@@ -1,10 +1,6 @@
 #[cfg(any(target_os = "windows", target_os = "linux"))]
-use std::process::Command;
-#[cfg(any(target_os = "windows", target_os = "linux"))]
-use std::{
-    fs,
-    sync::atomic::{AtomicUsize, Ordering},
-};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::{fs, process::Command};
 
 #[test]
 #[cfg(any(target_os = "windows", target_os = "linux"))]
