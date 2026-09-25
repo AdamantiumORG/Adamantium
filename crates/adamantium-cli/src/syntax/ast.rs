@@ -23,19 +23,6 @@ pub enum Comparison {
     Greater,
     GreaterEqual,
 }
-impl Operator {
-    pub(super) fn from_char(c: char) -> Option<Self> {
-        match c {
-            '+' => Some(Self::Add),
-            '-' => Some(Self::Subtract),
-            '*' => Some(Self::Multiply),
-            '/' => Some(Self::Divide),
-            '%' => Some(Self::Remainder),
-            _ => None,
-        }
-    }
-}
-
 #[derive(Debug)]
 pub enum Expr {
     Integer(i128),

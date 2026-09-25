@@ -14,6 +14,12 @@ syntax/
 
 The public compiler entry points remain `parse_modules`, `module_dependencies`, and `package_dependencies`. Tests also use `parse` for single-source programs. Callers continue to receive the same syntax-level `Program` and `line:column` diagnostics as before the split.
 
+Tokens end at the parser boundary. The parser converts lexical `Token` and
+`TokenKind` values into semantic AST enums such as `BinaryOperator` and
+`UnaryOperator`. AST nodes never store lexer tokens or infer semantics from
+token text. They retain source `Span` values so later compiler phases can
+produce precise diagnostics without depending on the lexer representation.
+
 Statement and declaration parsing uses recursive descent. Expression parsing
 uses a Pratt parser and a single operator contract:
 

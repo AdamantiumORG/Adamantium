@@ -3,6 +3,17 @@ use std::collections::{HashMap, HashSet};
 
 use super::{ast::*, diagnostics::Position, lexer::lex, tokens::*};
 
+fn arithmetic_operator(character: char) -> Option<Operator> {
+    match character {
+        '+' => Some(Operator::Add),
+        '-' => Some(Operator::Subtract),
+        '*' => Some(Operator::Multiply),
+        '/' => Some(Operator::Divide),
+        '%' => Some(Operator::Remainder),
+        _ => None,
+    }
+}
+
 #[derive(Clone)]
 struct Binding {
     slot: usize,
@@ -978,7 +989,7 @@ impl Parser {
                 _ => None,
             };
             let arithmetic = match self.peek() {
-                Token::Symbol(c) => Operator::from_char(*c),
+                Token::Symbol(c) => arithmetic_operator(*c),
                 _ => None,
             };
             let logical = match (self.peek(), next) {
@@ -1486,7 +1497,7 @@ impl Parser {
                     let adjacent = self.position().line == equals.line
                         && self.position().column == equals.column + 1;
                     let operator = match self.peek() {
-                        Token::Symbol(c) if adjacent => Operator::from_char(*c),
+                        Token::Symbol(c) if adjacent => arithmetic_operator(*c),
                         _ => None,
                     };
                     let value = if let Some(operator) = operator {
