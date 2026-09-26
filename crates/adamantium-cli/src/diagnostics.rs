@@ -20,9 +20,11 @@ fn render_error(error: &str) -> String {
     if error.starts_with("error[") || error.starts_with("warning[") {
         return error.to_owned();
     }
-    let (code, context) = classify(error);
+    let location = source_location(error);
+    let diagnostic_message = location.map_or(error, |(_, _, _, message)| message);
+    let (code, context) = classify(diagnostic_message);
     let mut rendered = format!("error[{code}]: {error}");
-    if let Some((path, line, column, message)) = source_location(error) {
+    if let Some((path, line, column, message)) = location {
         rendered = format!("error[{code}]: {message}\n  --> {path}:{line}:{column}");
         if let Ok(source) = std::fs::read_to_string(path)
             && let Some(text) = source.lines().nth(line.saturating_sub(1))
@@ -34,7 +36,7 @@ fn render_error(error: &str) -> String {
         }
     }
     rendered.push_str(&format!("\n   = context: {context}"));
-    if let Some(help) = suggestion(error) {
+    if let Some(help) = suggestion(diagnostic_message) {
         rendered.push_str(&format!("\n   = help: {help}"));
     }
     rendered
@@ -152,7 +154,7 @@ fn suggestion(error: &str) -> Option<&'static str> {
     let lower = error.to_ascii_lowercase();
     if lower.contains("internal compiler error") {
         Some("report the source file and compiler version so this compiler bug can be reproduced")
-    } else if lower.contains("expected ';'") {
+    } else if lower.contains("expected ';'") || lower.contains("expected symbol(';')") {
         Some("add `;` at the end of the statement")
     } else if lower.contains("must declare fun main") {
         Some("add `fun main() { }` to code/main.ad")
@@ -556,6 +558,21 @@ mod tests {
         assert!(rendered.contains("context: syntax analysis"));
         assert!(rendered.contains("help: add `;`"));
         std::fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn macos_private_temporary_paths_do_not_change_diagnostic_codes() {
+        let control_flow = render_errors(
+            "/private/var/folders/project/program.ad:1:14: 'break' can only be used inside a loop",
+        );
+        assert!(control_flow.starts_with("error[E000]"), "{control_flow}");
+        assert!(!control_flow.contains("make the symbol public"));
+
+        let syntax = render_errors(
+            "/private/var/folders/project/program.ad:1:26: expected Symbol(';'), found Symbol('}')",
+        );
+        assert!(syntax.starts_with("error[E100]"), "{syntax}");
+        assert!(syntax.contains("add `;`"), "{syntax}");
     }
 
     #[test]
