@@ -46,7 +46,7 @@ if [[ -z "$zig_license" ]]; then
 fi
 
 cp "$zig_license" "$package_root/ZIG-LICENSE.txt"
-cp "$compiler_root/THIRD_PARTY_LICENSES/NASM.txt" "$package_root/NASM-LICENSE.txt"
+cp "$compiler_root/docs/legal/NASM.txt" "$package_root/NASM-LICENSE.txt"
 cp "$compiler_root/README.md" "$package_root/README.md"
 cat > "$package_root/INSTALL.txt" <<'TEXT'
 Adamantium portable for Linux x86-64

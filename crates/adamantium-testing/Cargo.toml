@@ -2,7 +2,7 @@
 name = "adamantium-testing"
 version.workspace = true
 edition.workspace = true
-license-file = "../../LICENCE.md"
+license-file = "../../LICENSE.md"
 
 [dependencies]
 adamantium-compiler = { path = "../adamantium-compiler" }

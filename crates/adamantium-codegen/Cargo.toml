@@ -2,7 +2,7 @@
 name = "adamantium-codegen"
 version.workspace = true
 edition.workspace = true
-license-file = "../../LICENCE.md"
+license-file = "../../LICENSE.md"
 
 [dependencies]
 adamantium-ir = { path = "../adamantium-ir" }

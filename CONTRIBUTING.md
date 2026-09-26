@@ -88,5 +88,6 @@ change completes a tracked compiler item.
 
 ## License
 
-Review [LICENCE.md](LICENCE.md) before contributing. Submit only material that
+Review [LICENSE.md](LICENSE.md) and the [Code of Conduct](CODE_OF_CONDUCT.md)
+before contributing. Submit only material that
 you have the right to contribute under the project's license.

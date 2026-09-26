@@ -1,5 +1,19 @@
 # Adamantium WASM package ABI
 
+## Stability
+
+`wasi-command-v1` is versioned but remains provisional before Adamantium
+`1.0.0`. Its identifier and behavior may change in a compiler minor release,
+and every incompatible change must use a new ABI identifier. Published package
+assets such as `adamantium_packet_1_2_3` identify the package version, not the
+ABI version. Package authors must declare the ABI in the manifest and review
+release notes before adopting a new compiler minor version.
+
+After Adamantium `1.0.0`, an ABI identifier is immutable. Compatible additions
+retain the identifier; incompatible changes create `wasi-command-v2` or a later
+identifier. The compiler continues validating the declared identifier before
+installation and execution.
+
 ## ABI identifier
 
 The supported ABI is `wasi-command-v1`. A package is a WebAssembly 1.0 core module using WASI Preview 1 through the `wasi_snapshot_preview1` import namespace. Components and imports from other host namespaces are rejected.

@@ -1,5 +1,5 @@
 [![CI](https://github.com/AdamantiumORG/Adamantium/actions/workflows/ci.yml/badge.svg)](https://github.com/AdamantiumORG/Adamantium/actions/workflows/ci.yml)
-[![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENCE.md)
+[![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE.md)
 [![Status: Early development](https://img.shields.io/badge/status-early_development-orange.svg)](#project-status)
 
 # Adamantium
@@ -7,7 +7,7 @@
 **A simple native programming language for people who want readable syntax
 without giving up explicit control.**
 
-[Install](#installation) | [Documentation](docs/README.md) | [Examples](examples/README.md) | [Contributing](CONTRIBUTING.md)
+[Install](#installation) | [Documentation](docs/README.md) | [Versioning](docs/VERSIONING.md) | [Examples](examples/README.md) | [Contributing](CONTRIBUTING.md)
 
 Adamantium is an experiment in building an approachable, statically typed
 language from scratch. Its Rust compiler turns `.ad` source into NASM assembly

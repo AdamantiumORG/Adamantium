@@ -76,7 +76,7 @@ foreach ($library in $windowsLibraries) {
     }
     Copy-Item -LiteralPath $source -Destination $libraryRoot
 }
-Copy-Item -LiteralPath (Join-Path $compilerRoot "THIRD_PARTY_LICENSES/NASM.txt") -Destination $packageRoot
+Copy-Item -LiteralPath (Join-Path $compilerRoot "docs/legal/NASM.txt") -Destination $packageRoot
 Copy-Item -LiteralPath (Join-Path $compilerRoot "README.md") -Destination $packageRoot
 @"
 Adamantium portable for Windows x86-64

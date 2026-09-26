@@ -4,7 +4,11 @@ on:
   workflow_dispatch:
   push:
     tags:
-      - "v*"
+      - "v*.*.*"
+
+concurrency:
+  group: stable-release-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -32,6 +36,17 @@ jobs:
         shell: powershell
         run: ./scripts/package-windows.ps1
 
+      - name: Build Windows installer
+        shell: powershell
+        run: |
+          choco install innosetup --yes --no-progress
+          $env:ADAMANTIUM_VERSION = '${{ github.ref_name }}'.TrimStart('v')
+          if (-not $env:ADAMANTIUM_VERSION) { $env:ADAMANTIUM_VERSION = '0.1.0-dev' }
+          & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' `
+            '/DSourceRoot=..\dist\adamantium-windows-x86_64' `
+            'scripts\adamantium.iss'
+          if ($LASTEXITCODE -ne 0) { throw 'Inno Setup failed.' }
+
       - name: Upload portable package
         uses: actions/upload-artifact@v4
         with:
@@ -39,6 +54,7 @@ jobs:
           path: |
             dist/adamantium-windows-x86_64.zip
             dist/adamantium-windows-x86_64.zip.sha256
+            dist/adamantium-windows-x86_64-installer.exe
           if-no-files-found: error
 
       - name: Publish tagged portable package
@@ -48,4 +64,6 @@ jobs:
           files: |
             dist/adamantium-windows-x86_64.zip
             dist/adamantium-windows-x86_64.zip.sha256
+            dist/adamantium-windows-x86_64-installer.exe
           fail_on_unmatched_files: true
+          generate_release_notes: true

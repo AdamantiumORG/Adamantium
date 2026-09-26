@@ -38,3 +38,7 @@
 
 - [Security policy](../SECURITY.md)
 - [Contributing](../CONTRIBUTING.md)
+- [Code of Conduct](../CODE_OF_CONDUCT.md)
+- [Versioning and release channels](VERSIONING.md)
+- [GPLv3 license](../LICENSE.md)
+- [Third-party legal notices](legal/NASM.txt)

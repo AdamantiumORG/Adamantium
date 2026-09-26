@@ -2,7 +2,7 @@
 name = "adamantium-types"
 version.workspace = true
 edition.workspace = true
-license-file = "../../LICENCE.md"
+license-file = "../../LICENSE.md"
 
 [dependencies]
 rustc_apfloat.workspace = true

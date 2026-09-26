@@ -2,4 +2,4 @@
 name = "adamantium-nasm"
 version.workspace = true
 edition.workspace = true
-license-file = "../../LICENCE.md"
+license-file = "../../LICENSE.md"

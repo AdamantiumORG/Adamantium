@@ -168,6 +168,20 @@ jobs:
             dist/windows_portable_x86_64.zip.sha256 `
             --clobber
           if ($LASTEXITCODE -ne 0) { throw 'Could not upload the Nightly assets.' }
+          gh api "repos/$env:GITHUB_REPOSITORY/git/ref/tags/dev" *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh api --method PATCH "repos/$env:GITHUB_REPOSITORY/git/refs/tags/dev" -f sha="$env:HEAD_SHA" -F force=true *> $null
+          } else {
+            gh api --method POST "repos/$env:GITHUB_REPOSITORY/git/refs" -f ref='refs/tags/dev' -f sha="$env:HEAD_SHA" *> $null
+          }
+          gh release view dev *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release edit dev --title 'Development' --prerelease --latest=false `
+              --notes 'Automatically updated development build from the latest commit that passed CI.'
+          } else {
+            gh release create dev --title 'Development' --prerelease --latest=false --generate-notes --target "$env:HEAD_SHA"
+          }
+          gh release upload dev dist/windows_portable_x86_64.zip dist/windows_portable_x86_64.zip.sha256 --clobber
 
   nightly-linux:
     name: Publish Linux Nightly
@@ -240,6 +254,21 @@ jobs:
             gh release create nightly --title 'Nightly' --prerelease --latest=false --notes "$notes"
           fi
           gh release upload nightly \
+            dist/linux_portable_x86_64.zip \
+            dist/linux_portable_x86_64.zip.sha256 \
+            --clobber
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/dev" >/dev/null 2>&1; then
+            gh api --method PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/dev" -f sha="$HEAD_SHA" -F force=true >/dev/null
+          else
+            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" -f ref='refs/tags/dev' -f sha="$HEAD_SHA" >/dev/null
+          fi
+          if gh release view dev >/dev/null 2>&1; then
+            gh release edit dev --title 'Development' --prerelease --latest=false \
+              --notes 'Automatically updated development build from the latest commit that passed CI.'
+          else
+            gh release create dev --title 'Development' --prerelease --latest=false --generate-notes --target "$HEAD_SHA"
+          fi
+          gh release upload dev \
             dist/linux_portable_x86_64.zip \
             dist/linux_portable_x86_64.zip.sha256 \
             --clobber
