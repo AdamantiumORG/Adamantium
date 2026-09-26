@@ -24,6 +24,11 @@ toolchain available on the current machine:
 cargo run -p adamantium-cli -- doctor
 ```
 
+Continue with the [contributor getting-started guide](docs/compiler/contributor-guide.md).
+It maps common changes to crates, explains the compiler pipeline, and lists the
+smallest useful test commands for each area. The complete phase contracts are
+documented in [compiler architecture](docs/compiler/architecture.md).
+
 ## Report a bug
 
 Search existing issues before opening a new one. Include:

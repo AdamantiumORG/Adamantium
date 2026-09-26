@@ -865,7 +865,7 @@ adamantium-async = "1.0"
 * [ ] Implement async error handling
 * [ ] Integrate async with the compiler
 * [ ] Integrate async with memory safety
-* [ ] Add async documentation
+* [x] Add async design documentation
 * [ ] Add async tests
 
 ---
@@ -1112,20 +1112,20 @@ Adamantium must remain memory-safe.
 
 # 44. Runtime
 
-* [ ] Design Adamantium runtime
+* [x] Design Adamantium runtime - ABI, responsibilities, errors, packages and shutdown are specified
 * [x] Implement runtime startup
 * [x] Implement runtime shutdown
 * [x] Implement printing - strings, integers, floats, booleans, and `None`
 * [x] Implement panic handling
 * [x] Implement warning handling
 * [x] Implement exit codes - normal completion, output failures, arithmetic/range failures
-* [ ] Implement memory management
+* [x] Implement memory management - process-lifetime allocation with stable addresses and OS reclamation
 * [x] Implement string runtime - immutable literal storage and value copies; string operations are pending
 * [x] Implement list runtime - contiguous `Value` storage, recursive copies, indexing, iteration and bounds errors
 * [x] Implement object runtime - allocation and independent class-value copying
 * [x] Report arithmetic overflow, division by zero, and invalid clamp ranges
 * [x] Implement error runtime - structured recoverable, panic and package errors integrated with `try`
-* [ ] Optimize runtime overhead
+* [x] Optimize runtime overhead - allocation-free scalar paths and exact-size runtime buffers
 
 ---
 
@@ -1214,7 +1214,7 @@ Create the official standard library.
 * [x] Compiler reference
 * [x] Professional mode
 * [x] Examples
-* [ ] Tutorials
+* [x] Tutorials
 
 ---
 
@@ -1264,7 +1264,7 @@ Create the official standard library.
 * [x] Test installed CLI on Linux x86-64 - project creation, check, ELF build, run, tests, clean and clear
 * [x] Test Windows - compiler checks and native EXE regression tests configured
 * [x] Test Linux - compiler tests and native generated executable test
-* [x] Test macOS - compiler build/tests configured; no macOS program backend
+* [x] Test macOS - compiler tests and generated x86-64 programs run in CI
 * [x] Build documentation in CI with rustdoc warnings denied
 * [x] Create portable Windows packaging workflow - manual runs and version tags
 * [x] Publish portable ZIP as a GitHub Actions artifact
@@ -1292,7 +1292,7 @@ Create the official standard library.
 * [x] Code generation tests
 * [x] NASM generation tests
 * [x] Runtime tests
-* [x] CLI tests - command parsing and installed Windows and Linux x86-64 CLI workflows
+* [x] CLI tests - command parsing and native Windows, Linux and macOS x86-64 workflows
 * [x] Integration tests
 * [x] Regression tests
 
@@ -1319,8 +1319,8 @@ Create clear compiler diagnostics.
 
 * [x] Windows support - native console executables
 * [x] Linux support - native x86-64 ELF executables
-* [ ] macOS support
-* [x] x86-64 backend - Windows COFF and Linux ELF64
+* [x] macOS support - native x86-64 Mach-O executables
+* [x] x86-64 backend - Windows COFF, Linux ELF64 and macOS Mach-O
 * [x] Define future ARM64 support - target triples, ABI, object formats and acceptance tests
 * [x] Move target-independent typed IR into `adamantium-ir`
 * [x] Decouple typed IR operators from parser syntax
@@ -1910,13 +1910,13 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 33. Complete cross-platform behavior
 
-* [ ] Define cross-platform standard-library behavior
-* [ ] Define cross-platform file handling
-* [ ] Define cross-platform process handling
+* [x] Define cross-platform standard-library behavior
+* [x] Define cross-platform file handling
+* [x] Define cross-platform process handling
 * [x] Add macOS compiler support
-* [ ] Add macOS backend support
-* [x] Add macOS CI - compiler portability only; generated programs require a future Mach-O backend
-* [ ] Add cross-platform integration tests
+* [x] Add macOS backend support - x86-64 Mach-O through NASM and Apple `cc`
+* [x] Add macOS CI - compile and execute generated Adamantium programs
+* [x] Add cross-platform integration tests - Windows, Linux and Intel macOS
 
 ### 34. Complete release infrastructure
 
@@ -1973,7 +1973,7 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 * [x] Write the memory-safety specification - `docs/MEMORY_SAFETY.md`
 * [x] Write the package specification - `docs/CREATING_PACKAGES.md` and `docs/packages/WASM_ABI.md`
 * [x] Write the WASM ABI specification
-* [ ] Write the standard-library specification
+* [x] Write the standard-library specification
 * [x] Write the CLI specification - command reference in `README.md`
 
 ---
@@ -2005,7 +2005,7 @@ Async should be implemented **only after the core language, runtime, package sys
 * [ ] Implement cancellation
 * [ ] Implement async errors
 * [ ] Add async tests
-* [ ] Add async documentation
+* [x] Add async design documentation
 
 ### 39. Integrate async with the compiler
 

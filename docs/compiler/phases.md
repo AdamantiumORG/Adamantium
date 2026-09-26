@@ -144,7 +144,7 @@ Input: only `adamantium_ir::typed::Program<Type, Value>` plus the selected entry
 
 The backend may rely on all type-checker guarantees. It must not parse source text, resolve names, infer types, or import parser operator types.
 
-The current NASM backend produces x86-64 assembly. It lowers typed expressions and statements, calculates stack slots, applies the platform calling convention, and emits runtime calls. Windows and Linux ABI adaptation stays in the backend and runtime boundary. A future LLVM ARM64 backend must consume the same typed IR contract.
+The current NASM backend produces x86-64 assembly. It lowers typed expressions and statements, calculates stack slots, applies the platform calling convention, and emits runtime calls. Windows, Linux, and macOS ABI adaptation stays in the backend and runtime boundary. The LLVM ARM64 backend consumes the same typed IR contract, but the complete language lowering path has not migrated to it yet.
 
 ## Assembler and linker
 

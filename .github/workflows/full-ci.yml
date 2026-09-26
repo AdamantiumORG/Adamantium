@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-15-intel]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -29,6 +29,9 @@ jobs:
       - name: Install NASM on Linux
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install --yes nasm
+      - name: Install NASM on macOS
+        if: runner.os == 'macOS'
+        run: brew install nasm
       - name: Configure Windows x64 linker
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1

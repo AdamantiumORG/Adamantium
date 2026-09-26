@@ -1,9 +1,9 @@
-#[cfg(any(target_os = "windows", target_os = "linux"))]
+#[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::{fs, process::Command};
 
 #[test]
-#[cfg(any(target_os = "windows", target_os = "linux"))]
+#[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
 fn language_conformance_suite() {
     let output = Command::new(env!("CARGO_BIN_EXE_adamantium"))
         .args([
@@ -23,7 +23,7 @@ fn language_conformance_suite() {
 }
 
 #[test]
-#[cfg(any(target_os = "windows", target_os = "linux"))]
+#[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
 fn optimization_levels_preserve_program_output() {
     static NEXT: AtomicUsize = AtomicUsize::new(0);
     let root = std::env::temp_dir().join(format!(

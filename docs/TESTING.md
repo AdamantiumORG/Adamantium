@@ -53,7 +53,7 @@ adamantium test language
 cargo test
 ```
 
-Use `adamantium test language tests --verbose` to show full failure output. Native valid cases require NASM and a supported linker. The Cargo integration test runs on Windows and Linux and is disabled on macOS until a macOS backend exists.
+Use `adamantium test language tests --verbose` to show full failure output. Native valid cases require NASM and a supported linker. The Cargo integration test runs on Windows, Linux, and Intel macOS.
 
 ## Fuzzing
 

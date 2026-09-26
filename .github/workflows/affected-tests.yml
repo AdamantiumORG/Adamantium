@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-15-intel]
         crate: ${{ fromJSON(inputs.crates) }}
     steps:
       - uses: actions/checkout@v6
@@ -35,6 +35,9 @@ jobs:
       - name: Install NASM on Linux
         if: runner.os == 'Linux' && matrix.crate == 'adamantium-cli'
         run: sudo apt-get update && sudo apt-get install --yes nasm
+      - name: Install NASM on macOS
+        if: runner.os == 'macOS' && matrix.crate == 'adamantium-cli'
+        run: brew install nasm
       - name: Configure Windows x64 linker
         if: runner.os == 'Windows' && matrix.crate == 'adamantium-cli'
         uses: ilammy/msvc-dev-cmd@v1

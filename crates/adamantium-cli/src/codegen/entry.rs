@@ -30,6 +30,8 @@ fn cli_entry(function: &Function) -> String {
 pub fn assembly_entry(program: &Program, entry: &str, optimize: bool) -> String {
     let runtime = if cfg!(target_os = "linux") {
         include_str!("../runtime-linux.asm")
+    } else if cfg!(target_os = "macos") {
+        include_str!("../runtime-macos.asm")
     } else {
         include_str!("../runtime.asm")
     };
@@ -57,7 +59,11 @@ pub fn assembly_entry(program: &Program, entry: &str, optimize: bool) -> String 
     for function in &program.functions {
         generator.function(function);
     }
-    generator.emit("section .rdata");
+    generator.emit(if cfg!(target_os = "macos") {
+        "section .data"
+    } else {
+        "section .rdata"
+    });
     for (i, bytes) in generator.data.iter().enumerate() {
         generator.text.push_str(&format!("ad_string_{i}:\n"));
         for chunk in bytes.chunks(32) {
@@ -99,7 +105,7 @@ pub fn assembly_entry(program: &Program, entry: &str, optimize: bool) -> String 
             bytes.join(", ")
         ));
     }
-    if cfg!(target_os = "linux") {
+    if cfg!(any(target_os = "linux", target_os = "macos")) {
         let mut generated = generator.text.split_off(runtime_length);
         for (windows_name, linux_name) in [
             ("ExitProcess", "ad_linux_exit"),

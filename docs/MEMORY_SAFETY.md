@@ -12,11 +12,13 @@ semantics. Immutable
 string data can be shared because Adamantium does not permit mutation of string
 storage.
 
-Runtime allocations currently remain alive until process shutdown. `remove`
+Runtime allocations use the process-lifetime policy defined in
+[Runtime architecture](compiler/runtime.md) and remain alive until process shutdown. `remove`
 invalidates a source-level name and runs lifecycle behavior, but it does not
 call a raw memory deallocator. This makes double-free and physical
-use-after-free impossible in the current runtime. Runtime reclamation may be
-added later only if it preserves these language rules.
+use-after-free impossible in the current runtime. There is no tracing garbage
+collector or reference counter. Runtime reclamation may be added later only if
+it preserves these language rules.
 
 ## Aliases
 

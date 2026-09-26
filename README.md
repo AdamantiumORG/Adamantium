@@ -34,6 +34,15 @@ fun main() {
 Adamantium source -> compiler written in Rust -> NASM -> native x86-64 executable
 ```
 
+Adamantium started with NASM because textual x86-64 output is easy to inspect,
+compare in tests, and debug while the language semantics are still evolving.
+NASM also keeps instruction selection and calling conventions visible to people
+learning how the compiler works. The platform linker combines that object code
+with the Rust runtime. Target-independent typed IR now separates language
+semantics from this backend, so LLVM can serve ARM64 and future targets without
+forcing the original x86-64 path to be rewritten first. See the
+[compiler architecture](docs/compiler/architecture.md) for the phase boundaries.
+
 ## Why Adamantium?
 
 Why build another programming language? Adamantium explores a space between
@@ -102,7 +111,7 @@ Explore complete projects in [`examples`](examples/README.md).
 
 ## Features
 
-- Native Windows and Linux x86-64 executables
+- Native Windows, Linux, and macOS x86-64 executables
 - Static types with inference and Professional Mode with explicit declarations
 - Functions, classes, enums, traits, generics, lists, and optional values
 - `if`, exhaustive `match`, `for`, `while`, `until`, and `loop`
@@ -173,7 +182,7 @@ adamantium doctor
 ## Roadmap
 
 - [x] Scanner lexer, parser, AST, name resolution, and type checking
-- [x] NASM x86-64 backend and native Windows/Linux executables
+- [x] NASM x86-64 backend and native Windows/Linux/macOS executables
 - [x] Classes, enums, traits, generics, modules, tests, and optimization profiles
 - [x] WASI package format, dependency locking, checksums, and execution limits
 - [ ] Broader standard library and package ecosystem

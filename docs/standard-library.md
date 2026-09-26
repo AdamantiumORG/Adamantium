@@ -111,5 +111,5 @@ them, a stable error operation name, API documentation, unit tests, and a
 cross-platform test when it touches the operating system. Platform-specific
 extensions belong behind a portable contract or in an external package. A
 breaking signature or semantic change follows the
-[language specification](specification.md) and the
-[project versioning policy](../VERSIONING.md).
+[language specification](language/specification.md) and the
+[project versioning policy](VERSIONING.md).

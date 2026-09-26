@@ -16,14 +16,23 @@
 - [Errors](language/errors.md)
 - [Professional Mode](language/professional.md)
 - [Decorators](language/decorators.md)
-- [Standard library](language/standard-library.md)
+- [Standard library specification](standard-library.md)
+- [Planned async model](language/async.md)
+
+## Tutorials
+
+- [Create and run a first project](tutorials/first-project.md)
+- [Split a project into modules](tutorials/modules.md)
+- [Write and run language tests](tutorials/testing.md)
 
 ## Compiler
 
 - [Architecture](compiler/architecture.md)
+- [Contributor getting started](compiler/contributor-guide.md)
 - [Parser](compiler/parser.md)
 - [Type checker](compiler/typechecker.md)
 - [Code generation](compiler/codegen.md)
+- [Runtime architecture](compiler/runtime.md)
 - [Core stability and compiler hardening](compiler/stability.md)
 
 ## Tooling and packages

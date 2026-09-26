@@ -6,14 +6,16 @@
 | --- | --- | --- | --- | --- |
 | `x86_64-pc-windows-msvc` | COFF (`win64`) | Windows x64 for runtime calls | MSVC `link.exe` | Supported |
 | `x86_64-unknown-linux-gnu` | ELF64 | System V AMD64 for runtime calls | `cc` or bundled Zig | Supported |
+| `x86_64-apple-darwin` | Mach-O 64 | System V AMD64 for runtime calls | Apple `cc` | Supported |
 
-macOS CI compiles and tests the compiler crates, parser, diagnostics, and other
-platform-independent components. It does not run generated Adamantium programs
-because Adamantium does not yet provide a Mach-O program backend. The CI job is
-therefore a compiler portability check, not a claim of macOS target support.
+The macOS backend emits NASM `macho64` objects, uses Mach-O external symbol
+names, embeds a native Rust runtime, and links with the Apple C toolchain. CI
+runs generated Adamantium programs on an Intel macOS runner. Apple Silicon is
+not yet a supported language target because the complete language lowering path
+does not feed the LLVM ARM64 backend yet.
 
 Adamantium function calls use the compiler's internal stack-based value ABI on
-both targets. Platform entry points and calls into the Rust runtime use adapters
+all x86-64 targets. Platform entry points and calls into the Rust runtime use adapters
 for the operating system ABI.
 
 ## ARM64 backend

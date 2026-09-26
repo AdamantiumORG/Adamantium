@@ -3,14 +3,17 @@ use adamantium_stdlib::{environment, filesystem, process};
 #[test]
 fn paths_with_unicode_round_trip_as_text() {
     let root = std::env::temp_dir().join(format!(
-        "adamantium-cross-platform-{}-ą",
+        "adamantium-cross-platform-{}-\u{105}",
         std::process::id()
     ));
-    let file = root.join("wartość.txt");
+    let file = root.join("warto\u{15b}\u{107}.txt");
     let _ = std::fs::remove_dir_all(&root);
     filesystem::create_directory(&root).unwrap();
-    filesystem::write_text(&file, "żółw\n").unwrap();
-    assert_eq!(filesystem::read_text(&file).unwrap(), "żółw\n");
+    filesystem::write_text(&file, "\u{17c}\u{f3}\u{142}w\n").unwrap();
+    assert_eq!(
+        filesystem::read_text(&file).unwrap(),
+        "\u{17c}\u{f3}\u{142}w\n"
+    );
     assert_eq!(filesystem::list(&root).unwrap(), [file]);
     filesystem::remove(&root).unwrap();
 }

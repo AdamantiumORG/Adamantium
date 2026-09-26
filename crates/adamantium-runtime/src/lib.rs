@@ -436,9 +436,10 @@ unsafe fn string_operation(request: &Request) -> Result<Value, String> {
     match request.operation {
         0 => {
             let right = unsafe { string_value(request.b)? };
-            let bytes = [left.as_bytes(), right.as_bytes()]
-                .concat()
-                .into_boxed_slice();
+            let mut joined = Vec::with_capacity(left.len() + right.len());
+            joined.extend_from_slice(left.as_bytes());
+            joined.extend_from_slice(right.as_bytes());
+            let bytes = joined.into_boxed_slice();
             let value = Value {
                 lo: bytes.as_ptr() as u64,
                 hi: bytes.len() as u64,

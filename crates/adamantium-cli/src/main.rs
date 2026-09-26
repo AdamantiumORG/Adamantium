@@ -911,21 +911,26 @@ fn emit_executable(
     let target = root.join("target");
     fs::create_dir_all(&target).map_err(|e| e.to_string())?;
     let asm = target.join(format!("{output_name}.asm"));
-    let obj = target.join(if cfg!(target_os = "linux") {
+    let obj = target.join(if cfg!(any(target_os = "linux", target_os = "macos")) {
         format!("{output_name}.o")
     } else {
         format!("{output_name}.obj")
     });
-    let exe = target.join(if cfg!(target_os = "linux") {
+    let exe = target.join(if cfg!(any(target_os = "linux", target_os = "macos")) {
         output_name.to_string()
     } else {
         format!("{output_name}.exe")
     });
-    let runtime = target.join("adamantium_runtime.lib");
+    let runtime = target.join(if cfg!(windows) {
+        "adamantium_runtime.lib"
+    } else {
+        "libadamantium_runtime.a"
+    });
     let runtime_bytes = include_bytes!(concat!(env!("OUT_DIR"), "/runtime.lib"));
     if runtime_bytes.is_empty() {
         return Err(
-            "building Adamantium executables is supported on Windows and Linux x86-64".into(),
+            "building Adamantium executables is supported on Windows, Linux, and macOS x86-64"
+                .into(),
         );
     }
     fs::write(&runtime, runtime_bytes).map_err(|e| e.to_string())?;
@@ -941,6 +946,8 @@ fn emit_executable(
             .arg("-f")
             .arg(if cfg!(target_os = "linux") {
                 "elf64"
+            } else if cfg!(target_os = "macos") {
+                "macho64"
             } else {
                 "win64"
             })
@@ -962,11 +969,15 @@ fn doctor(root: &Path) -> Result<ExitCode, String> {
     let mut failures = 0usize;
     doctor_result(
         cfg!(all(
-            any(target_os = "windows", target_os = "linux"),
-            any(target_arch = "x86_64", target_arch = "aarch64")
+            any(
+                target_os = "windows",
+                target_os = "linux",
+                target_os = "macos"
+            ),
+            target_arch = "x86_64"
         )),
         format!("platform: {}-{}", env::consts::OS, env::consts::ARCH),
-        "use a supported Windows or Linux x86-64 or ARM64 build of Adamantium",
+        "use a supported Windows, Linux, or macOS x86-64 build of Adamantium",
         &mut failures,
     );
     doctor_result(
@@ -1660,10 +1671,23 @@ fn link(target: &Path, _name: &str, obj: &Path, runtime: &Path, exe: &Path) -> R
         }
         command.arg("-no-pie").arg(obj).arg(runtime);
         command
-            .args(linux_runtime_libraries(libraries))
+            .args(runtime_linker_arguments(libraries))
             .arg("-o")
             .arg(exe);
         return execute(&mut command, "Linux C linker");
+    }
+    if cfg!(target_os = "macos") {
+        let libraries = include_str!(concat!(env!("OUT_DIR"), "/runtime-libraries.txt"));
+        let linker = env::var_os("ADAMANTIUM_LINKER").unwrap_or_else(|| "cc".into());
+        let mut command = Command::new(linker);
+        command
+            .arg("-Wl,-no_pie")
+            .arg(obj)
+            .arg(runtime)
+            .args(runtime_linker_arguments(libraries))
+            .arg("-o")
+            .arg(exe);
+        return execute(&mut command, "macOS C linker");
     }
     let mut arguments = vec![
         OsString::from("/nologo"),
@@ -1707,19 +1731,19 @@ fn link(target: &Path, _name: &str, obj: &Path, runtime: &Path, exe: &Path) -> R
     execute(&mut command, "LLVM Windows linker")
 }
 
-fn linux_runtime_libraries(libraries: &str) -> Vec<&str> {
+fn runtime_linker_arguments(libraries: &str) -> Vec<&str> {
     libraries.split_whitespace().collect()
 }
 
 #[cfg(test)]
 mod linker_tests {
-    use super::linux_runtime_libraries;
+    use super::runtime_linker_arguments;
 
     #[test]
     fn linux_linker_keeps_rust_runtime_libraries() {
         let libraries = "-lgcc_s -lutil -lrt -lpthread -lm -ldl -lc";
         assert_eq!(
-            linux_runtime_libraries(libraries),
+            runtime_linker_arguments(libraries),
             [
                 "-lgcc_s",
                 "-lutil",
@@ -1728,6 +1752,20 @@ mod linker_tests {
                 "-lm",
                 "-ldl",
                 "-lc"
+            ]
+        );
+    }
+
+    #[test]
+    fn macos_linker_preserves_framework_pairs() {
+        assert_eq!(
+            runtime_linker_arguments("-framework Security -framework CoreFoundation -liconv"),
+            [
+                "-framework",
+                "Security",
+                "-framework",
+                "CoreFoundation",
+                "-liconv"
             ]
         );
     }

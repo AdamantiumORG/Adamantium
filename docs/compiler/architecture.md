@@ -2,6 +2,11 @@
 
 Adamantium is organized as a Rust workspace with a CLI and focused compiler crates. The current compilation path is:
 
+This is the starting document for contributors changing compiler behavior. The
+[contributor guide](contributor-guide.md) maps common tasks to crates and test
+commands, while [phase contracts](phases.md) define the invariants exchanged by
+each stage.
+
 ```text
 CLI and project loading
         |
@@ -22,6 +27,19 @@ NASM and platform linker
 native executable
 ```
 
+The pipeline has three ownership zones:
+
+| Zone | Responsibility | Must not do |
+| --- | --- | --- |
+| Frontend | Turn source into spanned, resolved, typed meaning | Select registers or invoke native tools |
+| Middle end | Lower HIR through MIR into target-independent IR and optimize it | Parse source text or depend on an OS ABI |
+| Backend and runtime | Select instructions, adapt platform ABIs, assemble, link, and execute runtime services | Reinterpret language syntax or type rules |
+
+The current production implementation is transitional. Focused crates define
+and test the intended boundaries, while mature language parsing, checking, and
+x86-64 generation still live partly inside `adamantium-cli`. New work should
+move data through crate APIs rather than adding another cross-layer dependency.
+
 Parsing uses recursive descent for declarations, functions, classes, traits,
 enums, and statements. Every expression is delegated to one Pratt parser with
 central prefix, infix, and postfix parselet definitions. Calls, indexing, and
@@ -32,6 +50,14 @@ place as the operator set grows.
 `adamantium-cli` currently owns the mature parser, semantic checker, and NASM generator while their public crate APIs are stabilized. The checker lowers parsed syntax into `adamantium_ir::typed::Program<Type, Value>`. `adamantium-ir` owns the target-independent control-flow, expression, class, package-call, and operator representation. It has no dependency on the parser or a native backend.
 
 The existing NASM generator consumes this shared typed IR. A future LLVM ARM64 generator can consume the same IR without translating parser syntax or depending on x86-64 register conventions.
+
+NASM was chosen for the first backend because its textual x86-64 output is easy
+to inspect, snapshot, and diagnose while language semantics are changing. It
+also makes stack layout, register selection, and Windows/System V calling
+conventions explicit. The linker remains a separate phase so code generation
+can be tested without producing an executable. LLVM support is being added for
+architectures where maintaining another complete instruction selector would
+slow development; both paths consume the same typed IR.
 
 ## Crate contracts
 
@@ -62,6 +88,9 @@ keeps an instruction-to-span map next to the emitted assembly so backend and
 runtime diagnostics can still identify the originating source construct.
 
 The exact input, output, invariants, and responsibilities of every stage are defined in [Compiler phase contracts](phases.md).
+
+The generated program boundary, value ABI, allocation policy, error state, and
+WASI isolation model are defined in [Runtime architecture](runtime.md).
 
 ## Workspace direction
 
