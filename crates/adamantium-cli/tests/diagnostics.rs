@@ -6,18 +6,21 @@ fn invalid_access_and_imports_fail_before_codegen() {
     fs::create_dir_all(root.join("code")).unwrap();
     fs::write(root.join("project.toml"),"name = \"Diagnostics\"\nversion = \"1\"\ndescription = \"Diagnostic tests\"\nauthors = []\n").unwrap();
     fs::write(root.join("requirement.toml"), "[packages]\n").unwrap();
-    for (source, message) in [
+    for (source, message, exit_code) in [
         (
             "use missing:[value]; fun main() {}",
             "module 'missing' does not export 'value'",
+            1,
         ),
         (
             "fun main() {\nvar a = 1;\na.unknown();\n}",
             "3:3: invalid access:",
+            3,
         ),
         (
             "fun main() {\nvar a = 1;\nprint.newline(a[0]);\n}",
             "invalid access:",
+            3,
         ),
     ] {
         fs::write(root.join("code/main.ad"), source).unwrap();
@@ -26,7 +29,7 @@ fn invalid_access_and_imports_fail_before_codegen() {
             .arg(&root)
             .output()
             .unwrap();
-        assert_eq!(output.status.code(), Some(1));
+        assert_eq!(output.status.code(), Some(exit_code), "{source}");
         assert!(output.stdout.is_empty());
         let stderr = String::from_utf8_lossy(&output.stderr);
         assert!(
