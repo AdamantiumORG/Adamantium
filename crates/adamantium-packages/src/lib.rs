@@ -73,9 +73,10 @@ pub struct Requirement {
 
 impl Requirement {
     pub fn new(source: &str, version: &str) -> Result<Self, String> {
-        let name = github_repository_name(source)?;
+        let source = canonical_github_source(source)?;
+        let name = github_repository_name(&source)?;
         Ok(Self {
-            source: source.trim_end_matches('/').to_string(),
+            source,
             name,
             version: version.parse()?,
         })
@@ -106,6 +107,11 @@ pub struct Manifest {
 
 impl Manifest {
     pub fn parse(source: &str) -> Result<Self, String> {
+        if source.len() > MAX_MANIFEST_BYTES {
+            return Err(format!(
+                "package manifest exceeds {MAX_MANIFEST_BYTES} bytes"
+            ));
+        }
         let manifest: Self =
             toml::from_str(source).map_err(|error| format!("invalid package manifest: {error}"))?;
         validate_identifier(&manifest.package.name, "package name")?;
@@ -128,6 +134,17 @@ impl Manifest {
             .any(|author| author.trim().is_empty())
         {
             return Err("package authors cannot contain empty values".into());
+        }
+        validate_metadata_text(&manifest.package.description, "package description", 8_192)?;
+        validate_metadata_text(&manifest.package.license, "package license", 256)?;
+        if manifest.package.authors.len() > 64 {
+            return Err("package manifest contains more than 64 authors".into());
+        }
+        for author in &manifest.package.authors {
+            validate_metadata_text(author, "package author", 256)?;
+        }
+        if manifest.dependencies.len() > 256 {
+            return Err("package manifest contains more than 256 dependencies".into());
         }
         if !manifest.package.repository.is_empty() {
             github_repository_name(&manifest.package.repository)?;
@@ -234,29 +251,86 @@ pub fn resolve(
     Ok(Lockfile { packages: output })
 }
 
-pub fn github_repository_name(source: &str) -> Result<String, String> {
-    let rest = source
-        .strip_prefix("https://github.com/")
-        .ok_or_else(|| {
-            "package source must be an https://github.com/OWNER/REPOSITORY URL".to_string()
-        })?
-        .trim_end_matches('/');
+pub const MAX_MANIFEST_BYTES: usize = 256 * 1024;
+pub const MAX_CHECKSUM_BYTES: usize = 64 * 1024;
+
+pub fn canonical_github_source(source: &str) -> Result<String, String> {
+    if source.trim() != source || source.chars().any(char::is_control) {
+        return Err("package source contains whitespace or control characters".into());
+    }
+    let rest = source.strip_prefix("https://github.com/").ok_or_else(|| {
+        "package source must be an https://github.com/OWNER/REPOSITORY URL".to_string()
+    })?;
+    if rest.contains(['?', '#', '@', '\\']) || rest.ends_with('/') || rest.contains(':') {
+        return Err("package source must be a canonical GitHub repository URL".into());
+    }
     let parts = rest.split('/').collect::<Vec<_>>();
     if parts.len() != 2 || parts.iter().any(|part| part.is_empty()) {
         return Err("package source must identify one GitHub repository".into());
     }
-    let repository = parts[1].trim_end_matches(".git");
-    let valid_owner = parts[0]
-        .chars()
-        .all(|character| character.is_ascii_alphanumeric() || character == '-');
+    let repository = parts[1].strip_suffix(".git").unwrap_or(parts[1]);
+    let owner = parts[0];
+    let valid_owner = !owner.is_empty()
+        && owner.len() <= 39
+        && !owner.starts_with('-')
+        && !owner.ends_with('-')
+        && owner
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric() || character == '-');
     let valid_repository = !repository.is_empty()
+        && repository.len() <= 100
+        && !matches!(repository, "." | "..")
         && repository.chars().all(|character| {
             character.is_ascii_alphanumeric() || matches!(character, '_' | '-' | '.')
         });
     if !valid_owner || !valid_repository {
         return Err("package source contains an invalid GitHub owner or repository name".into());
     }
-    Ok(repository.to_string())
+    Ok(format!("https://github.com/{owner}/{repository}"))
+}
+
+pub fn github_repository_parts(source: &str) -> Result<(String, String), String> {
+    let canonical = canonical_github_source(source)?;
+    let path = canonical
+        .strip_prefix("https://github.com/")
+        .expect("canonical GitHub source has the expected prefix");
+    let (owner, repository) = path
+        .split_once('/')
+        .expect("canonical GitHub source has an owner and repository");
+    Ok((owner.to_owned(), repository.to_owned()))
+}
+
+pub fn github_repository_name(source: &str) -> Result<String, String> {
+    github_repository_parts(source).map(|(_, repository)| repository)
+}
+
+pub fn validate_relative_package_path(value: &str) -> Result<(), String> {
+    if value.is_empty()
+        || value.starts_with(['/', '\\'])
+        || value.contains(':')
+        || value.chars().any(char::is_control)
+    {
+        return Err("package path must be a safe relative path".into());
+    }
+    for component in value.split(['/', '\\']) {
+        if component.is_empty() || matches!(component, "." | "..") {
+            return Err("package path contains an unsafe component".into());
+        }
+    }
+    Ok(())
+}
+
+fn validate_metadata_text(value: &str, label: &str, maximum: usize) -> Result<(), String> {
+    if value.len() > maximum {
+        return Err(format!("{label} exceeds {maximum} bytes"));
+    }
+    if value
+        .chars()
+        .any(|character| character.is_control() && !matches!(character, '\n' | '\t'))
+    {
+        return Err(format!("{label} contains a control character"));
+    }
+    Ok(())
 }
 
 fn validate_identifier(value: &str, label: &str) -> Result<(), String> {
@@ -394,10 +468,15 @@ pub fn sha256(bytes: &[u8]) -> String {
 }
 
 pub fn verify_checksum(checksums: &str, asset: &str, bytes: &[u8]) -> Result<(), String> {
-    if asset.is_empty() || asset.contains(['/', '\\']) {
+    validate_relative_package_path(asset)?;
+    if asset.contains(['/', '\\']) {
         return Err("checksum asset must be a file name".into());
     }
+    if checksums.len() > MAX_CHECKSUM_BYTES {
+        return Err(format!("checksum file exceeds {MAX_CHECKSUM_BYTES} bytes"));
+    }
     let mut expected = None;
+    let mut names = BTreeSet::new();
     for (index, line) in checksums.lines().enumerate() {
         if line.trim().is_empty() {
             continue;
@@ -408,8 +487,19 @@ pub fn verify_checksum(checksums: &str, asset: &str, bytes: &[u8]) -> Result<(),
         if hash.len() != 64 || !hash.bytes().all(|byte| byte.is_ascii_hexdigit()) {
             return Err(format!("invalid SHA-256 on checksum line {}", index + 1));
         }
-        if name == asset && expected.replace(hash.to_ascii_lowercase()).is_some() {
-            return Err(format!("duplicate checksum for '{asset}'"));
+        validate_relative_package_path(name)
+            .map_err(|error| format!("invalid checksum asset on line {}: {error}", index + 1))?;
+        if name.contains(['/', '\\']) {
+            return Err(format!(
+                "checksum asset on line {} must be a file name",
+                index + 1
+            ));
+        }
+        if !names.insert(name) {
+            return Err(format!("duplicate checksum for '{name}'"));
+        }
+        if name == asset {
+            expected = Some(hash.to_ascii_lowercase());
         }
     }
     let expected = expected.ok_or_else(|| format!("missing checksum for '{asset}'"))?;

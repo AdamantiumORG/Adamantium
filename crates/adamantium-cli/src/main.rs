@@ -1292,6 +1292,18 @@ fn install_packages(root: &Path) -> Result<(), String> {
         .map(|package| adamantium_packages::Requirement::new(&package.source, &package.version))
         .collect::<Result<Vec<_>, _>>()?;
     let lock = adamantium_packages::resolve(&roots, &manifests)?;
+    let mut install_names = std::collections::BTreeMap::new();
+    for locked in &lock.packages {
+        let name = adamantium_packages::github_repository_name(&locked.source)?;
+        if let Some(previous) = install_names.insert(name.clone(), locked.source.clone())
+            && previous != locked.source
+        {
+            return Err(format!(
+                "packages '{previous}' and '{}' use the same repository name '{name}'",
+                locked.source
+            ));
+        }
+    }
     for locked in &lock.packages {
         let repository_name = adamantium_packages::github_repository_name(&locked.source)?;
         let package = Package {
@@ -1303,15 +1315,16 @@ fn install_packages(root: &Path) -> Result<(), String> {
             eprintln!("{warning}");
         }
         let cache = package_cache_directory(&root, &package)?;
-        fs::create_dir_all(&cache)
-            .map_err(|error| format!("could not create {}: {error}", cache.display()))?;
+        ensure_safe_package_directory(&root, &cache)?;
         let tag = package_release_tag(&package.version);
-        let checksums_temporary = cache.join("SHA256SUMS.download");
-        let checksums_url = format!("{}/releases/download/{tag}/SHA256SUMS", package.source);
-        download_package_file(&downloader, &checksums_url, &checksums_temporary, &package)?;
-        let checksums = fs::read_to_string(&checksums_temporary)
-            .map_err(|error| format!("could not read package checksums: {error}"))?;
+        let checksums_path = cache.join(adamantium_packages::PACKAGE_CHECKSUMS);
+        let checksums = read_package_text_limited(
+            &checksums_path,
+            adamantium_packages::MAX_CHECKSUM_BYTES,
+            "package checksums",
+        )?;
         let manifest_path = cache.join(adamantium_packages::PACKAGE_MANIFEST);
+        reject_package_symlink(&manifest_path)?;
         let manifest_bytes = fs::read(&manifest_path)
             .map_err(|error| format!("could not read {}: {error}", manifest_path.display()))?;
         adamantium_packages::verify_checksum(
@@ -1321,6 +1334,7 @@ fn install_packages(root: &Path) -> Result<(), String> {
         )
         .map_err(|error| format!("package '{}': {error}", package.name))?;
         let cached_wasm = cache.join("adamantium_packet.wasm");
+        reject_package_symlink(&cached_wasm)?;
         let cached_wasm_valid = fs::read(&cached_wasm).is_ok_and(|bytes| {
             adamantium_wasm::validate_package(&bytes).is_ok()
                 && adamantium_packages::verify_checksum(
@@ -1356,26 +1370,15 @@ fn install_packages(root: &Path) -> Result<(), String> {
             }
             replace_file(&temporary, &cached_wasm)?;
         }
-        replace_file(
-            &checksums_temporary,
-            &cache.join(adamantium_packages::PACKAGE_CHECKSUMS),
-        )?;
         let directory = root
             .join("packages")
             .join(&package.name)
             .join(&package.version);
-        fs::create_dir_all(&directory)
-            .map_err(|error| format!("could not create {}: {error}", directory.display()))?;
+        ensure_safe_package_directory(&root, &directory)?;
         let destination = directory.join("adamantium_packet.wasm");
         let manifest_destination = directory.join("adamantium_packet.toml");
-        fs::copy(&cached_wasm, &destination)
-            .map_err(|error| format!("could not install {}: {error}", destination.display()))?;
-        fs::copy(cache.join("adamantium_packet.toml"), &manifest_destination).map_err(|error| {
-            format!(
-                "could not install {}: {error}",
-                manifest_destination.display()
-            )
-        })?;
+        copy_package_file(&cached_wasm, &destination)?;
+        copy_package_file(&cache.join("adamantium_packet.toml"), &manifest_destination)?;
         println!("Installed {} {}", package.name, package.version);
     }
     fs::write(root.join("adamantium.lock"), lock.render()?)
@@ -1430,11 +1433,27 @@ fn collect_package_manifests(
         return Ok(());
     }
     let cache = package_cache_directory(root, package)?;
-    fs::create_dir_all(&cache)
-        .map_err(|error| format!("could not create {}: {error}", cache.display()))?;
+    ensure_safe_package_directory(root, &cache)?;
     let manifest_path = cache.join("adamantium_packet.toml");
-    let manifest = match fs::read_to_string(&manifest_path)
+    let checksums_path = cache.join(adamantium_packages::PACKAGE_CHECKSUMS);
+    let manifest = match fs::read(&manifest_path)
         .ok()
+        .filter(|bytes| bytes.len() <= adamantium_packages::MAX_MANIFEST_BYTES)
+        .and_then(|bytes| {
+            let checksums = read_package_text_limited(
+                &checksums_path,
+                adamantium_packages::MAX_CHECKSUM_BYTES,
+                "package checksums",
+            )
+            .ok()?;
+            adamantium_packages::verify_checksum(
+                &checksums,
+                adamantium_packages::PACKAGE_MANIFEST,
+                &bytes,
+            )
+            .ok()?;
+            String::from_utf8(bytes).ok()
+        })
         .and_then(|source| adamantium_packages::Manifest::parse(&source).ok())
         .filter(|manifest| {
             package.version != "nightly" && manifest.package.version == package.version
@@ -1445,14 +1464,41 @@ fn collect_package_manifests(
         }
         None => {
             let temporary = cache.join("adamantium_packet.toml.download");
+            let checksums_temporary = cache.join("SHA256SUMS.download");
             let tag = package_release_tag(&package.version);
             let url = format!(
                 "{}/releases/download/{tag}/adamantium_packet.toml",
                 package.source
             );
             download_package_file(downloader, &url, &temporary, package)?;
-            let source = fs::read_to_string(&temporary)
-                .map_err(|error| format!("could not read package manifest: {error}"))?;
+            let checksums_url = format!("{}/releases/download/{tag}/SHA256SUMS", package.source);
+            if let Err(error) =
+                download_package_file(downloader, &checksums_url, &checksums_temporary, package)
+            {
+                let _ = fs::remove_file(&temporary);
+                return Err(error);
+            }
+            let bytes = read_package_file_limited(
+                &temporary,
+                adamantium_packages::MAX_MANIFEST_BYTES,
+                "package manifest",
+            )?;
+            let checksums = read_package_text_limited(
+                &checksums_temporary,
+                adamantium_packages::MAX_CHECKSUM_BYTES,
+                "package checksums",
+            )?;
+            if let Err(error) = adamantium_packages::verify_checksum(
+                &checksums,
+                adamantium_packages::PACKAGE_MANIFEST,
+                &bytes,
+            ) {
+                let _ = fs::remove_file(&temporary);
+                let _ = fs::remove_file(&checksums_temporary);
+                return Err(format!("package '{}': {error}", package.name));
+            }
+            let source = String::from_utf8(bytes)
+                .map_err(|_| "package manifest is not valid UTF-8".to_string())?;
             let manifest = adamantium_packages::Manifest::parse(&source)?;
             if package.version != "nightly" && manifest.package.version != package.version {
                 return Err(format!(
@@ -1462,6 +1508,7 @@ fn collect_package_manifests(
             }
             packages::validate_manifest(&temporary, &package.version)?;
             replace_file(&temporary, &manifest_path)?;
+            replace_file(&checksums_temporary, &checksums_path)?;
             manifest
         }
     };
@@ -1491,17 +1538,58 @@ fn package_release_tag(version: &str) -> String {
 }
 
 fn package_cache_directory(root: &Path, package: &Package) -> Result<PathBuf, String> {
-    let repository = package
-        .source
-        .strip_prefix("https://github.com/")
-        .and_then(|path| path.split_once('/'))
-        .ok_or_else(|| format!("invalid package source '{}'", package.source))?;
+    let (owner, repository) = adamantium_packages::github_repository_parts(&package.source)?;
     Ok(root
         .join("packages")
         .join(".cache")
-        .join(repository.0)
-        .join(repository.1.trim_end_matches(".git"))
+        .join(owner)
+        .join(repository)
         .join(&package.version))
+}
+
+fn ensure_safe_package_directory(root: &Path, directory: &Path) -> Result<(), String> {
+    let packages = root.join("packages");
+    if !directory.starts_with(&packages) {
+        return Err("package directory escapes the project package root".into());
+    }
+    let relative = directory
+        .strip_prefix(root)
+        .map_err(|_| "package directory escapes the project root".to_string())?;
+    let mut current = root.to_path_buf();
+    for component in relative.components() {
+        current.push(component);
+        if current.exists() {
+            if fs::symlink_metadata(&current)
+                .map_err(|error| format!("could not inspect {}: {error}", current.display()))?
+                .file_type()
+                .is_symlink()
+            {
+                return Err(format!(
+                    "package path '{}' contains a symbolic link",
+                    current.display()
+                ));
+            }
+        } else {
+            fs::create_dir(&current)
+                .map_err(|error| format!("could not create {}: {error}", current.display()))?;
+        }
+    }
+    Ok(())
+}
+
+fn read_package_file_limited(path: &Path, maximum: usize, label: &str) -> Result<Vec<u8>, String> {
+    let metadata =
+        fs::metadata(path).map_err(|error| format!("could not inspect {label}: {error}"))?;
+    if metadata.len() > maximum as u64 {
+        let _ = fs::remove_file(path);
+        return Err(format!("{label} exceeds {maximum} bytes"));
+    }
+    fs::read(path).map_err(|error| format!("could not read {label}: {error}"))
+}
+
+fn read_package_text_limited(path: &Path, maximum: usize, label: &str) -> Result<String, String> {
+    String::from_utf8(read_package_file_limited(path, maximum, label)?)
+        .map_err(|_| format!("{label} is not valid UTF-8"))
 }
 
 fn replace_file(source: &Path, destination: &Path) -> Result<(), String> {
@@ -1513,12 +1601,46 @@ fn replace_file(source: &Path, destination: &Path) -> Result<(), String> {
         .map_err(|error| format!("could not install {}: {error}", destination.display()))
 }
 
+fn reject_package_symlink(path: &Path) -> Result<(), String> {
+    if path.exists()
+        && fs::symlink_metadata(path)
+            .map_err(|error| format!("could not inspect {}: {error}", path.display()))?
+            .file_type()
+            .is_symlink()
+    {
+        return Err(format!(
+            "package file '{}' is a symbolic link",
+            path.display()
+        ));
+    }
+    Ok(())
+}
+
+fn copy_package_file(source: &Path, destination: &Path) -> Result<(), String> {
+    reject_package_symlink(source)?;
+    if destination.exists() {
+        fs::remove_file(destination)
+            .map_err(|error| format!("could not replace {}: {error}", destination.display()))?;
+    }
+    fs::copy(source, destination)
+        .map(|_| ())
+        .map_err(|error| format!("could not install {}: {error}", destination.display()))
+}
+
 fn download_package_file(
     downloader: &std::ffi::OsStr,
     url: &str,
     destination: &Path,
     package: &Package,
 ) -> Result<(), String> {
+    if fs::symlink_metadata(destination).is_ok() {
+        fs::remove_file(destination).map_err(|error| {
+            format!(
+                "could not clear temporary package file {}: {error}",
+                destination.display()
+            )
+        })?;
+    }
     let status = Command::new(downloader)
         .args([
             "-fL",

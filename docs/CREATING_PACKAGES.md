@@ -196,7 +196,9 @@ Installed files are stored under `packages/REPOSITORY/VERSION/`. Downloads are c
 - `function ... is not declared` - add `[functions.NAME]` and import the same name.
 - `Adamantium package error` - inspect the package's stderr output.
 
-The installer currently validates the downloaded WASM and manifest. Verification against the published checksum file and package signatures remain planned.
+The installer accepts canonical HTTPS GitHub repository sources. It verifies a manifest against the release `SHA256SUMS` file before using its dependency metadata, then verifies the WASM module before caching or installing it. Manifest and checksum sizes are limited, metadata and paths are validated, and package directories may not traverse the project root or pass through symbolic links.
+
+Checksums protect against corrupted or mismatched release assets. They do not authenticate a publisher because the checksum file is hosted in the same release. Packages outside the Adamantium organizations are identified as community packages and should be reviewed before use. Cryptographic package signatures remain planned.
 
 ## Release checklist
 

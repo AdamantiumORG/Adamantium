@@ -167,3 +167,66 @@ fn verifies_release_checksums_strictly() {
         adamantium_packages::verify_checksum("bad line", "adamantium_packet.wasm", bytes).is_err()
     );
 }
+
+#[test]
+fn rejects_unsafe_package_sources() {
+    for source in [
+        "http://github.com/example/App",
+        "https://github.com/example/App/extra",
+        "https://github.com/example/App?download=1",
+        "https://github.com/example/../App",
+        "https://github.com/-example/App",
+        "https://github.com/example/App/",
+        " https://github.com/example/App",
+    ] {
+        assert!(
+            Requirement::new(source, "1.0.0").is_err(),
+            "accepted {source}"
+        );
+    }
+    let requirement = Requirement::new("https://github.com/example/App.git", "1.0.0").unwrap();
+    assert_eq!(requirement.source, "https://github.com/example/App");
+}
+
+#[test]
+fn rejects_malicious_manifest_metadata() {
+    let oversized = "a".repeat(adamantium_packages::MAX_MANIFEST_BYTES + 1);
+    assert!(Manifest::parse(&oversized).unwrap_err().contains("exceeds"));
+    let control = "[package]\nname='Good'\nversion='1.0.0'\nabi='wasi-command-v1'\ndescription='bad\u{7}value'\n";
+    assert!(Manifest::parse(control).is_err());
+    let authors = (0..65)
+        .map(|index| format!("'author{index}'"))
+        .collect::<Vec<_>>()
+        .join(",");
+    let source = format!(
+        "[package]\nname='Good'\nversion='1.0.0'\nabi='wasi-command-v1'\nauthors=[{authors}]\n"
+    );
+    assert!(Manifest::parse(&source).unwrap_err().contains("64 authors"));
+}
+
+#[test]
+fn rejects_path_traversal_and_hostile_checksum_entries() {
+    for path in [
+        "../packet.wasm",
+        "..\\packet.wasm",
+        "/packet.wasm",
+        "C:\\packet.wasm",
+        "safe//packet.wasm",
+    ] {
+        assert!(
+            adamantium_packages::validate_relative_package_path(path).is_err(),
+            "accepted {path}"
+        );
+    }
+    let bytes = b"package bytes";
+    let hash = adamantium_packages::sha256(bytes);
+    for checksums in [
+        format!("{hash}  ../adamantium_packet.toml\n{hash}  adamantium_packet.wasm\n"),
+        format!("{hash}  other.wasm\n{hash}  other.wasm\n{hash}  adamantium_packet.wasm\n"),
+    ] {
+        assert!(
+            adamantium_packages::verify_checksum(&checksums, "adamantium_packet.wasm", bytes)
+                .is_err()
+        );
+    }
+}

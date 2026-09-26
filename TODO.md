@@ -1723,13 +1723,13 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 ### 19. Implement package security
 
-* [ ] Validate package sources
-* [ ] Validate package contents
-* [ ] Prevent malicious package metadata
-* [ ] Prevent unsafe extraction paths
-* [ ] Prevent path traversal
-* [ ] Validate downloaded package integrity
-* [ ] Add package-security tests
+* [x] Validate package sources
+* [x] Validate package contents
+* [x] Prevent malicious package metadata
+* [x] Prevent unsafe extraction paths
+* [x] Prevent path traversal
+* [x] Validate downloaded package integrity
+* [x] Add package-security tests
 
 ### 20. Implement WASM package loading
 
@@ -2161,7 +2161,7 @@ Resume this backlog only after all five foundation stages are complete.
 16. [x] Complete parallel test execution
 17. [x] Implement assertions
 18. [x] Complete package installation
-19. [ ] Implement package security
+19. [x] Implement package security
 20. [x] Implement WASM package loading
 21. [x] Implement package publishing
 22. [x] Complete `AdamantiumFiles`

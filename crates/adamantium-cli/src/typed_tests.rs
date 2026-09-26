@@ -69,7 +69,12 @@ fn string_operations_generate_runtime_evaluation_calls() {
             "missing string operation {operation}: {assembly}"
         );
     }
-    assert!(assembly.contains("call ad_evaluate"));
+    let evaluate_call = if cfg!(any(target_os = "linux", target_os = "macos")) {
+        "call ad_linux_evaluate"
+    } else {
+        "call ad_evaluate"
+    };
+    assert!(assembly.contains(evaluate_call), "{assembly}");
 }
 
 #[test]
@@ -470,7 +475,7 @@ fn explicit_exit_code_is_emitted_for_the_platform_runtime() {
     let assembly = crate::codegen::assembly_entry(&program, "main", false);
     assert!(assembly.contains("mov rax, 23"), "{assembly}");
     assert!(assembly.contains("mov ecx, eax"), "{assembly}");
-    let exit_call = if cfg!(target_os = "linux") {
+    let exit_call = if cfg!(any(target_os = "linux", target_os = "macos")) {
         "call ad_linux_exit"
     } else {
         "call ExitProcess"
