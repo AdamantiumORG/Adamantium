@@ -22,7 +22,6 @@ The LLVM backend recognizes these target names:
 
 * `aarch64-pc-windows-msvc`
 * `aarch64-unknown-linux-gnu`
-* `aarch64-apple-darwin`
 
 The ARM64 backend emits LLVM IR directly from target-independent IR. It does
 not translate generated x86-64 assembly text. Windows and Linux use separate
@@ -39,7 +38,11 @@ distribution.
 
 The `ARM64 backend` workflow runs on native Windows ARM64 and Linux ARM64
 runners. It emits LLVM IR through `adamantium-codegen`, lets Clang create the
-platform executable, and runs that executable on the matching architecture.
+platform executable, and runs that executable on the matching architecture. It
+also creates and extracts an archive containing the native CLI and smoke
+program, verifies its required files, and executes both packaged binaries. The
+archive is explicitly a packaging regression fixture, not a portable release,
+because it does not yet bundle a complete ARM64 language toolchain.
 
 Before an ARM64 target can be marked supported, it must provide:
 

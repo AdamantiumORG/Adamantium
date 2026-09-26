@@ -1265,7 +1265,7 @@ Create the official standard library.
 * [x] Test Windows - compiler checks and native EXE regression tests configured
 * [x] Test Linux - compiler tests and native generated executable test
 * [x] Test macOS - compiler build/tests configured; no macOS program backend
-* [ ] Build documentation
+* [x] Build documentation in CI with rustdoc warnings denied
 * [x] Create portable Windows packaging workflow - manual runs and version tags
 * [x] Publish portable ZIP as a GitHub Actions artifact
 * [x] Create portable Linux x86-64 ZIP after Linux CLI tests pass
@@ -1330,6 +1330,7 @@ Create clear compiler diagnostics.
 * [x] Generate Linux ARM64 native executables - verified on a native Linux ARM64 runner
 * [ ] Create portable Windows ARM64 ZIP packaging
 * [ ] Create portable Linux ARM64 ZIP packaging
+* [x] Add ARM64 archive-layout and packaged-binary regression tests
 * [x] Cross-platform standard library behavior
 * [x] Cross-platform file handling
 * [x] Cross-platform process handling
@@ -1943,7 +1944,7 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 * [x] Complete parser error recovery for multiple grammar errors in one module
 * [x] Prevent compiler panics from escaping on user input
 * [x] Maintain the complete language regression suite
-* [x] Add deterministic malformed-input testing and a `cargo-fuzz` frontend target
+* [x] Add deterministic malformed-input testing and `cargo-fuzz` targets for the frontend, codegen, runtime values and package loader
 
 ### 35. Freeze the core language
 

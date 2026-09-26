@@ -43,3 +43,15 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             throw "Generated ARM64 executable returned $LASTEXITCODE."
           }
+      - name: Build and verify ARM64 packaging regression archive
+        shell: pwsh
+        env:
+          TARGET: ${{ matrix.target }}
+          EXECUTABLE: ${{ matrix.executable }}
+        run: ./scripts/test-arm64-package.ps1
+      - name: Upload ARM64 packaging regression archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: adamantium-${{ matrix.target }}-packaging-smoke
+          path: dist/adamantium-${{ matrix.target }}-packaging-smoke.zip
+          if-no-files-found: error

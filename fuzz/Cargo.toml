@@ -11,6 +11,11 @@ cargo-fuzz = true
 libfuzzer-sys = "0.4"
 adamantium-cli = { path = "../crates/adamantium-cli" }
 adamantium-lexer = { path = "../crates/adamantium-lexer" }
+adamantium-codegen = { path = "../crates/adamantium-codegen" }
+adamantium-ir = { path = "../crates/adamantium-ir" }
+adamantium-runtime = { path = "../crates/adamantium-runtime" }
+adamantium-types = { path = "../crates/adamantium-types" }
+adamantium-wasm = { path = "../crates/adamantium-wasm" }
 
 [[bin]]
 name = "frontend"
@@ -22,6 +27,27 @@ bench = false
 [[bin]]
 name = "lexer"
 path = "fuzz_targets/lexer.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "codegen"
+path = "fuzz_targets/codegen.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "runtime"
+path = "fuzz_targets/runtime.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "package_loader"
+path = "fuzz_targets/package_loader.rs"
 test = false
 doc = false
 bench = false

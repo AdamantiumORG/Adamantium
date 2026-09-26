@@ -71,3 +71,13 @@ jobs:
         run: typos .
       - name: Clippy on all crates
         run: cargo clippy --locked --workspace --all-targets -- -D warnings
+      - name: Build API documentation
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --locked --workspace --no-deps
+      - name: Upload API documentation
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-api-documentation
+          path: target/doc
+          if-no-files-found: error

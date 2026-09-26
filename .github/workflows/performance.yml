@@ -1,0 +1,47 @@
+name: Performance regression
+
+on:
+  push:
+    paths:
+      - "benchmarks/**"
+      - "scripts/benchmark-optimizations.sh"
+      - "crates/adamantium-cli/src/codegen/**"
+      - "crates/adamantium-cli/src/optimizer.rs"
+      - ".github/workflows/performance.yml"
+  pull_request:
+    paths:
+      - "benchmarks/**"
+      - "scripts/benchmark-optimizations.sh"
+      - "crates/adamantium-cli/src/codegen/**"
+      - "crates/adamantium-cli/src/optimizer.rs"
+      - ".github/workflows/performance.yml"
+  schedule:
+    - cron: "41 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  optimization-guard:
+    name: Optimization performance guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - run: sudo apt-get update && sudo apt-get install --yes nasm
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.14.1
+      - name: Measure optimization levels
+        run: ./scripts/benchmark-optimizations.sh ./benchmarks/optimization 20 | tee performance.csv
+      - name: Reject significant optimizer regressions
+        run: python3 scripts/check-performance.py performance.csv
+      - uses: actions/upload-artifact@v4
+        with:
+          name: optimization-performance-results
+          path: performance.csv
+          if-no-files-found: error

@@ -55,6 +55,24 @@ cargo test
 
 Use `adamantium test language tests --verbose` to show full failure output. Native valid cases require NASM and a supported linker. The Cargo integration test runs on Windows and Linux and is disabled on macOS until a macOS backend exists.
 
+## Fuzzing
+
+The `Fuzzing` workflow runs bounded `cargo-fuzz` jobs for the lexer, complete
+frontend, code generators, safe runtime value boundary, and WASM package
+loader. Pull requests affecting those components receive a short run, while a
+weekly schedule repeats every target. Crashes are uploaded as CI artifacts and
+must become deterministic regression tests before the fix is merged.
+
+## Performance regression guard
+
+The `Performance regression` workflow builds and executes the optimization
+benchmark on Linux. It records CSV results for `-O0`, `-O1`, and `-O2`, checks
+that every measurement is valid, rejects `-O2` assembly larger than `-O0`, and
+rejects large execution-time or compilation-time regressions. Results are
+uploaded for comparison between runs. The generous runtime margin accounts for
+shared GitHub runner noise; detailed local benchmarking remains documented in
+the compiler optimization guide.
+
 Memory-safety compile checks have a dedicated cross-platform integration suite:
 
 ```text
