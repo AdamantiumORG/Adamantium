@@ -18,6 +18,11 @@ adamantium run -O1 --name value
 
 If no option is supplied, Adamantium uses `-O1`. `adamantium check` performs semantic analysis only, so optimization levels do not apply to it.
 
+At `-O2`, the optimizer also inlines small, parameterless functions whose body
+has no local state or control flow when they are called as standalone
+statements. The deliberately narrow eligibility rule prevents slot capture,
+recursive expansion, and changes to observable error or lifecycle behavior.
+
 The optimizer never folds an operation that would report overflow, division by zero, an invalid conversion, or another runtime error. It keeps effectful calls when their assigned value is unused. Function elimination starts at the selected executable entry point and follows ordinary calls, constructors, methods, and lifecycle hooks.
 
 ## Benchmarks

@@ -29,6 +29,9 @@ pub fn optimize(mut program: Program, entry: &str, level: Level) -> Program {
     if level == Level::O0 {
         return program;
     }
+    if level == Level::O2 {
+        inline_small_functions(&mut program, entry);
+    }
     for function in &mut program.functions {
         optimize_function(function, level);
     }
@@ -36,6 +39,69 @@ pub fn optimize(mut program: Program, entry: &str, level: Level) -> Program {
         remove_dead_functions(&mut program, entry);
     }
     program
+}
+
+fn inline_small_functions(program: &mut Program, entry: &str) {
+    let candidates = program
+        .functions
+        .iter()
+        .filter(|function| function.name != entry)
+        .filter(|function| function.parameters == 0 && function.result.is_none())
+        .filter_map(|function| {
+            let body = function
+                .instructions
+                .iter()
+                .filter(|instruction| !matches!(instruction, Instruction::Return))
+                .cloned()
+                .collect::<Vec<_>>();
+            (body.len() <= 4 && body.iter().all(inline_safe_statement))
+                .then(|| (function.name.clone(), body))
+        })
+        .collect::<HashMap<_, _>>();
+    if candidates.is_empty() {
+        return;
+    }
+    for function in &mut program.functions {
+        let mut output = Vec::with_capacity(function.instructions.len());
+        for instruction in std::mem::take(&mut function.instructions) {
+            if let Instruction::Call(Expression {
+                kind: Kind::Call(name, arguments),
+                ..
+            }) = &instruction
+                && arguments.is_empty()
+                && let Some(body) = candidates.get(name)
+            {
+                output.extend(body.iter().cloned());
+            } else {
+                output.push(instruction);
+            }
+        }
+        function.instructions = output;
+    }
+}
+
+fn inline_safe_statement(statement: &Instruction) -> bool {
+    match statement {
+        Instruction::Noop | Instruction::Print(_, _) | Instruction::Message(_, _, _) => true,
+        Instruction::Return => true,
+        Instruction::Assign(..)
+        | Instruction::Disconnect(..)
+        | Instruction::Remove(..)
+        | Instruction::Clamp(..)
+        | Instruction::SetField(..)
+        | Instruction::SetIndex(..)
+        | Instruction::If(..)
+        | Instruction::While(..)
+        | Instruction::Until(..)
+        | Instruction::Loop(..)
+        | Instruction::For(..)
+        | Instruction::ForEach(..)
+        | Instruction::Match(..)
+        | Instruction::Break
+        | Instruction::Continue
+        | Instruction::Exit(_) => false,
+        Instruction::Call(_) => false,
+    }
 }
 
 fn optimize_function(function: &mut Function, level: Level) {
@@ -656,7 +722,7 @@ mod tests {
         let program = Program {
             functions: vec![
                 function("main", vec![Instruction::Call(call)]),
-                function("helper", vec![Instruction::Return]),
+                function("helper", vec![Instruction::Exit(None)]),
                 function("dead", vec![Instruction::Return]),
             ],
             class_sizes: Vec::new(),
@@ -672,6 +738,35 @@ mod tests {
                 .collect::<Vec<_>>(),
             ["main", "helper"]
         );
+    }
+
+    #[test]
+    fn inlines_small_stateless_functions_at_o2() {
+        let call = Expression {
+            ty: Type::None,
+            kind: Kind::Call("announce".into(), Vec::new()),
+        };
+        let program = Program {
+            functions: vec![
+                function("main", vec![Instruction::Call(call)]),
+                function("announce", vec![Instruction::Print(value(7), true)]),
+            ],
+            class_sizes: Vec::new(),
+            classes: Vec::new(),
+            package_functions: HashMap::new(),
+        };
+        let program = optimize(program, "main", Level::O2);
+        assert_eq!(program.functions.len(), 1);
+        assert!(matches!(
+            program.functions[0].instructions.as_slice(),
+            [Instruction::Print(
+                Expression {
+                    kind: Kind::Constant(_),
+                    ..
+                },
+                true
+            )]
+        ));
     }
 
     #[test]

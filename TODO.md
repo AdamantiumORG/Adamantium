@@ -1161,7 +1161,7 @@ Adamantium must remain memory-safe.
 * [x] Dead-code elimination
 * [x] Dead-function elimination
 * [x] Expression simplification
-* [ ] Inline small functions
+* [x] Inline small stateless functions at `-O2`
 * [x] Optimize local variables
 * [x] Optimize function calls
 * [x] Optimize generated assembly
@@ -1633,12 +1633,13 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 
 * [x] Create the root Cargo workspace
 * [x] Extract CLI and project loading
-* [ ] Extract AST, lexer and parser crates
-* [ ] Extract semantics, types and diagnostics crates
-* [ ] Extract codegen, NASM and linker crates
+* [x] Extract AST, lexer and parser crates
+* [x] Extract semantics, types and diagnostics crates
+* [x] Extract codegen, NASM and linker crates
 * [x] Extract runtime, package and WASM crates
 * [x] Extract the language testing runner
-* [ ] Add standard library, formatter and LSP crates when implemented
+* [x] Add the standard library crate
+* [ ] Add formatter and LSP crates when implemented
 * [x] Keep the CLI and generated-program behavior stable during extraction
 * [x] Give every workspace crate a dedicated integration test suite
 * [x] Test changed crates and their transitive downstream dependents in CI
@@ -1939,7 +1940,7 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 * [x] Freeze primitive type semantics
 * [x] Freeze memory semantics
 * [x] Improve diagnostics with stable codes, source highlighting and suggestions
-* [ ] Complete parser error recovery for multiple grammar errors in one module
+* [x] Complete parser error recovery for multiple grammar errors in one module
 * [x] Prevent compiler panics from escaping on user input
 * [x] Maintain the complete language regression suite
 * [x] Add deterministic malformed-input testing and a `cargo-fuzz` frontend target
