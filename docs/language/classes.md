@@ -15,3 +15,14 @@ fun main() {
 ```
 
 Fields and methods are private unless marked `pub`. Lifecycle hooks include `__new__`, `__change__`, and `__remove__`.
+
+## Copying nested class values
+
+Assignment copies ordinary class values, but complete recursive deep-copy
+semantics for fields that themselves contain class values are not yet part of
+the stable language contract. Code must not rely on nested class graphs being
+recursively duplicated. This restriction avoids silently choosing identity,
+cycle, alias, and lifecycle-hook behavior before those rules are specified.
+Use scalar fields or construct an explicit independent nested object when copy
+isolation matters. The compiler will gain deep copying only together with
+defined cycle handling and `__new__`, `__change__`, and `__remove__` ordering.

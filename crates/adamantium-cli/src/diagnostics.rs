@@ -199,6 +199,7 @@ pub fn warnings(program: &Program) -> Vec<String> {
         let mut returned = false;
         let mut warned_unreachable = false;
         for (statement, position) in function.statements.iter().zip(&function.positions) {
+            deprecated_alias_warnings(statement, &mut warnings);
             if returned {
                 if !warned_unreachable {
                     warnings.push(
@@ -214,7 +215,7 @@ pub fn warnings(program: &Program) -> Vec<String> {
                     declared.insert(*slot);
                     visit(expr, &mut reads, &mut calls);
                 }
-                Statement::Disconnect(destination, source) => {
+                Statement::Disconnect(destination, source, _) => {
                     declared.insert(*destination);
                     reads.insert(*source);
                 }
@@ -410,7 +411,7 @@ fn visit_statement(
             declared.insert(*slot);
             visit(expr, reads, calls);
         }
-        Statement::Disconnect(destination, source) => {
+        Statement::Disconnect(destination, source, _) => {
             declared.insert(*destination);
             reads.insert(*source);
         }
@@ -495,6 +496,41 @@ fn visit_statement(
         Statement::Break | Statement::Continue | Statement::Return => (),
     }
 }
+
+fn deprecated_alias_warnings(statement: &Statement, warnings: &mut Vec<String>) {
+    match statement {
+        Statement::Disconnect(_, _, Some(position)) => warnings.push(
+            position.error("warning[W004]: 'disconect' is deprecated; use 'disconnect' instead"),
+        ),
+        Statement::If(_, yes, no) => {
+            for statement in yes.iter().chain(no) {
+                deprecated_alias_warnings(statement, warnings);
+            }
+        }
+        Statement::While(_, body)
+        | Statement::Until(_, body)
+        | Statement::Loop(body)
+        | Statement::For(_, _, _, body)
+        | Statement::ForEach(_, _, body) => {
+            for statement in body {
+                deprecated_alias_warnings(statement, warnings);
+            }
+        }
+        Statement::Match(_, arms, fallback) => {
+            for (_, body) in arms {
+                for statement in body {
+                    deprecated_alias_warnings(statement, warnings);
+                }
+            }
+            if let Some(body) = fallback {
+                for statement in body {
+                    deprecated_alias_warnings(statement, warnings);
+                }
+            }
+        }
+        _ => {}
+    }
+}
 fn visit_call(call: &Call, reads: &mut HashSet<usize>, calls: &mut HashSet<String>) {
     calls.insert(call.name.clone());
     for argument in &call.arguments {
@@ -549,6 +585,23 @@ mod tests {
         let program = crate::syntax::parse(source).unwrap();
         crate::typed::check(&program).unwrap();
         warnings(&program)
+    }
+    #[test]
+    fn warns_when_the_legacy_disconect_spelling_is_used() {
+        let result = analyze(
+            "fun main() { var source=1; var alias=source.as_variable; alias.disconect; print.newline(alias); }",
+        );
+        assert!(
+            result.iter().any(|warning| {
+                warning.contains("warning[W004]") && warning.contains("use 'disconnect' instead")
+            }),
+            "{result:?}"
+        );
+        assert!(
+            analyze("fun main() { var source=1; var alias=source.as_variable; alias.disconnect; print.newline(alias); }")
+                .iter()
+                .all(|warning| !warning.contains("W004"))
+        );
     }
     #[test]
     fn ignores_dead_reads_and_calls() {

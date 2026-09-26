@@ -11,6 +11,11 @@ var text = "hello":string;
 
 Defaults are `i32` for integer literals and `f64` for decimal literals. Explicit conversions use `value.as(Type)` and are checked by the compiler.
 
+Integer types use byte-addressable widths: `i8`, `i16`, `i32`, `i64`, `u8`,
+`u16`, `u32`, and `u64`. The earlier experimental `u4` spelling was removed.
+It is not a supported type and its former internal type identifier remains
+reserved so old compiled metadata cannot be misinterpreted as another type.
+
 A decimal literal requires at least one digit on both sides of `.`. Therefore
 `123.45` is one floating-point literal, while `123.` is an integer followed by
 `.` and `.123` is `.` followed by an integer. Two consecutive dots always form

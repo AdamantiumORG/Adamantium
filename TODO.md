@@ -705,7 +705,8 @@ var a = b.as_variable;
 * [x] Implement `desync()`
 * [x] Implement `change_only()`
 * [x] Implement `sync()`
-* [x] Implement `disconect` and `disconnect` for scalar value aliases
+* [x] Implement `disconnect` for scalar value aliases
+* [x] Keep `disconect` as a deprecated compatibility alias with warning `W004`
 * [x] Implement `detach()` as a separate API
 * [x] Implement `reattach()`
 * [x] Define alias lifetime rules
@@ -1848,6 +1849,7 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 * [x] Define `-O0`
 * [x] Define `-O1`
 * [x] Define `-O2`
+* [ ] Define and implement size-oriented `-Os`
 * [x] Define optimization defaults
 * [x] Add optimization CLI options
 * [x] Add optimization tests

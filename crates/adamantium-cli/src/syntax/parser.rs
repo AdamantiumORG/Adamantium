@@ -1343,7 +1343,11 @@ impl Parser {
                                 root: None,
                             },
                         );
-                        Statement::Disconnect(new_slot, old_slot)
+                        Statement::Disconnect(
+                            new_slot,
+                            old_slot,
+                            (member == "disconect").then_some(member_position),
+                        )
                     } else if member == "detach" || member == "desync" {
                         self.symbol('(')?;
                         self.symbol(')')?;
@@ -1367,7 +1371,7 @@ impl Parser {
                                 root: binding.root,
                             },
                         );
-                        Statement::Disconnect(new_slot, binding.slot)
+                        Statement::Disconnect(new_slot, binding.slot, None)
                     } else if member == "sync" || member == "reattach" {
                         self.symbol('(')?;
                         let binding = self.bindings.get(&name).unwrap().clone();
@@ -2711,7 +2715,7 @@ fn parse_tokens(tokens: Vec<(Token, Position)>, professional: bool) -> Result<Pr
                     return Err(format!("function '{function}' is not declared"));
                 }
             }
-            Statement::Disconnect(_, _) | Statement::Noop(None) => (),
+            Statement::Disconnect(_, _, _) | Statement::Noop(None) => (),
             Statement::Clamp(_, low, high) => {
                 validate_expr(low, signatures)?;
                 validate_expr(high, signatures)?;

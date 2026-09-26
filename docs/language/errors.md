@@ -9,7 +9,10 @@ warn("operation continued");
 panic("operation failed");
 ```
 
-`warn` reports the source line and continues. `panic` reports the source line and stops unless it is handled by `try`. A `try` expression returns `None` on success or an optional error string on failure.
+`warn` reports the source line and continues. `panic` reports the source line
+and stops unless it is handled by `try`. A `try` expression currently returns
+`None` on success or an optional formatted error string on failure. This is a
+compatibility surface for the current language, not the final error type.
 
 The runtime stores failures as structured `RuntimeError` values containing a
 kind, stable code, message, and optional source line. Recoverable failures use
@@ -17,6 +20,12 @@ kind `Recoverable` and codes beginning with `R`. Explicit `panic` uses kind
 `Panic` and codes beginning with `P`. Package failures have kind `Package`.
 This distinction is preserved while `try` is active, although the current
 language-level result remains an optional formatted string.
+
+A future typed error result will expose the structured error kind, stable code,
+message, and source line without requiring programs to parse the formatted
+string. It must preserve the existing ability to distinguish recoverable
+errors, explicit panics, and package failures. The exact `Result<T, E>` syntax
+is not frozen yet.
 
 Known source locations are retained for explicit panics, List bounds failures,
 and invalid optional-value access. Operations whose AST does not retain an

@@ -60,7 +60,7 @@ pub struct Call {
 pub enum Statement {
     Noop(Option<String>),
     Assign(usize, Expr),
-    Disconnect(usize, usize),
+    Disconnect(usize, usize, Option<Position>),
     Remove(usize),
     Clamp(usize, Expr, Expr),
     Print(Expr, bool),

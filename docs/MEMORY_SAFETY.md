@@ -58,9 +58,11 @@ The alias API has these guarantees:
 * `sync()` discards the private value and reconnects to the remembered parent.
 * `reattach()` is equivalent to `sync()`. `reattach(target)` redirects the alias
   to `target` and adopts the target's root.
-* `disconnect()` and the compatibility spelling `disconect` copy the current
-  value and permanently remove all parent and root relationships.
-* `changename(new_name)` moves the binding to an unused identifier. It preserves
+* `disconnect()` copies the current value and permanently removes all parent
+  and root relationships. The legacy misspelling `disconect` is deprecated,
+  emits warning `W004`, and is retained only for source compatibility.
+* `changename(new_name)` is a binding rename rather than an alias operation. It
+  moves the binding to an unused identifier and preserves
   the slot, value, type, mutability, parent, root, and synchronization state.
 
 Removing one synchronized name does not remove shared storage. A detached alias

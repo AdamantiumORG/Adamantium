@@ -18,6 +18,11 @@ adamantium run -O1 --name value
 
 If no option is supplied, Adamantium uses `-O1`. `adamantium check` performs semantic analysis only, so optimization levels do not apply to it.
 
+`-Os` is reserved for a future size-oriented profile. It is not currently
+accepted by the CLI. Its implementation must measure both executable and
+runtime size and may trade execution speed for smaller output, which is useful
+for distribution and future embedded targets.
+
 At `-O2`, the optimizer also inlines small, parameterless functions whose body
 has no local state or control flow when they are called as standalone
 statements. The deliberately narrow eligibility rule prevents slot capture,

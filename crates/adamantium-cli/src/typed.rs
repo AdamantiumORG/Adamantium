@@ -864,10 +864,10 @@ impl Checker<'_> {
                 }
                 Instruction::Assign(*slot, value)
             }
-            Statement::Disconnect(destination, source) => {
+            Statement::Disconnect(destination, source, _) => {
                 let ty = self.types[*source].ok_or("unknown alias type")?;
                 if matches!(ty, Type::Enum(_) | Type::Class(_)) {
-                    return Err(format!("disconect is not supported for {ty} aliases"));
+                    return Err(format!("disconnect is not supported for {ty} aliases"));
                 }
                 self.types[*destination] = Some(ty);
                 Instruction::Disconnect(*destination, *source)
