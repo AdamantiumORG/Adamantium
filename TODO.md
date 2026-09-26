@@ -1405,7 +1405,7 @@ Create clear compiler diagnostics.
 * [x] Complete CI/CD
 * [ ] Complete cross-platform builds
 * [ ] Perform security audit
-* [ ] Perform performance benchmarks
+* [x] Perform performance benchmarks - scheduled CI records compile time, run time and output sizes
 * [ ] Fix all critical bugs
 * [ ] Tag `v1.0.0`
 * [ ] Publish Adamantium 1.0
@@ -1644,6 +1644,10 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 * [x] Keep the CLI and generated-program behavior stable during extraction
 * [x] Give every workspace crate a dedicated integration test suite
 * [x] Test changed crates and their transitive downstream dependents in CI
+* [x] Route production CLI syntax preflight through the extracted recovery parser
+* [ ] Move mature AST construction out of `adamantium-cli`
+* [ ] Move the mature semantic/type checker out of `adamantium-cli`
+* [ ] Move the mature x86-64 generator and optimizer out of `adamantium-cli`
 
 ---
 
@@ -2056,7 +2060,7 @@ Async should be implemented **only after the core language, runtime, package sys
 * [x] Complete CI/CD
 * [ ] Complete supported platform builds
 * [ ] Complete security audit
-* [ ] Complete performance benchmarks
+* [x] Complete performance benchmarks - CI rejects compiler, execution and output-size regressions
 * [ ] Fix all critical bugs
 * [ ] Freeze the 1.0 language specification
 * [ ] Tag `v1.0.0`

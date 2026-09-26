@@ -6,6 +6,7 @@ Install `cargo-fuzz`, then run:
 cargo install cargo-fuzz
 cargo fuzz run lexer
 cargo fuzz run frontend
+cargo fuzz run pipeline
 cargo fuzz run codegen
 cargo fuzz run runtime
 cargo fuzz run package_loader

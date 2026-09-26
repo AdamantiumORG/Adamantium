@@ -18,20 +18,9 @@ pub fn architecture_smoke_test(
     source: &str,
 ) -> Result<String, Vec<adamantium_diagnostics::Diagnostic>> {
     let lexed = adamantium_lexer::lex_recovering(source);
-    if !lexed.errors.is_empty() {
-        return Err(lexed
-            .errors
-            .iter()
-            .map(|error| {
-                adamantium_diagnostics::Diagnostic::at_stage(
-                    adamantium_diagnostics::Stage::Lexing,
-                    adamantium_diagnostics::Severity::Error,
-                    "E100",
-                    error.message(),
-                    error.span(),
-                )
-            })
-            .collect());
+    let diagnostics = frontend_diagnostics_from_lexed(source, &lexed);
+    if !diagnostics.is_empty() {
+        return Err(diagnostics);
     }
     let tokens = lexed.tokens;
     let parsed = adamantium_parser::parse_checked(source, &tokens).map_err(|errors| {
@@ -64,4 +53,45 @@ pub fn architecture_smoke_test(
     let _wasm = adamantium_wasm::is_module(adamantium_wasm::MAGIC);
     let _type = adamantium_types::PrimitiveType::Int;
     Ok(assembly)
+}
+
+/// Runs the recovery-capable lexical and grammar checks used before the mature
+/// semantic frontend. Every independent error is returned in source order.
+pub fn frontend_diagnostics(source: &str) -> Vec<adamantium_diagnostics::Diagnostic> {
+    let lexed = adamantium_lexer::lex_recovering(source);
+    frontend_diagnostics_from_lexed(source, &lexed)
+}
+
+fn frontend_diagnostics_from_lexed(
+    source: &str,
+    lexed: &adamantium_lexer::LexOutput,
+) -> Vec<adamantium_diagnostics::Diagnostic> {
+    if !lexed.errors.is_empty() {
+        return lexed
+            .errors
+            .iter()
+            .map(|error| {
+                adamantium_diagnostics::Diagnostic::at_stage(
+                    adamantium_diagnostics::Stage::Lexing,
+                    adamantium_diagnostics::Severity::Error,
+                    "E100",
+                    error.message(),
+                    error.span(),
+                )
+            })
+            .collect();
+    }
+    adamantium_parser::parse_recovering(source, &lexed.tokens)
+        .errors
+        .into_iter()
+        .map(|error| {
+            adamantium_diagnostics::Diagnostic::at_stage(
+                adamantium_diagnostics::Stage::Parsing,
+                adamantium_diagnostics::Severity::Error,
+                "E110",
+                error.message,
+                error.span,
+            )
+        })
+        .collect()
 }

@@ -1628,6 +1628,22 @@ fn analyze_sources(
     professional: bool,
 ) -> Result<typed::Program, String> {
     let source_path = root.join("code/main.ad");
+    let mut frontend_errors = Vec::new();
+    for (module, source) in sources {
+        let path = if module.is_empty() {
+            source_path.clone()
+        } else {
+            root.join("code").join(module).with_extension("ad")
+        };
+        frontend_errors.extend(
+            adamantium_compiler::frontend_diagnostics(source)
+                .iter()
+                .map(|diagnostic| diagnostics::render_diagnostic(diagnostic, &path, source)),
+        );
+    }
+    if !frontend_errors.is_empty() {
+        return Err(diagnostics::multiple_errors(frontend_errors));
+    }
     let parsed = syntax::parse_modules_with_mode(sources, professional)
         .map_err(|e| format!("{}:{e}", source_path.display()))?;
     let main_source = sources

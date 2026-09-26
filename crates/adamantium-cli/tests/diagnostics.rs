@@ -75,3 +75,33 @@ fn missing_and_circular_packed_modules_are_reported() {
     assert!(!root.join("target").exists());
     fs::remove_dir_all(root).unwrap();
 }
+
+#[test]
+fn reports_multiple_syntax_errors_from_one_module_before_codegen() {
+    let root =
+        std::env::temp_dir().join(format!("adamantium-parser-recovery-{}", std::process::id()));
+    fs::create_dir_all(root.join("code")).unwrap();
+    fs::write(
+        root.join("project.toml"),
+        "name=\"Recovery\"\nversion=\"1\"\ndescription=\"\"\nauthors=[]\n",
+    )
+    .unwrap();
+    fs::write(root.join("requirement.toml"), "[packages]\n").unwrap();
+    fs::write(
+        root.join("code/main.ad"),
+        "fun main() {\nvar first = ;\nif true { var nested += ; }\nvar final = ;\n}",
+    )
+    .unwrap();
+
+    let output = Command::new(env!("CARGO_BIN_EXE_adamantium"))
+        .args(["check", root.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert_eq!(stderr.matches("error[E110]").count(), 3, "{stderr}");
+    assert!(stderr.contains("expected expression after '='"));
+    assert!(stderr.contains("expected expression after '+='"));
+    assert!(!root.join("target").exists());
+    fs::remove_dir_all(root).unwrap();
+}

@@ -5,15 +5,27 @@ on:
     paths:
       - "benchmarks/**"
       - "scripts/benchmark-optimizations.sh"
+      - "scripts/check-performance.py"
+      - "crates/adamantium-compiler/**"
       - "crates/adamantium-cli/src/codegen/**"
       - "crates/adamantium-cli/src/optimizer.rs"
+      - "crates/adamantium-ir/**"
+      - "crates/adamantium-lowering/**"
+      - "crates/adamantium-runtime/**"
+      - "crates/adamantium-types/**"
       - ".github/workflows/performance.yml"
   pull_request:
     paths:
       - "benchmarks/**"
       - "scripts/benchmark-optimizations.sh"
+      - "scripts/check-performance.py"
+      - "crates/adamantium-compiler/**"
       - "crates/adamantium-cli/src/codegen/**"
       - "crates/adamantium-cli/src/optimizer.rs"
+      - "crates/adamantium-ir/**"
+      - "crates/adamantium-lowering/**"
+      - "crates/adamantium-runtime/**"
+      - "crates/adamantium-types/**"
       - ".github/workflows/performance.yml"
   schedule:
     - cron: "41 4 * * 1"

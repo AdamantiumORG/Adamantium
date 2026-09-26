@@ -122,6 +122,33 @@ fn recovery_regression_never_repeats_an_error_at_one_token() {
 }
 
 #[test]
+fn recovery_reports_delimiter_errors_and_continues_to_later_statements() {
+    let source = "fun main( { var first = ; ] var second += ; }";
+    let tokens = adamantium_lexer::lex(source).unwrap();
+    let output = adamantium_parser::parse_recovering(source, &tokens);
+
+    assert!(output.errors.len() >= 4, "{:?}", output.errors);
+    assert!(
+        output
+            .errors
+            .iter()
+            .any(|error| error.message.contains("unexpected closing delimiter ']'"))
+    );
+    assert!(
+        output
+            .errors
+            .iter()
+            .any(|error| error.message.contains("unclosed delimiter '('"))
+    );
+    assert!(
+        output
+            .errors
+            .iter()
+            .any(|error| error.message == "expected expression after '+='")
+    );
+}
+
+#[test]
 fn randomized_utf8_never_panics_parser_recovery() {
     let alphabet = [
         'a', '1', '=', '+', ';', '{', '}', '(', ')', ' ', '\n', 'ż', '🦀',

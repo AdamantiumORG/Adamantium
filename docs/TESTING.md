@@ -57,9 +57,10 @@ Use `adamantium test language tests --verbose` to show full failure output. Nati
 
 ## Fuzzing
 
-The `Fuzzing` workflow runs bounded `cargo-fuzz` jobs for the lexer, complete
-frontend, code generators, safe runtime value boundary, and WASM package
-loader. Pull requests affecting those components receive a short run, while a
+The `Fuzzing` workflow runs bounded `cargo-fuzz` jobs for the lexer, production
+frontend, complete compiler pipeline through code generation, individual code
+generators, safe runtime value boundary, and WASM package loader. Pull requests
+affecting those components receive a short run, while a
 weekly schedule repeats every target. Crashes are uploaded as CI artifacts and
 must become deterministic regression tests before the fix is merged.
 

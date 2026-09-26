@@ -69,3 +69,20 @@ fn parser_recovery_reports_multiple_independent_diagnostics() {
     );
     assert!(diagnostics[1].span().start > diagnostics[0].span().start);
 }
+
+#[test]
+fn production_frontend_preflight_keeps_recovering_after_nested_errors() {
+    let source = "fun main(){ var first = ; if true { var nested += ; } var final = ; }";
+    let diagnostics = adamantium_compiler::frontend_diagnostics(source);
+    assert_eq!(diagnostics.len(), 3);
+    assert!(
+        diagnostics
+            .windows(2)
+            .all(|pair| pair[0].span().start < pair[1].span().start)
+    );
+    assert!(
+        diagnostics
+            .iter()
+            .all(|diagnostic| diagnostic.code == "E110")
+    );
+}

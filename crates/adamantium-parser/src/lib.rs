@@ -63,9 +63,59 @@ pub fn parse_recovering(source: &str, tokens: &[Token]) -> ParseOutput {
             cursor += 1;
         }
     }
+    recover_delimiters(tokens, &mut errors);
+    errors.sort_by_key(|error| (error.span.start, error.span.end));
+    errors.dedup_by(|right, left| right.span == left.span);
     ParseOutput {
         file: parse(source, tokens),
         errors,
+    }
+}
+
+fn recover_delimiters(tokens: &[Token], errors: &mut Vec<ParseError>) {
+    let mut stack = Vec::new();
+    for token in tokens {
+        match token.kind {
+            TokenKind::LeftParen | TokenKind::LeftBrace | TokenKind::LeftBracket => {
+                stack.push((token.kind.clone(), token.span));
+            }
+            TokenKind::RightParen | TokenKind::RightBrace | TokenKind::RightBracket => {
+                let expected = match token.kind {
+                    TokenKind::RightParen => TokenKind::LeftParen,
+                    TokenKind::RightBrace => TokenKind::LeftBrace,
+                    TokenKind::RightBracket => TokenKind::LeftBracket,
+                    _ => unreachable!(),
+                };
+                if stack.last().is_some_and(|(kind, _)| *kind == expected) {
+                    stack.pop();
+                } else {
+                    errors.push(ParseError {
+                        message: format!(
+                            "unexpected closing delimiter '{}'",
+                            token_text(&token.kind)
+                        ),
+                        span: token.span,
+                    });
+                }
+            }
+            _ => {}
+        }
+    }
+    errors.extend(stack.into_iter().map(|(kind, span)| ParseError {
+        message: format!("unclosed delimiter '{}'", token_text(&kind)),
+        span,
+    }));
+}
+
+fn token_text(kind: &TokenKind) -> &'static str {
+    match kind {
+        TokenKind::LeftParen => "(",
+        TokenKind::RightParen => ")",
+        TokenKind::LeftBrace => "{",
+        TokenKind::RightBrace => "}",
+        TokenKind::LeftBracket => "[",
+        TokenKind::RightBracket => "]",
+        _ => "",
     }
 }
 

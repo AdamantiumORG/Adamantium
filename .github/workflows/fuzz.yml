@@ -6,6 +6,10 @@ on:
       - "fuzz/**"
       - "crates/adamantium-lexer/**"
       - "crates/adamantium-parser/**"
+      - "crates/adamantium-compiler/**"
+      - "crates/adamantium-semantics/**"
+      - "crates/adamantium-lowering/**"
+      - "crates/adamantium-ir/**"
       - "crates/adamantium-codegen/**"
       - "crates/adamantium-runtime/**"
       - "crates/adamantium-wasm/**"
@@ -15,6 +19,10 @@ on:
       - "fuzz/**"
       - "crates/adamantium-lexer/**"
       - "crates/adamantium-parser/**"
+      - "crates/adamantium-compiler/**"
+      - "crates/adamantium-semantics/**"
+      - "crates/adamantium-lowering/**"
+      - "crates/adamantium-ir/**"
       - "crates/adamantium-codegen/**"
       - "crates/adamantium-runtime/**"
       - "crates/adamantium-wasm/**"
@@ -37,7 +45,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [lexer, frontend, codegen, runtime, package_loader]
+        target: [lexer, frontend, pipeline, codegen, runtime, package_loader]
     steps:
       - uses: actions/checkout@v6
         with:

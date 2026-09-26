@@ -10,6 +10,7 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "0.4"
 adamantium-cli = { path = "../crates/adamantium-cli" }
+adamantium-compiler = { path = "../crates/adamantium-compiler" }
 adamantium-lexer = { path = "../crates/adamantium-lexer" }
 adamantium-codegen = { path = "../crates/adamantium-codegen" }
 adamantium-ir = { path = "../crates/adamantium-ir" }
@@ -48,6 +49,13 @@ bench = false
 [[bin]]
 name = "package_loader"
 path = "fuzz_targets/package_loader.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "pipeline"
+path = "fuzz_targets/pipeline.rs"
 test = false
 doc = false
 bench = false
