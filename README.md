@@ -111,6 +111,7 @@ Explore complete projects in [`examples`](examples/README.md).
 
 ## Features
 
+- A written [language specification](docs/language/specification.md) covering the core syntax and semantics
 - Native Windows, Linux, and macOS x86-64 executables
 - Static types with inference and Professional Mode with explicit declarations
 - Functions, classes, enums, traits, generics, lists, and optional values
@@ -149,7 +150,28 @@ adamantium doctor
 ```
 
 Source builds use the host Rust toolchain. Compiling Adamantium programs also
-needs NASM and a supported linker configuration.
+needs NASM and a supported linker configuration. Rust 1.85 or newer is required
+because the workspace uses Rust 2024 edition. CI tests the current stable Rust
+release.
+
+If `cargo install` succeeds but Adamantium cannot build a program, run
+`adamantium doctor`. Install NASM and the platform linker reported as missing,
+then make sure both are available through `PATH`. On Windows, use the Visual
+Studio x64 native tools environment or the portable archive, which already
+contains NASM, LLVM's linker, and the required import libraries. On Linux,
+install NASM and a C linker or use the portable archive with its bundled Zig
+toolchain. On macOS, install NASM and the Xcode Command Line Tools.
+
+### Supported platforms
+
+| Architecture | Windows | Linux | macOS |
+| --- | --- | --- | --- |
+| x86-64 | Supported | Supported | Supported |
+| ARM64 | Experimental backend and CI smoke tests | Experimental backend and CI smoke tests | Not implemented |
+
+Portable release archives currently target x86-64. The ARM64 LLVM backend is
+under development and is not yet a complete replacement for the x86-64 CLI
+pipeline. See [compilation targets](docs/TARGETS.md) for exact status.
 
 ## Quick start
 
@@ -185,6 +207,34 @@ adamantium install
 adamantium clean
 adamantium doctor
 ```
+
+Errors can be reported, handled, or emitted as non-fatal warnings:
+
+```adamantium
+fun main() {
+    warn("Using the fallback configuration");
+
+    var error = try {
+        panic("The requested operation failed");
+    };
+
+    if error != None {
+        print.newline(error);
+    }
+}
+```
+
+See [errors and diagnostics](docs/language/errors.md) for the runtime behavior
+of `try`, `panic`, and `warn`.
+
+## Known limitations
+
+- Adamantium is pre-1.0 and its advanced language and package APIs may change.
+- It has not completed an independent security audit and should not yet be used for security-critical production systems.
+- Portable releases are currently available only for x86-64.
+- ARM64 supports an experimental LLVM path and packaging smoke tests, but not the complete language and portable toolchain.
+- Package checksums detect corrupted or mismatched assets but do not authenticate publishers; package signatures are still planned.
+- The standard library, package ecosystem, editor integrations, and debugger support are still developing.
 
 ## Roadmap
 

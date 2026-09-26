@@ -426,13 +426,13 @@ pack tools.utils;
 Implement:
 
 ```adamantium
-use utils::funkcja;
+use utils::calculate;
 ```
 
 Multiple imports:
 
 ```adamantium
-use utils::[dodawanie, odejmowanie];
+use utils::[add, subtract];
 ```
 
 * [x] Implement imports
