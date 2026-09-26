@@ -9,6 +9,50 @@ permissions:
   contents: read
 
 jobs:
+  cross-compile:
+    name: Cross-compile ARM64 objects from x86-64
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-unknown-linux-gnu
+            object: arm64-linux.o
+            container: "ELF"
+            architecture: "ARM aarch64|AArch64|ARM64"
+          - target: aarch64-pc-windows-msvc
+            object: arm64-windows.obj
+            container: "COFF"
+            architecture: "Aarch64|ARM64"
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Emit target-specific LLVM IR
+        run: cargo run --locked -p adamantium-codegen --example arm64-smoke -- ${{ matrix.target }} arm64-smoke.ll
+      - name: Cross-compile object on x86-64 host
+        run: clang -target ${{ matrix.target }} -c arm64-smoke.ll -o ${{ matrix.object }}
+      - name: Verify target object format
+        shell: bash
+        env:
+          CONTAINER: ${{ matrix.container }}
+          ARCHITECTURE: ${{ matrix.architecture }}
+          OBJECT: ${{ matrix.object }}
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = "x86_64"
+          description="$(file "$OBJECT")"
+          echo "$description"
+          grep -F "$CONTAINER" <<< "$description"
+          grep -E "$ARCHITECTURE" <<< "$description"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cross-compiled-${{ matrix.target }}-object
+          path: ${{ matrix.object }}
+          if-no-files-found: error
+
   native:
     name: Native LLVM (${{ matrix.target }})
     runs-on: ${{ matrix.runner }}

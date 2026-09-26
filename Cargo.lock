@@ -15,6 +15,7 @@ version = "0.1.0"
 dependencies = [
  "adamantium-compiler",
  "adamantium-diagnostics",
+ "adamantium-fmt",
  "adamantium-ir",
  "adamantium-linker",
  "adamantium-packages",
@@ -64,6 +65,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "adamantium-fmt"
+version = "0.1.0"
+dependencies = [
+ "adamantium-lexer",
+ "adamantium-parser",
+]
+
+[[package]]
 name = "adamantium-hir"
 version = "0.1.0"
 dependencies = [
@@ -95,6 +104,14 @@ dependencies = [
  "adamantium-ir",
  "adamantium-mir",
  "adamantium-types",
+]
+
+[[package]]
+name = "adamantium-lsp"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

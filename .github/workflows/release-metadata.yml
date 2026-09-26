@@ -1,0 +1,70 @@
+name: Release metadata
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version without the v prefix
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: stable-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  metadata:
+    name: Validate version and generate changelog
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate release version
+        id: version
+        shell: bash
+        env:
+          DISPATCH_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            version="${GITHUB_REF_NAME#v}"
+            [[ "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          else
+            version="$DISPATCH_VERSION"
+            [[ "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          fi
+          manifest_version="$(sed -n 's/^version = "\([^"]*\)"/\1/p' Cargo.toml | head -1)"
+          test "$version" = "$manifest_version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Generate changelog
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          current="v$VERSION"
+          previous="$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-version:refname | grep -Fvx "$current" | head -1 || true)"
+          arguments=(--version "$VERSION" --to-ref HEAD --output dist/RELEASE_NOTES.md)
+          if [[ -n "$previous" ]]; then arguments+=(--from-ref "$previous"); fi
+          python3 scripts/generate-changelog.py "${arguments[@]}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-notes-${{ steps.version.outputs.version }}
+          path: dist/RELEASE_NOTES.md
+          if-no-files-found: error
+      - name: Attach changelog to stable release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: dist/RELEASE_NOTES.md
+          files: dist/RELEASE_NOTES.md
+          fail_on_unmatched_files: true

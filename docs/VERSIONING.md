@@ -26,3 +26,7 @@ Release workflows generate notes from merged pull requests and attach checksumme
 portable archives. Breaking changes and package ABI changes require an explicit
 release-note section.
 
+Stable tags must exactly match the workspace version in `Cargo.toml`. CI rejects
+noncanonical tags, generates categorized notes from commits since the previous
+stable tag, and attaches `RELEASE_NOTES.md` to the GitHub release. Windows
+stable releases include both a portable ZIP and an Inno Setup installer.

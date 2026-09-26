@@ -124,11 +124,18 @@ Explore complete projects in [`examples`](examples/README.md).
 
 ## Installation
 
-The easiest installation is a portable Nightly archive from the
-[Nightly release](https://github.com/AdamantiumORG/Adamantium/releases/tag/nightly).
+The easiest installation is a tested archive from one of the release channels:
+
+- Stable `vMAJOR.MINOR.PATCH` releases are immutable and intended for normal use.
+- Development `dev` is updated after the complete CI and CLI suite passes.
+- Nightly `nightly` follows the newest tested commit.
+
+See the [versioning and release policy](docs/VERSIONING.md) and
+[changelog](CHANGELOG.md).
 
 - `windows_portable_x86_64.zip` includes the CLI, NASM, LLVM linker, and import libraries.
 - `linux_portable_x86_64.zip` includes the CLI, NASM, and Zig linker toolchain.
+- Stable Windows releases also provide `adamantium-windows-x86_64-installer.exe`, which installs the same self-contained toolchain and updates the user `PATH`.
 
 Extract the complete archive and add its directory to `PATH`. Verify the
 published SHA-256 file before use. Rust and separate native build tools are not

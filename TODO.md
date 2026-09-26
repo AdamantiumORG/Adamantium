@@ -1272,7 +1272,7 @@ Create the official standard library.
 * [x] Publish Linux portable ZIP and checksum to the Nightly release
 * [x] Build a standalone CLI that does not require Rust on user machines
 * [x] Bundle and checksum the official NASM Windows binary
-* [ ] Publish installer
+* [x] Publish installer - stable Windows tags attach the Inno Setup executable and checksum
 * [x] Publish packages directly on GitHub Releases
 
 ---
@@ -1331,6 +1331,7 @@ Create clear compiler diagnostics.
 * [ ] Create portable Windows ARM64 ZIP packaging
 * [ ] Create portable Linux ARM64 ZIP packaging
 * [x] Add ARM64 archive-layout and packaged-binary regression tests
+* [x] Cross-compile Windows and Linux ARM64 objects from an x86-64 CI host
 * [x] Cross-platform standard library behavior
 * [x] Cross-platform file handling
 * [x] Cross-platform process handling
@@ -1640,7 +1641,9 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 * [x] Extract runtime, package and WASM crates
 * [x] Extract the language testing runner
 * [x] Add the standard library crate
-* [ ] Add formatter and LSP crates when implemented
+* [x] Add formatter crate and route the CLI through it
+* [x] Add LSP protocol crate with initialization capabilities and stable wire types
+* [ ] Implement the language-server transport and compiler database
 * [x] Keep the CLI and generated-program behavior stable during extraction
 * [x] Give every workspace crate a dedicated integration test suite
 * [x] Test changed crates and their transitive downstream dependents in CI
@@ -1929,7 +1932,7 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 * [x] Define development releases
 * [x] Define nightly releases
 * [x] Define stable releases
-* [ ] Generate changelogs
+* [x] Generate changelogs - stable tags receive categorized notes generated from Git history
 * [x] Generate release notes
 * [x] Publish release binaries - stable, development, and Nightly archives
 * [x] Publish package releases

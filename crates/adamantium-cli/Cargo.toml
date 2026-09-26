@@ -12,6 +12,7 @@ path = "src/main.rs"
 [dependencies]
 adamantium-compiler = { path = "../adamantium-compiler" }
 adamantium-diagnostics = { path = "../adamantium-diagnostics" }
+adamantium-fmt = { path = "../adamantium-fmt" }
 adamantium-ir = { path = "../adamantium-ir" }
 adamantium-linker = { path = "../adamantium-linker" }
 adamantium-packages = { path = "../adamantium-packages" }

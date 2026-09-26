@@ -71,6 +71,8 @@ slow development; both paths consume the same typed IR.
 | `adamantium-lowering` | HIR or MIR | the next representation | HIR, MIR, IR |
 | `adamantium-ir` | lowered operations | target-independent backend IR | spans, canonical types |
 | `adamantium-codegen` | IR | target assembly | IR only |
+| `adamantium-fmt` | source text | deterministic formatted source | no semantic layer |
+| `adamantium-lsp` | JSON-RPC/LSP values | protocol capabilities and wire types | shared compiler APIs only |
 | `adamantium-stdlib` | typed host-service requests | values or structured errors | no compiler layer |
 
 Backends must not depend on the parser, AST, name resolution, or source text.
@@ -94,7 +96,7 @@ WASI isolation model are defined in [Runtime architecture](runtime.md).
 
 ## Workspace direction
 
-The workspace contains focused crates including `adamantium-cli`, `adamantium-lexer`, `adamantium-parser`, `adamantium-ast`, `adamantium-semantics`, `adamantium-types`, `adamantium-diagnostics`, `adamantium-ir`, `adamantium-codegen`, `adamantium-nasm`, `adamantium-linker`, `adamantium-runtime`, `adamantium-project`, `adamantium-packages`, `adamantium-wasm`, `adamantium-testing`, and `adamantium-stdlib`.
+The workspace contains focused crates including `adamantium-cli`, `adamantium-lexer`, `adamantium-parser`, `adamantium-ast`, `adamantium-semantics`, `adamantium-types`, `adamantium-diagnostics`, `adamantium-ir`, `adamantium-codegen`, `adamantium-nasm`, `adamantium-linker`, `adamantium-runtime`, `adamantium-project`, `adamantium-packages`, `adamantium-wasm`, `adamantium-testing`, `adamantium-stdlib`, `adamantium-fmt`, and `adamantium-lsp`.
 
 Crates should be extracted only after the corresponding in-crate API has a clear input, output, ownership model, and diagnostic boundary. This avoids cyclic dependencies and prevents internal data structures from becoming public APIs accidentally.
 
@@ -106,4 +108,4 @@ Recommended extraction order:
 4. Semantic analysis.
 5. Code generation, NASM invocation, and linking.
 6. Project, package, WASM, and testing services.
-7. Formatter, standard library, and LSP after their contracts exist.
+7. Formatter, standard library, and LSP protocol and transport.

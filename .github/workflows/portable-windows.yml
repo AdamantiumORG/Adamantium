@@ -46,6 +46,8 @@ jobs:
             '/DSourceRoot=..\dist\adamantium-windows-x86_64' `
             'scripts\adamantium.iss'
           if ($LASTEXITCODE -ne 0) { throw 'Inno Setup failed.' }
+          $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath 'dist/adamantium-windows-x86_64-installer.exe').Hash.ToLowerInvariant()
+          "$hash  adamantium-windows-x86_64-installer.exe" | Set-Content -LiteralPath 'dist/adamantium-windows-x86_64-installer.exe.sha256' -Encoding ASCII
 
       - name: Upload portable package
         uses: actions/upload-artifact@v4
@@ -55,6 +57,7 @@ jobs:
             dist/adamantium-windows-x86_64.zip
             dist/adamantium-windows-x86_64.zip.sha256
             dist/adamantium-windows-x86_64-installer.exe
+            dist/adamantium-windows-x86_64-installer.exe.sha256
           if-no-files-found: error
 
       - name: Publish tagged portable package
@@ -65,5 +68,6 @@ jobs:
             dist/adamantium-windows-x86_64.zip
             dist/adamantium-windows-x86_64.zip.sha256
             dist/adamantium-windows-x86_64-installer.exe
+            dist/adamantium-windows-x86_64-installer.exe.sha256
           fail_on_unmatched_files: true
           generate_release_notes: true
