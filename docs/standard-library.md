@@ -23,6 +23,7 @@ rules and include tests on every supported host.
 | `network` | Resolve an address and perform a bounded TCP exchange with timeouts |
 | `filesystem` | Read, write, append, list, create, test, and remove paths |
 | `json` | Parse, validate, compact, and pretty-print JSON |
+| `math` | Trigonometric functions in radians and high-precision pi constants |
 | `asynchronous` | Spawn a task and join it while converting task panics into errors |
 | `testing` | Equality and boolean assertions with readable failures |
 
@@ -41,6 +42,7 @@ language-style names, but must preserve these arguments, results, and effects.
 | `network` | `tcp_exchange(address, payload, timeout, maximum_response_bytes)` |
 | `filesystem` | `read_text`, `write_text`, `append_text`, `create_directory`, `remove`, `exists`, `list` |
 | `json` | `parse`, `compact`, `pretty` |
+| `math` | `sin`, `cos`, `tan`, `PI`, `PI_F64` |
 | `asynchronous` | `Task.spawn`, `Task.join` |
 | `testing` | `equal`, `truthy` |
 
@@ -72,8 +74,12 @@ timeout, write, and read failures retain distinct operation identifiers.
 Direct Adamantium syntax for this module is not stable yet; documentation must
 not present a proposed binding as an implemented language feature.
 
-String, math, and recoverable-error behavior continue to live in the core
-runtime because generated programs already use those operations directly.
+Core generated arithmetic and recoverable-error behavior continue to live in
+the runtime. The standard library owns reusable trigonometric functions and
+constants. `sin`, `cos`, and `tan` accept radians and return `f64`. `PI` is a
+3,255-character decimal string, including `3.`, for applications that need to
+choose their own precision. `PI_F64` is the nearest `f64` value for direct
+floating-point calculations.
 
 ## Error contract
 

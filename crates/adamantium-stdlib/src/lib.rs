@@ -8,6 +8,7 @@ pub mod collections;
 pub mod environment;
 pub mod filesystem;
 pub mod json;
+pub mod math;
 pub mod network;
 pub mod process;
 pub mod random;
