@@ -595,11 +595,11 @@ fn parses_conditions_and_all_loop_forms() {
     let program = parse(
         r#"fun main() {
         var a = 0;
-        if a == 0 then { a =+ 1; } else { a =- 1; }
+        if a == 0 { a =+ 1; } else { a =- 1; }
         while a < 3 { a =+ 1; }
         until a >= 5 { a =+ 1; }
         for i in 0..3 { print.newline(i); }
-        loop { if a != 0 then { break; } continue; }
+        loop { if a != 0 { break; } continue; }
     }"#,
     )
     .unwrap();
@@ -628,6 +628,12 @@ fn parses_conditions_and_all_loop_forms() {
             .unwrap_err()
             .contains("inside a loop")
     );
+}
+
+#[test]
+fn if_does_not_use_then_and_then_is_available_as_a_name() {
+    assert!(parse("fun main() { var then=1; if then == 1 { print.newline(then); } }").is_ok());
+    assert!(parse("fun main() { if true then {} }").is_err());
 }
 
 #[test]
@@ -1013,7 +1019,7 @@ fn parses_offset_creation_and_reads() {
 #[test]
 fn nested_blocks_shadow_variables_and_restore_parent_bindings() {
     let program = parse(
-        "fun main() { var value=1; if true then { var value=2; print.newline(value); } print.newline(value); }",
+        "fun main() { var value=1; if true { var value=2; print.newline(value); } print.newline(value); }",
     )
     .unwrap();
     let statements = &program.functions[0].statements;
@@ -1028,8 +1034,7 @@ fn nested_blocks_shadow_variables_and_restore_parent_bindings() {
     ));
 
     assert!(
-        parse("fun main() { var parent=1; if true then { parent=2; print.newline(parent); } }")
-            .is_ok()
+        parse("fun main() { var parent=1; if true { parent=2; print.newline(parent); } }").is_ok()
     );
     assert!(
         parse("fun main() { var value=1; var value=2; }")
@@ -1041,13 +1046,13 @@ fn nested_blocks_shadow_variables_and_restore_parent_bindings() {
 #[test]
 fn block_variables_and_iterators_expire_at_the_closing_brace() {
     for source in [
-        "fun main() { if true then { var local=1; } print.newline(local); }",
+        "fun main() { if true { var local=1; } print.newline(local); }",
         "fun main() { while false { var local=1; } print.newline(local); }",
         "fun main() { until true { var local=1; } print.newline(local); }",
         "fun main() { loop { var local=1; break; } print.newline(local); }",
         "fun main() { match 1 { 1 => { var local=1; } } print.newline(local); }",
         "fun main() { var error=try { var local=1; }; print.newline(local); }",
-        "fun main() { if true then { var local=1; local.remove; } print.newline(local); }",
+        "fun main() { if true { var local=1; local.remove; } print.newline(local); }",
         "fun main() { for item in 0..1 { print.newline(item); } print.newline(item); }",
         "fun main() { var values=List[1]; for item in values { print.newline(item); } print.newline(item); }",
     ] {
@@ -1077,10 +1082,10 @@ fn loop_iterators_may_shadow_parent_variables() {
 #[test]
 fn lexical_shadowing_respects_other_symbol_namespaces() {
     for source in [
-        "enum State { ready } fun main() { if true then { var State=1; } }",
-        "class Item() { fun __new__() {} } fun main() { if true then { var Item=1; } }",
-        "define Count=int; fun main() { if true then { var Count=1; } }",
-        "trait Named { fun name() result:string; } fun main() { if true then { var Named=1; } }",
+        "enum State { ready } fun main() { if true { var State=1; } }",
+        "class Item() { fun __new__() {} } fun main() { if true { var Item=1; } }",
+        "define Count=int; fun main() { if true { var Count=1; } }",
+        "trait Named { fun name() result:string; } fun main() { if true { var Named=1; } }",
     ] {
         assert!(parse(source).is_err(), "{source}");
     }
@@ -1089,8 +1094,7 @@ fn lexical_shadowing_respects_other_symbol_namespaces() {
         ("tools".into(), "pub fun work() result:None {}".into()),
         (
             "".into(),
-            "pack tools; use tools:work; fun main() { if true then { var work=1; work(); } }"
-                .into(),
+            "pack tools; use tools:work; fun main() { if true { var work=1; work(); } }".into(),
         ),
     ])
     .unwrap_err();

@@ -48,7 +48,7 @@ The package writes its return value to stdout. A successful call exits with stat
 | Adamantium type | Argument encoding | Result encoding |
 | --- | --- | --- |
 | `i8`, `i16`, `i32`, `i64` | signed decimal UTF-8 | signed decimal UTF-8 |
-| `u4`, `u8`, `u16`, `u32`, `u64` | unsigned decimal UTF-8 | unsigned decimal UTF-8 |
+| `u8`, `u16`, `u32`, `u64` | unsigned decimal UTF-8 | unsigned decimal UTF-8 |
 | `f32`, `f64` | decimal UTF-8 | decimal UTF-8 |
 | `bool` | `true` or `false` | `true` or `false` |
 | `string` | unchanged UTF-8 | unchanged stdout bytes interpreted as UTF-8 |

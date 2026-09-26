@@ -257,7 +257,6 @@ fn integer_ranges_are_checked_for_every_width() {
         Type::I16,
         Type::I32,
         Type::I64,
-        Type::U4,
         Type::U8,
         Type::U16,
         Type::U32,
@@ -409,7 +408,7 @@ fn checks_comparisons_conditions_and_integer_ranges() {
     let program = checked(
         r#"fun main() {
         var a = 0;
-        if a < 2 then { a =+ 1; } else { a =- 1; }
+        if a < 2 { a =+ 1; } else { a =- 1; }
         while a != 3 { a =+ 1; }
         until a >= 4 { a =+ 1; }
         for i in 0:u8..3:u8 { print.newline(i); }
@@ -419,7 +418,7 @@ fn checks_comparisons_conditions_and_integer_ranges() {
     .unwrap();
     assert_eq!(program.functions[0].types.last(), Some(&Type::U8));
     for source in [
-        "fun main() { if 1 then {} }",
+        "fun main() { if 1 {} }",
         "fun main() { for i in 0.0..2.0 {} }",
         "fun main() { var a = true < false; }",
     ] {

@@ -131,10 +131,10 @@ fn class_lifecycle_hooks_reject_immediate_recursion() {
 #[test]
 fn nested_scope_bindings_do_not_escape_or_destroy_shadowed_parents() {
     assert_valid(
-        "fun main() { var value=10; if true then { var value=20; value.remove; } print.newline(value); }",
+        "fun main() { var value=10; if true { var value=20; value.remove; } print.newline(value); }",
     );
     assert_invalid(
-        "fun main() { if true then { var local=10; } print.newline(local); }",
+        "fun main() { if true { var local=10; } print.newline(local); }",
         "variable 'local' is out of scope",
     );
 }

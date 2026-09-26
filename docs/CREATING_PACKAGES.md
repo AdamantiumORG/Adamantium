@@ -55,7 +55,7 @@ Each function has a required `parameters` array of at most eight types and a req
 
 ```text
 i8 i16 i32 i64
-u4 u8 u16 u32 u64
+u8 u16 u32 u64
 f32 f64
 string bool None
 ```

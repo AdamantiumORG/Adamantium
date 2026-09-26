@@ -270,7 +270,7 @@ fn promoted(a: Type, b: Type) -> Result<Type, String> {
     let candidates = if low < 0 {
         vec![Type::I8, Type::I16, Type::I32, Type::I64]
     } else {
-        vec![Type::U4, Type::U8, Type::U16, Type::U32, Type::U64]
+        vec![Type::U8, Type::U16, Type::U32, Type::U64]
     };
     candidates
         .into_iter()

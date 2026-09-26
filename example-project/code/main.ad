@@ -47,7 +47,7 @@ fun main() {
     var signed16 = -1600:i16;
     var signed32 = -32000:i32;
     var signed64 = -64000:i64;
-    var tiny_unsigned = 15:u4;
+    var tiny_unsigned = 15:u8;
     var unsigned8 = 200:u8;
     var unsigned16 = 60000:u16;
     var unsigned32 = 4000000000:u32;
@@ -143,7 +143,7 @@ fun main() {
     print.newline(calculation(2,3));
 
     // Comparisons produce bool values. A for range excludes its upper bound.
-    if arithmetic >= 10 then {
+    if arithmetic >= 10 {
         print.newline("The if branch ran.");
     } else {
         print.newline("The else branch ran.");
@@ -162,9 +162,9 @@ fun main() {
     }
     loop {
         while_value =+ 1;
-        if while_value == 5 then { continue; }
+        if while_value == 5 { continue; }
         print.newline(while_value);
-        if while_value >= 6 then { break; }
+        if while_value >= 6 { break; }
     }
 
     // clamp changes the current value once and uses inclusive bounds.

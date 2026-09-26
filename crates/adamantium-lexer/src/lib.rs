@@ -170,7 +170,6 @@ pub enum Keyword {
     Public,
     Return,
     Static,
-    Then,
     Trait,
     Until,
     Use,
@@ -661,7 +660,6 @@ pub fn keyword_kind(text: &str) -> Option<TokenKind> {
         "pub" => TokenKind::Keyword(Keyword::Public),
         "return" => TokenKind::Keyword(Keyword::Return),
         "static" | "stc" => TokenKind::Keyword(Keyword::Static),
-        "then" => TokenKind::Keyword(Keyword::Then),
         "trait" => TokenKind::Keyword(Keyword::Trait),
         "until" => TokenKind::Keyword(Keyword::Until),
         "use" => TokenKind::Keyword(Keyword::Use),
@@ -679,7 +677,6 @@ fn is_numeric_suffix(text: &str) -> bool {
             | "i32"
             | "i64"
             | "int"
-            | "u4"
             | "u8"
             | "u16"
             | "u32"

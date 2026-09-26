@@ -9,7 +9,7 @@ fun main() {
     until total>=7 {
         total=+1;
     }
-    if total==7 then {
+    if total==7 {
         print.newline(total);
     } else {
         print.newline(0);
@@ -21,7 +21,7 @@ fun main() {
     var iterations=0;
     loop {
         iterations=+1;
-        if iterations==2 then {
+        if iterations==2 {
             break;
         }
     }

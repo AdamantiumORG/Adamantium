@@ -45,7 +45,6 @@ fn classifies_all_keywords_in_one_contract() {
         ("return", TokenKind::Keyword(Keyword::Return)),
         ("static", TokenKind::Keyword(Keyword::Static)),
         ("stc", TokenKind::Keyword(Keyword::Static)),
-        ("then", TokenKind::Keyword(Keyword::Then)),
         ("trait", TokenKind::Keyword(Keyword::Trait)),
         ("until", TokenKind::Keyword(Keyword::Until)),
         ("use", TokenKind::Keyword(Keyword::Use)),
@@ -59,6 +58,15 @@ fn classifies_all_keywords_in_one_contract() {
         assert_eq!(keyword_kind(text), Some(expected), "keyword {text:?}");
     }
     assert_eq!(keyword_kind("custom_name"), None);
+}
+
+#[test]
+fn removed_then_keyword_is_an_identifier() {
+    assert_eq!(keyword_kind("then"), None);
+    assert_eq!(
+        Lexer::new("then").next().unwrap().unwrap().kind,
+        TokenKind::Identifier
+    );
 }
 
 #[test]

@@ -254,7 +254,6 @@ fn default_value(ty: Type) -> &'static str {
         Type::I16 => "0:i16",
         Type::I32 => "0:i32",
         Type::I64 => "0:i64",
-        Type::U4 => "0:u4",
         Type::U8 => "0:u8",
         Type::U16 => "0:u16",
         Type::U32 => "0:u32",

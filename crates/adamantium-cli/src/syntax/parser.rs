@@ -157,7 +157,6 @@ fn validate_generic_constraint(
                 | "i32"
                 | "i64"
                 | "int"
-                | "u4"
                 | "u8"
                 | "u16"
                 | "u32"
@@ -170,7 +169,7 @@ fn validate_generic_constraint(
         ),
         Some("integer") => matches!(
             name.as_str(),
-            "i8" | "i16" | "i32" | "i64" | "int" | "u4" | "u8" | "u16" | "u32" | "u64" | "u"
+            "i8" | "i16" | "i32" | "i64" | "int" | "u8" | "u16" | "u32" | "u64" | "u"
         ),
         Some("float") => matches!(name.as_str(), "f32" | "f64" | "f128" | "float"),
         Some("comparable") => !matches!(name.as_str(), "None") && !name.starts_with("List["),
@@ -454,7 +453,6 @@ impl Parser {
                     "pub",
                     "priv",
                     "if",
-                    "then",
                     "else",
                     "for",
                     "in",
@@ -1574,7 +1572,6 @@ impl Parser {
         Ok(match keyword.as_str() {
             "if" => {
                 let condition = self.expression(0)?;
-                self.word("then")?;
                 let yes = self.block()?;
                 let no = if self.take(Token::Word("else".into())) {
                     self.block()?

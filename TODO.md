@@ -209,7 +209,7 @@ Implement:
 
 ### Unsigned integers
 
-* [x] `u4`
+* [x] Remove the experimental `u4` type
 * [x] `u8`
 * [x] `u16`
 * [x] `u32`
@@ -520,14 +520,14 @@ enum Direction {
 ## `if`
 
 * [x] Implement `if`
-* [x] Implement `then`
+* [x] Remove the legacy `then` keyword from `if`
 * [x] Implement `else`
 * [x] Implement nested conditions
 
 Example:
 
 ```adamantium
-if hp <= 0 then {
+if hp <= 0 {
     ...
 }
 ```

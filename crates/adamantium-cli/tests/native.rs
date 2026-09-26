@@ -153,7 +153,7 @@ fn native_traits_and_trait_constrained_generics() {
 #[test]
 #[ignore = "requires NASM and Visual Studio C++ build tools"]
 fn native_nested_lists_optional_lists_and_recursion() {
-    let source = "fun sum(n:int) result:int { if n==0 then { result=0; return result; } result=n+sum(n-1); } fun optional($values:List[int]) result:None {} fun main() { var nested=List[List[1,2],List[3,4]]; optional(); optional(nested[0]); print.newline(nested[1][0]); print.newline(sum(5)); }";
+    let source = "fun sum(n:int) result:int { if n==0 { result=0; return result; } result=n+sum(n-1); } fun optional($values:List[int]) result:None {} fun main() { var nested=List[List[1,2],List[3,4]]; optional(); optional(nested[0]); print.newline(nested[1][0]); print.newline(sum(5)); }";
     let output = Project::new(source).run();
     assert_eq!(
         output.status.code(),
@@ -777,15 +777,15 @@ fn native_conditions_and_loops() {
         r#"
         fun main() {
             var value = 0;
-            if value == 0 then { print.newline("if"); } else { print.newline("else"); }
+            if value == 0 { print.newline("if"); } else { print.newline("else"); }
             while value < 2 { print.newline(value); value =+ 1; }
             until value >= 4 { print.newline(value); value =+ 1; }
             for i in 0..3 { print.newline(i); }
             loop {
                 value =+ 1;
-                if value == 5 then { continue; }
+                if value == 5 { continue; }
                 print.newline(value);
-                if value >= 6 then { break; }
+                if value >= 6 { break; }
             }
         }
     "#,
@@ -812,8 +812,8 @@ fn native_for_iterates_over_supported_list_values() {
         fun main() {
             var total=0;
             for number in List[1,2,3,4] {
-                if number == 2 then { continue; }
-                if number == 4 then { break; }
+                if number == 2 { continue; }
+                if number == 4 { break; }
                 total =+ number;
             }
             print.newline(total);
@@ -930,7 +930,7 @@ fn native_all_types_and_typed_calls() {
             var b = -32768:i16; print.newline(b);
             var c = -2147483648:i32; print.newline(c);
             var d = -9223372036854775808:i64; print.newline(d);
-            var e = 15:u4; print.newline(e);
+            var e = 15:u8; print.newline(e);
             var f = 255:u8; print.newline(f);
             var g = 65535:u16; print.newline(g);
             var h = 4294967295:u32; print.newline(h);
@@ -1033,7 +1033,7 @@ fn native_nested_scopes_use_distinct_storage_and_restore_parent_values() {
     let project = Project::new(
         r#"fun main() {
             var value=1;
-            if true then {
+            if true {
                 var value=2;
                 print.newline(value);
             }
@@ -1205,7 +1205,7 @@ fn native_runtime_errors_are_reported() {
         "var a = -9223372036854775808:i64; print.newline(-a);",
         "var a = 10; a.clamp(100,0);",
         "var a = 127:i8; a =+ 1;",
-        "var a = 15:u4; a =+ 1;",
+        "var a = 255:u8; a =+ 1;",
         "var a = 0:u64; a =- 1;",
         "var a = 18446744073709551615:u64; a =* 2;",
         "var a = 300; var b = a:u8;",

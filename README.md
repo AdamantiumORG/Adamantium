@@ -58,7 +58,7 @@ Functions use explicit parameters and a named result:
 
 ```adamantium
 fun fibonacci(n:int) result:int {
-    if n <= 1 then {
+    if n <= 1 {
         result = n;
     } else {
         result = fibonacci(n-1) + fibonacci(n-2);

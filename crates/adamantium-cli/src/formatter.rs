@@ -8,8 +8,8 @@
 //!
 //! Canonical layout rules:
 //! - 4-space indentation, one statement per line, braces on the opening line.
-//! - Every block is expanded: `if x then { continue; }` becomes
-//!   `if x then {` / `    continue;` / `}`.
+//! - Every block is expanded: `if x { continue; }` becomes
+//!   `if x {` / `    continue;` / `}`.
 //! - Blank lines are preserved as written; runs of blank lines are kept intact.
 //! - Trailing line comments are moved to their own line at the current indent.
 //! - Enum variants are emitted one per line with a trailing comma, matching the
@@ -737,11 +737,11 @@ mod tests {
     #[test]
     fn formats_nested_blocks() {
         let source =
-            "fun main() { if value >= 10 then { print.newline(value); } else { warn(\"no\"); } }";
+            "fun main() { if value >= 10 { print.newline(value); } else { warn(\"no\"); } }";
         let formatted = format(source);
         assert_eq!(
             formatted,
-            "fun main() {\n    if value >= 10 then {\n        print.newline(value);\n    } else {\n        warn(\"no\");\n    }\n}\n"
+            "fun main() {\n    if value >= 10 {\n        print.newline(value);\n    } else {\n        warn(\"no\");\n    }\n}\n"
         );
         idempotent(source);
     }

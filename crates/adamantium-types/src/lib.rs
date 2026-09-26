@@ -64,7 +64,6 @@ pub enum Type {
     I16,
     I32,
     I64,
-    U4,
     U8,
     U16,
     U32,
@@ -95,7 +94,6 @@ impl Type {
             "i16" => Self::I16,
             "i32" | "int" => Self::I32,
             "i64" => Self::I64,
-            "u4" => Self::U4,
             "u8" => Self::U8,
             "u16" => Self::U16,
             "u32" | "u" => Self::U32,
@@ -120,25 +118,24 @@ impl Type {
             0 => (),
             _ => return None,
         }
-        [
-            Self::I8,
-            Self::I16,
-            Self::I32,
-            Self::I64,
-            Self::U4,
-            Self::U8,
-            Self::U16,
-            Self::U32,
-            Self::U64,
-            Self::F32,
-            Self::F64,
-            Self::F128,
-            Self::String,
-            Self::Bool,
-            Self::None,
-        ]
-        .get(payload as usize)
-        .copied()
+        Some(match payload {
+            0 => Self::I8,
+            1 => Self::I16,
+            2 => Self::I32,
+            3 => Self::I64,
+            // ID 4 belonged to the removed experimental `u4` type.
+            5 => Self::U8,
+            6 => Self::U16,
+            7 => Self::U32,
+            8 => Self::U64,
+            9 => Self::F32,
+            10 => Self::F64,
+            11 => Self::F128,
+            12 => Self::String,
+            13 => Self::Bool,
+            14 => Self::None,
+            _ => return None,
+        })
     }
     pub fn id(self) -> u32 {
         match self {
@@ -146,7 +143,6 @@ impl Type {
             Self::I16 => 1 << 3,
             Self::I32 => 2 << 3,
             Self::I64 => 3 << 3,
-            Self::U4 => 4 << 3,
             Self::U8 => 5 << 3,
             Self::U16 => 6 << 3,
             Self::U32 => 7 << 3,
@@ -171,7 +167,6 @@ impl Type {
                 | Self::I16
                 | Self::I32
                 | Self::I64
-                | Self::U4
                 | Self::U8
                 | Self::U16
                 | Self::U32
@@ -185,10 +180,7 @@ impl Type {
         self.integer() || self.floating()
     }
     pub fn unsigned(self) -> bool {
-        matches!(
-            self,
-            Self::U4 | Self::U8 | Self::U16 | Self::U32 | Self::U64
-        )
+        matches!(self, Self::U8 | Self::U16 | Self::U32 | Self::U64)
     }
     pub fn bounds(self) -> (i128, i128) {
         match self {
@@ -196,13 +188,24 @@ impl Type {
             Self::I16 => (i16::MIN as i128, i16::MAX as i128),
             Self::I32 => (i32::MIN as i128, i32::MAX as i128),
             Self::I64 => (i64::MIN as i128, i64::MAX as i128),
-            Self::U4 => (0, 15),
             Self::U8 => (0, u8::MAX as i128),
             Self::U16 => (0, u16::MAX as i128),
             Self::U32 => (0, u32::MAX as i128),
             Self::U64 => (0, u64::MAX as i128),
             _ => (0, 0),
         }
+    }
+}
+
+#[cfg(test)]
+mod removed_type_tests {
+    use super::Type;
+
+    #[test]
+    fn u4_is_not_a_type_and_its_old_id_is_reserved() {
+        assert_eq!(Type::parse("u4"), None);
+        assert_eq!(Type::from_id(4 << 3), None);
+        assert_eq!(Type::U8.id(), 5 << 3);
     }
 }
 impl std::fmt::Display for Type {
@@ -212,7 +215,6 @@ impl std::fmt::Display for Type {
             Self::I16 => "i16",
             Self::I32 => "i32",
             Self::I64 => "i64",
-            Self::U4 => "u4",
             Self::U8 => "u8",
             Self::U16 => "u16",
             Self::U32 => "u32",
