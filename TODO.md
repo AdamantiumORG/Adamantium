@@ -1386,7 +1386,7 @@ Create clear compiler diagnostics.
 * [x] Freeze test system
 * [x] Write complete language specification - `docs/language/specification.md`
 * [x] Write compiler specification - `docs/compiler/`
-* [ ] Write standard library specification
+* [x] Write standard library specification
 
 ---
 

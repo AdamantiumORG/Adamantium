@@ -5,3 +5,5 @@
 /fuzz/target/
 /dist/
 /packages/
+/benchmarks/*/target/
+/benchmarks/*/*/target/

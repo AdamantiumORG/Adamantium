@@ -1,0 +1,4 @@
+name = "LanguageComparison"
+version = "0.1.0"
+description = "Adamantium language comparison benchmark"
+authors = ["Adamantium contributors"]

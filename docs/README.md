@@ -33,6 +33,8 @@
 - [WASM package ABI](packages/WASM_ABI.md)
 - [Memory safety](MEMORY_SAFETY.md)
 - [Compilation targets](TARGETS.md)
+- [Online development environment](PLAYGROUND.md)
+- [Language comparison benchmark](../benchmarks/language-comparison/README.md)
 
 ## Project governance
 

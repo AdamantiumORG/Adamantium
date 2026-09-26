@@ -7,7 +7,7 @@
 **A simple native programming language for people who want readable syntax
 without giving up explicit control.**
 
-[Install](#installation) | [Documentation](docs/README.md) | [Versioning](docs/VERSIONING.md) | [Examples](examples/README.md) | [Contributing](CONTRIBUTING.md)
+[Install](#installation) | [Documentation](docs/README.md) | [Try online](docs/PLAYGROUND.md) | [Versioning](docs/VERSIONING.md) | [Examples](examples/README.md) | [Contributing](CONTRIBUTING.md)
 
 Adamantium is an experiment in building an approachable, statically typed
 language from scratch. Its Rust compiler turns `.ad` source into NASM assembly
@@ -136,6 +136,8 @@ Source builds use the host Rust toolchain. Compiling Adamantium programs also
 needs NASM and a supported linker configuration.
 
 ## Quick start
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/AdamantiumORG/Adamantium?quickstart=1)
 
 ```text
 adamantium new FirstProject

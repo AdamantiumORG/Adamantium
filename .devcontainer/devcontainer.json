@@ -1,0 +1,16 @@
+{
+  "name": "Adamantium",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "postCreateCommand": "cargo build --locked -p adamantium-cli",
+  "remoteEnv": {
+    "PATH": "${containerWorkspaceFolder}/target/debug:${containerEnv:PATH}"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["rust-lang.rust-analyzer"]
+    }
+  }
+}
