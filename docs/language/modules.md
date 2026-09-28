@@ -12,7 +12,7 @@ Call an unimported public symbol with `utils/tools:calculate()`. Use a list to i
 Installed WASM packages use `mod PackageName;` followed by the same `use` syntax. Project functions, classes, and enums are private by default.
 
 Local WASM files declared in `requirement.toml` use their configured module
-alias with `pack`, for example `PacketAdamantium;`. They use the same
-`use PacketAdamantium:function;` imports and qualified calls as installed
+alias with `pack`, for example `pack LocalPackage;`. They use the same
+`use LocalPackage:function;` imports and qualified calls as installed
 packages. A local WASM file requires a companion `.toml` manifest describing
 its function ABI.

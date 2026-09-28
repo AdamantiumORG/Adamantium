@@ -321,11 +321,11 @@ fn block_comment_diagnostics_preserve_source_locations() {
         "2:3: unterminated block comment; expected '*/'"
     );
     assert!(
-        parse("/* Żółw\r\ncomment */\r\nfun main() {\r\n @\r\n}")
+        parse("/* 界abc\r\ncomment */\r\nfun main() {\r\n @\r\n}")
             .unwrap_err()
             .starts_with("4:2:")
     );
-    assert!(lex("/* Ż */@").unwrap_err().starts_with("1:8:"));
+    assert!(lex("/* 界 */@").unwrap_err().starts_with("1:8:"));
 }
 
 #[test]
@@ -483,12 +483,12 @@ fn functions_forward_calls_and_named_results() {
 #[test]
 fn preserves_strings_comments_and_integer_boundaries() {
     let statements = main_statements(
-        "// comment\nfun main() { print.sameline(\"Żółw // \\\"\\\\\\t\\0\"); print.newline(\"Hi\\n\"); var low = -9223372036854775808; var high = 9223372036854775807; }",
+        "// comment\nfun main() { print.sameline(\"界abc // \\\"\\\\\\t\\0\"); print.newline(\"Hi\\n\"); var low = -9223372036854775808; var high = 9223372036854775807; }",
     );
     let Statement::Print(Expr::String(bytes), false) = &statements[0] else {
         panic!("string expected");
     };
-    assert_eq!(bytes, "Żółw // \"\\\t\0".as_bytes());
+    assert_eq!(bytes, "界abc // \"\\\t\0".as_bytes());
     let Statement::Print(Expr::String(bytes), true) = &statements[1] else {
         panic!("string expected");
     };

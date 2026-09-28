@@ -192,10 +192,10 @@ A project can reference a package file without publishing or installing it:
 
 ```toml
 [packages]
-"./SomePacket.wasm" = "PacketAdamantium"
+"./SomePackage.wasm" = "LocalPackage"
 ```
 
-Place `JakisPakiet.toml` next to `JakisPakiet.wasm`. The companion manifest uses
+Place `SomePackage.toml` next to `SomePackage.wasm`. The companion manifest uses
 the same `[package]`, `[permissions]`, and `[functions]` format as a published
 `adamantium_packet.toml`. It supplies function names and types, which cannot be
 inferred from a WASI command module. Both files must remain inside the project.
@@ -204,15 +204,15 @@ The compiler validates them on every check or build.
 Load the configured alias with `pack` and optionally import selected functions:
 
 ```adamantium
-pack PacketAdamantium;
-use PacketAdamantium:[calculate,format_value];
+pack LocalPackage;
+use LocalPackage:[calculate,format_value];
 
 fun main() {
     print.newline(calculate(2));
 }
 ```
 
-Without `use`, call `PacketAdamantium:calculate(2)`. Local WASM entries are not
+Without `use`, call `LocalPackage:calculate(2)`. Local WASM entries are not
 downloaded by `adamantium install` and are not written to `adamantium.lock`.
 
 Installed files are stored under `packages/REPOSITORY/VERSION/`. Downloads are cached under `packages/.cache/OWNER/REPOSITORY/VERSION/` and reused after validation. `adamantium check`, `build`, and `run` read transitive packages from `adamantium.lock` and validate the declaration, manifest, ABI, types, version, and WASM header. Run `adamantium install` after changing `requirement.toml`.

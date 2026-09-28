@@ -34,13 +34,13 @@ fn lists_are_homogeneous_and_indexed_by_integers() {
 fn strings_support_length_comparison_concatenation_and_indexing() {
     let program = checked(
         r#"fun main() {
-            var text="Żółw";
+            var text="界abc";
             var joined=text+"!";
             var length=joined.length;
             var same_length=joined.length();
             var character=joined[1];
             var ordered="abc"<"bcd";
-            var equal=joined=="Żółw!";
+            var equal=joined=="界abc!";
         }"#,
     )
     .unwrap();

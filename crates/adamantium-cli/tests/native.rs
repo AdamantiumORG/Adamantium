@@ -941,7 +941,7 @@ fn native_all_types_and_typed_calls() {
             var m = 1.25:f128; m =* 2; m.clamp(0,2); print.newline(m);
             variable changeable text = "hello":string;
             var stc original = text;
-            text = echo("Żółw\0!"); print.newline(text); print.newline(original);
+            text = echo("界abc\0!"); print.newline(text); print.newline(original);
             var yes = true:bool; yes = flag(false); print.newline(yes);
             var missing = None; print.newline(missing);
             var none = nothing(); print.newline(none);
@@ -990,7 +990,7 @@ fn native_all_types_and_typed_calls() {
     assert_eq!(lines[12].parse::<f64>().unwrap(), 2.0);
     assert_eq!(
         &lines[13..19],
-        &["Żółw\0!", "hello", "false", "None", "None", "1.75"]
+        &["界abc\0!", "hello", "false", "None", "None", "1.75"]
     );
     assert_eq!(lines[19].parse::<f64>().unwrap(), 1.0);
     assert_eq!(lines[20].parse::<f64>().unwrap(), 1.0);
@@ -1174,7 +1174,7 @@ fn native_arithmetic_clamp_calls_and_returns() {
             print.newline(-9223372036854775808:i64);
             print.newline(9223372036854775807:i64);
             print.sameline(0); print.newline("");
-            print.newline("Żółw");
+            print.newline("界abc");
             print.sameline("a\0b");
         }
         fun add(a:int,b:int) r:int { r = a+b; }
@@ -1190,7 +1190,7 @@ fn native_arithmetic_clamp_calls_and_returns() {
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
-    assert_eq!(output.stdout, "30\r\n300\r\n30\r\n20\r\n30\r\n14\r\n20\r\n2\r\n-3\r\n-3\r\n3\r\n0\r\n100\r\n150\r\n40\r\n5\r\n30\r\n50\r\n18\r\n21\r\n1223\r\n5\r\n10\r\n-9223372036854775808\r\n9223372036854775807\r\n0\r\nŻółw\r\na\0b".as_bytes());
+    assert_eq!(output.stdout, "30\r\n300\r\n30\r\n20\r\n30\r\n14\r\n20\r\n2\r\n-3\r\n-3\r\n3\r\n0\r\n100\r\n150\r\n40\r\n5\r\n30\r\n50\r\n18\r\n21\r\n1223\r\n5\r\n10\r\n-9223372036854775808\r\n9223372036854775807\r\n0\r\n界abc\r\na\0b".as_bytes());
 }
 
 #[test]
@@ -1225,14 +1225,14 @@ fn native_runtime_errors_are_reported() {
 #[ignore = "requires NASM and Visual Studio C++ build tools"]
 fn native_string_operations_use_utf8_characters() {
     let source = r#"fun main() {
-        var text="Żółw";
+        var text="界abc";
         print.newline(text.length);
         print.newline(text.length());
         print.newline(text[0]);
         print.newline(text[3]);
         print.newline(text+"!");
         print.newline("abc"<"bcd");
-        print.newline(text=="Żółw");
+        print.newline(text=="界abc");
         var error=try { print.newline(text[4]); };
         print.newline(error);
     }"#;
@@ -1246,7 +1246,7 @@ fn native_string_operations_use_utf8_characters() {
     let stdout = String::from_utf8_lossy(&output.stdout).replace("\r\n", "\n");
     assert_eq!(
         stdout,
-        "4\n4\nŻ\nw\nŻółw!\ntrue\ntrue\nAdamantium runtime error at line 10: String index 4 is out of bounds for length 4\n"
+        "4\n4\n界\nc\n界abc!\ntrue\ntrue\nAdamantium runtime error at line 10: String index 4 is out of bounds for length 4\n"
     );
 }
 

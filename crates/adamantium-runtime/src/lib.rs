@@ -249,7 +249,7 @@ mod string_tests {
 
     #[test]
     fn strings_use_unicode_scalar_lengths_and_indexes() {
-        let text = "aŻ🙂";
+        let text = "a界🙂";
         let length =
             unsafe { string_operation(&request(14, value(text), Value::default())) }.unwrap();
         assert_eq!(length.lo, 3);
@@ -278,7 +278,8 @@ mod string_tests {
         }
 
         let less = unsafe { string_operation(&request(9, value("abc"), value("bcd"))) }.unwrap();
-        let equal = unsafe { string_operation(&request(7, value("żółw"), value("żółw"))) }.unwrap();
+        let equal =
+            unsafe { string_operation(&request(7, value("界abc"), value("界abc"))) }.unwrap();
         assert_eq!(less.lo, 1);
         assert_eq!(equal.lo, 1);
     }

@@ -151,7 +151,7 @@ fn recovery_reports_delimiter_errors_and_continues_to_later_statements() {
 #[test]
 fn randomized_utf8_never_panics_parser_recovery() {
     let alphabet = [
-        'a', '1', '=', '+', ';', '{', '}', '(', ')', ' ', '\n', 'ż', '🦀',
+        'a', '1', '=', '+', ';', '{', '}', '(', ')', ' ', '\n', '界', '🦀',
     ];
     let mut state = 0x5eed_u64;
     for _ in 0..2_000 {
