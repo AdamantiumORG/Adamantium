@@ -14,6 +14,12 @@ pub fn load_bindings(
     let mut requested = HashSet::new();
     for (_, source) in sources.iter() {
         requested.extend(syntax::package_dependencies(source)?);
+        let packed = syntax::module_dependencies(source)?;
+        requested.extend(packed.into_iter().filter(|module| {
+            requirements
+                .iter()
+                .any(|package| package.version == "local" && package.name == *module)
+        }));
     }
     let mut bindings = Vec::new();
     for module in requested {
@@ -24,30 +30,39 @@ pub fn load_bindings(
         }
         let mut found = None;
         for package in requirements {
-            let directory = root
-                .join("packages")
-                .join(&package.name)
-                .join(&package.version);
-            let manifest_path = directory.join("adamantium_packet.toml");
+            let (manifest_path, wasm) = if package.version == "local" {
+                if package.name != module {
+                    continue;
+                }
+                local_package_paths(root, package)?
+            } else {
+                let directory = root
+                    .join("packages")
+                    .join(&package.name)
+                    .join(&package.version);
+                (
+                    directory.join("adamantium_packet.toml"),
+                    directory.join("adamantium_packet.wasm"),
+                )
+            };
             if !manifest_path.is_file() {
                 continue;
             }
             let manifest = parse_manifest(&manifest_path, &package.version)?;
-            if manifest.name == module {
+            if package.version == "local" || manifest.name == module {
                 if found.is_some() {
                     return Err(format!(
                         "package module '{module}' is provided more than once"
                     ));
                 }
-                found = Some((package, directory, manifest));
+                found = Some((package, wasm, manifest));
             }
         }
-        let Some((package, directory, manifest)) = found else {
+        let Some((package, wasm, manifest)) = found else {
             return Err(format!(
                 "package module '{module}' is not installed or declared; add it to requirement.toml and run 'adamantium install'"
             ));
         };
-        let wasm = directory.join("adamantium_packet.wasm");
         let bytes = fs::read(&wasm).map_err(|error| {
             format!(
                 "could not read installed package '{}': {error}",
@@ -97,6 +112,60 @@ pub fn load_bindings(
     Ok(bindings)
 }
 
+pub fn validate_local_package(root: &Path, package: &Package) -> Result<(), String> {
+    let (manifest, wasm) = local_package_paths(root, package)?;
+    let bytes = fs::read(&wasm)
+        .map_err(|error| format!("could not read local package '{}': {error}", wasm.display()))?;
+    adamantium_wasm::validate_package(&bytes).map_err(|error| {
+        format!(
+            "local package '{}' is not valid WASM: {error}",
+            package.name
+        )
+    })?;
+    parse_manifest(&manifest, "local")?;
+    Ok(())
+}
+
+fn local_package_paths(
+    root: &Path,
+    package: &Package,
+) -> Result<(std::path::PathBuf, std::path::PathBuf), String> {
+    let wasm = root.join(&package.source);
+    let wasm = wasm.canonicalize().map_err(|error| {
+        format!(
+            "could not resolve local package '{}': {error}",
+            wasm.display()
+        )
+    })?;
+    if !wasm.starts_with(root) || !wasm.is_file() {
+        return Err(format!(
+            "local package '{}' must be a file inside the project",
+            package.source
+        ));
+    }
+    let requested_manifest = wasm.with_extension("toml");
+    if !requested_manifest.is_file() {
+        return Err(format!(
+            "local package '{}' requires companion manifest '{}'",
+            package.name,
+            requested_manifest.display()
+        ));
+    }
+    let manifest = requested_manifest.canonicalize().map_err(|error| {
+        format!(
+            "could not resolve local package manifest '{}': {error}",
+            requested_manifest.display()
+        )
+    })?;
+    if !manifest.starts_with(root) {
+        return Err(format!(
+            "local package manifest '{}' must remain inside the project",
+            manifest.display()
+        ));
+    }
+    Ok((manifest, wasm))
+}
+
 struct Manifest {
     name: String,
     filesystem: u32,
@@ -137,7 +206,7 @@ fn parse_manifest(path: &Path, expected_version: &str) -> Result<Manifest, Strin
         ));
     }
     let version = field("version")?;
-    if expected_version != "nightly" && version != expected_version {
+    if expected_version != "nightly" && expected_version != "local" && version != expected_version {
         return Err(format!(
             "{}: manifest version '{version}' does not match requirement '{expected_version}'",
             path.display()

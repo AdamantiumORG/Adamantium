@@ -1232,19 +1232,47 @@ fn packages(table: &toml::Table) -> Result<Vec<Package>, String> {
     }
     let mut result = Vec::new();
     for (source, value) in values {
-        let version = value.as_str().ok_or_else(|| {
+        let value = value.as_str().ok_or_else(|| {
             format!("requirement.toml: package '{source}' version must be a string")
         })?;
-        let requirement = adamantium_packages::Requirement::new(source, version)
-            .map_err(|error| format!("requirement.toml: package '{source}': {error}"))?;
-        result.push(Package {
-            name: requirement.name,
-            source: requirement.source,
-            version: requirement.version.to_string(),
-        });
+        if source.ends_with(".wasm") {
+            validate_package_alias(value)
+                .map_err(|error| format!("requirement.toml: local package '{source}': {error}"))?;
+            let relative_source = source
+                .strip_prefix("./")
+                .or_else(|| source.strip_prefix(".\\"))
+                .unwrap_or(source);
+            adamantium_packages::validate_relative_package_path(relative_source)
+                .map_err(|error| format!("requirement.toml: local package '{source}': {error}"))?;
+            result.push(Package {
+                name: value.to_owned(),
+                source: source.to_owned(),
+                version: "local".into(),
+            });
+        } else {
+            let requirement = adamantium_packages::Requirement::new(source, value)
+                .map_err(|error| format!("requirement.toml: package '{source}': {error}"))?;
+            result.push(Package {
+                name: requirement.name,
+                source: requirement.source,
+                version: requirement.version.to_string(),
+            });
+        }
     }
     result.sort_by(|left, right| left.name.cmp(&right.name));
     Ok(result)
+}
+
+fn validate_package_alias(name: &str) -> Result<(), String> {
+    let mut characters = name.chars();
+    if !characters
+        .next()
+        .is_some_and(|character| character.is_ascii_alphabetic() || character == '_')
+        || !characters.all(|character| character.is_ascii_alphanumeric() || character == '_')
+    {
+        return Err(format!("module alias '{name}' is invalid"));
+    }
+    Ok(())
 }
 
 fn is_official_package_source(source: &str) -> bool {
@@ -1272,8 +1300,19 @@ fn install_packages(root: &Path) -> Result<(), String> {
         .map_err(|error| format!("{}: {error}", requested_root.display()))?;
     let requirements = read_toml(&root.join("requirement.toml"))?;
     let requested = packages(&requirements)?;
+    for package in requested
+        .iter()
+        .filter(|package| package.version == "local")
+    {
+        packages::validate_local_package(&root, package)?;
+        println!("Validated local package {}", package.name);
+    }
+    let requested = requested
+        .into_iter()
+        .filter(|package| package.version != "local")
+        .collect::<Vec<_>>();
     if requested.is_empty() {
-        println!("No packages to install");
+        println!("No remote packages to install");
         return Ok(());
     }
     let downloader = env::var_os("ADAMANTIUM_CURL").unwrap_or_else(|| {
@@ -1690,7 +1729,12 @@ fn project_sources(root: &Path) -> Result<ProjectSources, String> {
     }
     let manifest = manifest.expect("validated project manifest");
     let packages = packages_from_lock(&root, packages)?;
-    let mut sources = load_modules(&root.join("code"))?;
+    let local_package_names = packages
+        .iter()
+        .filter(|package| package.version == "local")
+        .map(|package| package.name.as_str())
+        .collect::<std::collections::HashSet<_>>();
+    let mut sources = load_modules(&root.join("code"), &local_package_names)?;
     if manifest.professional {
         for (module, source) in &sources {
             syntax::validate_professional(source).map_err(|error| {
@@ -1714,9 +1758,12 @@ fn project_sources(root: &Path) -> Result<ProjectSources, String> {
 }
 
 fn packages_from_lock(root: &Path, direct: Vec<Package>) -> Result<Vec<Package>, String> {
+    let (local, direct): (Vec<_>, Vec<_>) = direct
+        .into_iter()
+        .partition(|package| package.version == "local");
     let path = root.join("adamantium.lock");
     if !path.exists() {
-        return Ok(direct);
+        return Ok(local.into_iter().chain(direct).collect());
     }
     let source = fs::read_to_string(&path)
         .map_err(|error| format!("could not read {}: {error}", path.display()))?;
@@ -1731,7 +1778,8 @@ fn packages_from_lock(root: &Path, direct: Vec<Package>) -> Result<Vec<Package>,
             ));
         }
     }
-    lock.packages
+    let remote = lock
+        .packages
         .into_iter()
         .map(|package| {
             Ok(Package {
@@ -1740,7 +1788,8 @@ fn packages_from_lock(root: &Path, direct: Vec<Package>) -> Result<Vec<Package>,
                 version: package.version,
             })
         })
-        .collect()
+        .collect::<Result<Vec<_>, String>>()?;
+    Ok(local.into_iter().chain(remote).collect())
 }
 
 fn analyze_sources(
@@ -1785,9 +1834,19 @@ fn analyze_sources(
     Ok(statements)
 }
 
-fn load_modules(code: &Path) -> Result<Vec<(String, String)>, String> {
+fn load_modules(
+    code: &Path,
+    local_packages: &std::collections::HashSet<&str>,
+) -> Result<Vec<(String, String)>, String> {
     adamantium_project::load_modules(code, |source| {
-        syntax::module_dependencies(source).map_err(|error| error.to_string())
+        syntax::module_dependencies(source)
+            .map(|modules| {
+                modules
+                    .into_iter()
+                    .filter(|module| !local_packages.contains(module.as_str()))
+                    .collect()
+            })
+            .map_err(|error| error.to_string())
     })
 }
 
@@ -1992,6 +2051,29 @@ mod package_tests {
                 },
             ]
         );
+    }
+
+    #[test]
+    fn parses_local_wasm_packages_with_module_aliases() {
+        let table = r#"[packages]
+"./packages/tools.wasm" = "ProjectTools"
+"#
+        .parse::<toml::Table>()
+        .unwrap();
+        assert_eq!(
+            packages(&table).unwrap(),
+            [Package {
+                name: "ProjectTools".into(),
+                source: "./packages/tools.wasm".into(),
+                version: "local".into(),
+            }]
+        );
+        for invalid in [
+            "[packages]\n\"../tools.wasm\"=\"Tools\"",
+            "[packages]\n\"./tools.wasm\"=\"bad-name\"",
+        ] {
+            assert!(packages(&invalid.parse().unwrap()).is_err(), "{invalid}");
+        }
     }
 
     #[test]

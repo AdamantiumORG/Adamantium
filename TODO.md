@@ -1721,6 +1721,8 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 * [x] Detect dependency cycles
 * [x] Validate package versions
 * [x] Validate package metadata
+* [x] Support local WASM packages with project-relative paths and module aliases
+* [x] Validate local WASM packages and companion manifests without adding them to the lockfile
 
 ### 19. Implement package security
 

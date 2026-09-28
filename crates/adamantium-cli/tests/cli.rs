@@ -74,6 +74,54 @@ fn package_prepare_generates_valid_release_assets() {
 }
 
 #[test]
+fn check_loads_a_local_wasm_package_through_pack_and_use() {
+    let root = std::env::temp_dir().join(format!(
+        "adamantium-local-package-{}-{}",
+        std::process::id(),
+        NEXT_PROJECT.fetch_add(1, Ordering::Relaxed)
+    ));
+    fs::create_dir_all(root.join("code")).unwrap();
+    fs::create_dir_all(root.join("local")).unwrap();
+    fs::write(
+        root.join("project.toml"),
+        "name='LocalPackageTest'\nversion='1.0.0'\ndescription=''\nauthors=[]\n",
+    )
+    .unwrap();
+    fs::write(
+        root.join("requirement.toml"),
+        "[packages]\n\"./local/tools.wasm\" = \"ProjectTools\"\n",
+    )
+    .unwrap();
+    fs::write(
+        root.join("code/main.ad"),
+        "pack ProjectTools;\nuse ProjectTools:ping;\nfun main() { var value=ping(); print.newline(value); }\n",
+    )
+    .unwrap();
+    fs::write(
+        root.join("local/tools.toml"),
+        "[package]\nname='InternalName'\nversion='1.0.0'\nabi='wasi-command-v1'\n\n[functions.ping]\nparameters=[]\nresult='string'\n",
+    )
+    .unwrap();
+    fs::write(
+        root.join("local/tools.wasm"),
+        wat::parse_str("(module (func (export \"_start\")))").unwrap(),
+    )
+    .unwrap();
+
+    let output = adamantium()
+        .args(["check", root.to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(!root.join("adamantium.lock").exists());
+    fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn fmt_formats_source_ids_idempotently_and_keeps_project_valid() {
     let base = std::env::temp_dir().join(format!(
         "adamantium-cli-fmt-{}-{}",
