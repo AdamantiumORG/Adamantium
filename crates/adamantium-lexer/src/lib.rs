@@ -455,9 +455,6 @@ impl<'src> Lexer<'src> {
             if suffix.is_empty() {
                 return Err(self.number_error(span, "expected a type after numeric suffix ':'"));
             }
-            if !is_numeric_suffix(suffix) {
-                return Err(self.number_error(span, &format!("unknown numeric suffix '{suffix}'")));
-            }
         } else if self
             .peek()
             .is_some_and(|value| value.is_ascii_alphabetic() || value == '_')
@@ -668,23 +665,4 @@ pub fn keyword_kind(text: &str) -> Option<TokenKind> {
         "while" => TokenKind::Keyword(Keyword::While),
         _ => return None,
     })
-}
-
-fn is_numeric_suffix(text: &str) -> bool {
-    matches!(
-        text,
-        "i8" | "i16"
-            | "i32"
-            | "i64"
-            | "int"
-            | "u8"
-            | "u16"
-            | "u32"
-            | "u64"
-            | "u"
-            | "f32"
-            | "f64"
-            | "f128"
-            | "float"
-    )
 }

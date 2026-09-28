@@ -298,6 +298,7 @@ fn rejects_incompatible_types_and_reserved_future_types() {
         "var a = 1e100:f32;",
         "var a = 1e400:f64;",
         "var a = 1e5000:f128;",
+        "var a = 1:wat;",
     ] {
         assert!(
             checked(&format!("fun main() {{ {body} }}")).is_err(),

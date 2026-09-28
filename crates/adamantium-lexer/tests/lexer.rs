@@ -356,7 +356,7 @@ fn literal_kinds_are_complete_and_unambiguous() {
 
 #[test]
 fn recognizes_numeric_suffixes_without_allocating_literal_values() {
-    let source = "123 123.0 123.45 123:i32 123:u64 1.5:f64 1e3:f128";
+    let source = "123 123.0 123.45 123:i32 123:u64 1.5:f64 1e3:f128 7:Number";
     let tokens = lex(source).unwrap();
     assert_eq!(
         tokens.iter().map(|token| &token.kind).collect::<Vec<_>>(),
@@ -368,12 +368,14 @@ fn recognizes_numeric_suffixes_without_allocating_literal_values() {
             &TokenKind::IntLiteral,
             &TokenKind::FloatLiteral,
             &TokenKind::FloatLiteral,
+            &TokenKind::IntLiteral,
             &TokenKind::Eof,
         ]
     );
     assert_eq!(token_text(source, &tokens[3]), "123:i32");
     assert_eq!(token_text(source, &tokens[5]), "1.5:f64");
     assert_eq!(token_text(source, &tokens[6]), "1e3:f128");
+    assert_eq!(token_text(source, &tokens[7]), "7:Number");
 }
 
 #[test]
@@ -382,7 +384,6 @@ fn rejects_malformed_numeric_literals_with_their_complete_span() {
         ("123abc", "must be separated"),
         ("1.2.3", "only one decimal point"),
         ("123:", "expected a type"),
-        ("123:wat", "unknown numeric suffix 'wat'"),
         ("1e", "expected exponent digits"),
         ("1e+", "expected exponent digits"),
     ] {
