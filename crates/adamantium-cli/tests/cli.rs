@@ -456,7 +456,7 @@ fn global_output_options_and_exit_code_classes_are_stable() {
 
 #[test]
 fn rejects_invalid_or_repeated_optimization_levels() {
-    for arguments in [vec!["build", "-O3"], vec!["build", "-O0", "-O2"]] {
+    for arguments in [vec!["build", "-O3"], vec!["build", "-Os", "-O2"]] {
         let output = adamantium().args(arguments).output().unwrap();
         assert_eq!(output.status.code(), Some(1));
         assert!(String::from_utf8_lossy(&output.stderr).contains("optimization"));

@@ -67,7 +67,7 @@ must become deterministic regression tests before the fix is merged.
 ## Performance regression guard
 
 The `Performance regression` workflow builds and executes the optimization
-benchmark on Linux. It records CSV results for `-O0`, `-O1`, and `-O2`, checks
+benchmark on Linux. It records CSV results for `-O0`, `-O1`, `-O2`, and `-Os`, checks
 that every measurement is valid, rejects `-O2` assembly larger than `-O0`, and
 rejects large execution-time or compilation-time regressions. Results are
 uploaded for comparison between runs. The generous runtime margin accounts for

@@ -139,8 +139,8 @@ Usage:\n\
   adamantium package publish [PACKAGE_DIRECTORY]\n\
   adamantium clean [PROJECT_DIRECTORY]\n\
   adamantium clear [PROJECT_DIRECTORY]\n\
-  adamantium build [PROJECT_DIRECTORY] [-O0|-O1|-O2]\n\
-  adamantium run [PROJECT_DIRECTORY] [-O0|-O1|-O2] [--name value ...]\n\
+  adamantium build [PROJECT_DIRECTORY] [-O0|-O1|-O2|-Os]\n\
+  adamantium run [PROJECT_DIRECTORY] [-O0|-O1|-O2|-Os] [--name value ...]\n\
   adamantium test list [PROJECT_DIRECTORY]\n\
   adamantium test run [PROJECT_DIRECTORY] [TEST_NAME] [--verbose]\n\
   adamantium test language [SUITE_DIRECTORY] [--verbose]\n\
@@ -150,7 +150,7 @@ Usage:\n\
   adamantium --help\n\
   adamantium --version\n\n\
 Options:\n\
-  -O0, -O1, -O2    Select optimization level (default: -O1)\n\
+  -O0, -O1, -O2, -Os    Select optimization level (default: -O1)\n\
   --verbose         Show detailed test output\n\
   --quiet, -q       Suppress compiler error output\n\
   --no-color        Disable terminal colors\n\
@@ -470,7 +470,7 @@ fn optimization_arguments(
             }
         } else if text.starts_with("-O") {
             return Err(format!(
-                "unknown optimization level '{text}'; expected -O0, -O1, or -O2"
+                "unknown optimization level '{text}'; expected -O0, -O1, -O2, or -Os"
             ));
         } else {
             remaining.push(argument);
@@ -937,7 +937,7 @@ fn emit_executable(
     let optimized = optimizer::optimize(statements.clone(), entry, level);
     fs::write(
         &asm,
-        codegen::assembly_entry(&optimized, entry, level == optimizer::Level::O2),
+        codegen::assembly_entry(&optimized, entry, level.optimizes_assembly()),
     )
     .map_err(|e| e.to_string())?;
     let nasm = nasm_command();

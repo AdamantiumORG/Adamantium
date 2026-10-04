@@ -7,7 +7,7 @@ path = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "performance.csv")
 with path.open(newline="", encoding="utf-8") as handle:
     rows = {row["level"]: row for row in csv.DictReader(handle)}
 
-missing = {"-O0", "-O1", "-O2"} - rows.keys()
+missing = {"-O0", "-O1", "-O2", "-Os"} - rows.keys()
 if missing:
     raise SystemExit(f"missing benchmark rows: {', '.join(sorted(missing))}")
 
@@ -19,11 +19,18 @@ for level, row in rows.items():
 
 o0 = rows["-O0"]
 o2 = rows["-O2"]
+size = rows["-Os"]
 if int(o2["assembly_bytes"]) > int(o0["assembly_bytes"]):
     raise SystemExit("-O2 assembly is larger than -O0 assembly")
 if float(o2["average_run_ms"]) > max(float(o0["average_run_ms"]) * 2.0, 5.0):
     raise SystemExit("-O2 execution time regressed beyond the allowed noise margin")
 if float(o2["compile_ms"]) > 120_000:
     raise SystemExit("-O2 compilation exceeded the 120 second guard")
+if int(size["assembly_bytes"]) > int(o0["assembly_bytes"]):
+    raise SystemExit("-Os assembly is larger than -O0 assembly")
+if int(size["executable_bytes"]) > int(o0["executable_bytes"]):
+    raise SystemExit("-Os executable is larger than -O0 executable")
+if float(size["compile_ms"]) > 120_000:
+    raise SystemExit("-Os compilation exceeded the 120 second guard")
 
 print("performance regression guard passed")

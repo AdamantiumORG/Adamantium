@@ -5,11 +5,17 @@ project="${1:-benchmarks/optimization}"
 iterations="${2:-20}"
 root="$(cd "$project" && pwd)"
 name="$(sed -n '/^name[[:space:]]*=/s/^[^\"]*\"\([^\"]*\)\".*/\1/p' "$root/project.toml" | head -n1)"
-cli="$(cd "$(dirname "$0")/.." && pwd)/target/release/adamantium"
+compiler_root="$(cd "$(dirname "$0")/.." && pwd)"
+target_root="${CARGO_TARGET_DIR:-$compiler_root/target}"
+case "$target_root" in
+  /*) ;;
+  *) target_root="$compiler_root/$target_root" ;;
+esac
+cli="$target_root/release/adamantium"
 cargo build --release -p adamantium-cli
 
 printf 'level,compile_ms,assembly_bytes,executable_bytes,average_run_ms\n'
-for level in -O0 -O1 -O2; do
+for level in -O0 -O1 -O2 -Os; do
   start="$(date +%s%N)"
   "$cli" build "$root" "$level" >/dev/null
   end="$(date +%s%N)"

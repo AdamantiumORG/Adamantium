@@ -120,7 +120,7 @@ Explore complete projects in [`examples`](examples/README.md).
 - Checked aliases, offsets, lifecycle hooks, and memory diagnostics
 - WASI packages with explicit imports, integrity checks, and runtime limits
 - Built-in project and language test runners
-- `-O0`, `-O1`, and `-O2` optimization profiles
+- `-O0`, `-O1`, `-O2`, and size-oriented `-Os` optimization profiles
 - Structured diagnostics with source spans and stable error families
 
 ## Installation

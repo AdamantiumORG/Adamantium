@@ -12,6 +12,7 @@ pub enum Level {
     #[default]
     O1,
     O2,
+    Os,
 }
 
 impl Level {
@@ -20,6 +21,7 @@ impl Level {
             "-O0" => Some(Self::O0),
             "-O1" => Some(Self::O1),
             "-O2" => Some(Self::O2),
+            "-Os" => Some(Self::Os),
             _ => None,
         }
     }
@@ -35,10 +37,20 @@ pub fn optimize(mut program: Program, entry: &str, level: Level) -> Program {
     for function in &mut program.functions {
         optimize_function(function, level);
     }
-    if level == Level::O2 {
+    if level.is_aggressive() {
         remove_dead_functions(&mut program, entry);
     }
     program
+}
+
+impl Level {
+    pub fn is_aggressive(self) -> bool {
+        matches!(self, Self::O2 | Self::Os)
+    }
+
+    pub fn optimizes_assembly(self) -> bool {
+        self.is_aggressive()
+    }
 }
 
 fn inline_small_functions(program: &mut Program, entry: &str) {
@@ -107,7 +119,7 @@ fn inline_safe_statement(statement: &Instruction) -> bool {
 fn optimize_function(function: &mut Function, level: Level) {
     let mut constants = HashMap::new();
     optimize_block(&mut function.instructions, &mut constants);
-    if level != Level::O2 {
+    if !level.is_aggressive() {
         return;
     }
     let mut used = HashSet::new();
@@ -766,6 +778,40 @@ mod tests {
                 },
                 true
             )]
+        ));
+    }
+
+    #[test]
+    fn os_removes_dead_functions_without_inlining_live_calls() {
+        let call = Expression {
+            ty: Type::None,
+            kind: Kind::Call("announce".into(), Vec::new()),
+        };
+        let program = Program {
+            functions: vec![
+                function("main", vec![Instruction::Call(call)]),
+                function("announce", vec![Instruction::Print(value(7), true)]),
+                function("unused", vec![Instruction::Return]),
+            ],
+            class_sizes: Vec::new(),
+            classes: Vec::new(),
+            package_functions: HashMap::new(),
+        };
+        let program = optimize(program, "main", Level::Os);
+        assert_eq!(
+            program
+                .functions
+                .iter()
+                .map(|function| function.name.as_str())
+                .collect::<Vec<_>>(),
+            ["main", "announce"]
+        );
+        assert!(matches!(
+            program.functions[0].instructions.as_slice(),
+            [Instruction::Call(Expression {
+                kind: Kind::Call(name, arguments),
+                ..
+            })] if name == "announce" && arguments.is_empty()
         ));
     }
 

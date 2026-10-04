@@ -8,11 +8,16 @@ $projectRoot = (Resolve-Path -LiteralPath $Project).Path
 $manifest = Get-Content -LiteralPath (Join-Path $projectRoot "project.toml") -Raw
 if ($manifest -notmatch '(?m)^name\s*=\s*"([^"]+)"') { throw "project.toml has no name" }
 $name = $Matches[1]
-$cli = Join-Path $PSScriptRoot "../target/release/adamantium.exe"
+$targetRoot = if ($env:CARGO_TARGET_DIR) {
+    [IO.Path]::GetFullPath($env:CARGO_TARGET_DIR)
+} else {
+    [IO.Path]::GetFullPath((Join-Path $PSScriptRoot "../target"))
+}
+$cli = Join-Path $targetRoot "release/adamantium.exe"
 cargo build --release -p adamantium-cli
 if ($LASTEXITCODE -ne 0) { throw "could not build Adamantium CLI" }
 
-foreach ($level in "-O0", "-O1", "-O2") {
+foreach ($level in "-O0", "-O1", "-O2", "-Os") {
     $timer = [Diagnostics.Stopwatch]::StartNew()
     & $cli build $projectRoot $level | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "build failed for $level" }

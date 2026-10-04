@@ -39,7 +39,7 @@ fn optimization_levels_preserve_program_output() {
     fs::write(root.join("code/main.ad"), "fun helper(a:int) r:int { r=a+0; } fun deadfunc() r:None { print.newline(99); } fun main() { var a=2+3; print.newline(helper(a)); }").unwrap();
     let name = root.file_name().unwrap().to_string_lossy();
     let mut outputs = Vec::new();
-    for level in ["-O0", "-O1", "-O2"] {
+    for level in ["-O0", "-O1", "-O2", "-Os"] {
         let build = Command::new(env!("CARGO_BIN_EXE_adamantium"))
             .args(["build", root.to_str().unwrap(), level])
             .output()
@@ -50,7 +50,10 @@ fn optimization_levels_preserve_program_output() {
             String::from_utf8_lossy(&build.stderr)
         );
         let assembly = fs::read_to_string(root.join("target").join(format!("{name}.asm"))).unwrap();
-        assert_eq!(assembly.contains("ad_fun_deadfunc:"), level != "-O2");
+        assert_eq!(
+            assembly.contains("ad_fun_deadfunc:"),
+            !matches!(level, "-O2" | "-Os")
+        );
         let executable = root.join("target").join(if cfg!(windows) {
             format!("{name}.exe")
         } else {

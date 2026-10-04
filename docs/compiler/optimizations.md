@@ -7,12 +7,14 @@ Adamantium applies optimizations after semantic analysis and before NASM code ge
 | `-O0` | Preserve typed IR and generated assembly for debugging. |
 | `-O1` | Default. Fold constants, propagate scalar constants, simplify expressions and constant branches, and remove unreachable statements. |
 | `-O2` | Apply `-O1`, remove unused local assignments and unreachable functions, preserve side effects, and remove redundant assembly instructions. |
+| `-Os` | Optimize for binary size. Apply aggressive dead-code and assembly cleanup without inlining functions that could duplicate code. |
 
 Use one level with `adamantium build` or `adamantium run`:
 
 ```text
 adamantium build -O0
 adamantium build ./project -O2
+adamantium build ./project -Os
 adamantium run -O1 --name value
 ```
 
@@ -39,4 +41,4 @@ Run the platform script against an Adamantium project:
 ./scripts/benchmark-optimizations.sh ./benchmarks/optimization 20
 ```
 
-Each script reports compiler wall time, assembly size, executable size, and average program wall time for `-O0`, `-O1`, and `-O2`. Run benchmarks on an otherwise idle machine and compare results from the same commit and toolchain.
+Each script reports compiler wall time, assembly size, executable size, and average program wall time for `-O0`, `-O1`, `-O2`, and `-Os`. The CI guard verifies that `-Os` does not produce assembly or an executable larger than `-O0`. Run benchmarks on an otherwise idle machine and compare results from the same commit and toolchain.

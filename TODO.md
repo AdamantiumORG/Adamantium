@@ -1851,7 +1851,7 @@ The goal of this roadmap is to stabilize the current language and compiler befor
 * [x] Define `-O0`
 * [x] Define `-O1`
 * [x] Define `-O2`
-* [ ] Define and implement size-oriented `-Os`
+* [x] Define and implement size-oriented `-Os`
 * [x] Define optimization defaults
 * [x] Add optimization CLI options
 * [x] Add optimization tests
